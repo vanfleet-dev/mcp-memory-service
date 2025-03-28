@@ -1,3 +1,6 @@
+# Aider files
+.aider.*
+
 # Python
 __pycache__/
 *.py[cod]
