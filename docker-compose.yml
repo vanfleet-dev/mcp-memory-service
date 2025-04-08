@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+  memory-service:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/chroma_db:/app/chroma_db
+      - ./data/backups:/app/backups
+    environment:
+      - MCP_MEMORY_CHROMA_PATH=/app/chroma_db
+      - MCP_MEMORY_BACKUPS_PATH=/app/backups
+      - LOG_LEVEL=INFO
+      - MAX_RESULTS_PER_QUERY=10
+      - SIMILARITY_THRESHOLD=0.7
+    restart: unless-stopped
