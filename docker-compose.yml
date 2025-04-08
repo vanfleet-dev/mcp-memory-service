@@ -6,8 +6,8 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-      - $HOME/mcp-memory/chroma_db:/app/chroma_db
-      - $HOME/mcp-memory/backups:/app/backups
+      - ${CHROMA_DB_PATH:-$HOME/mcp-memory/chroma_db}:/app/chroma_db
+      - ${BACKUPS_PATH:-$HOME/mcp-memory/backups}:/app/backups
     environment:
       - MCP_MEMORY_CHROMA_PATH=/app/chroma_db
       - MCP_MEMORY_BACKUPS_PATH=/app/backups
