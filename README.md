@@ -150,6 +150,97 @@ For detailed installation instructions, platform-specific guides, and troublesho
 - [Technical Documentation](docs/technical/) - Detailed technical procedures and specifications
 - [Scripts Documentation](docs/guides/scripts.md) - Overview of available scripts and their usage
 
+## VPS Deployment Requirements
+
+If you're planning to deploy the Memory Service to a Virtual Private Server (VPS), here are the recommended specifications and configuration guidelines.
+
+### Minimum System Requirements
+
+| Resource | Minimum | Recommended | Notes |
+|----------|---------|-------------|-------|
+| CPU | 2 vCPU cores | 4+ vCPU cores | Modern x86_64 or ARM64 compatible |
+| RAM | 4 GB | 8+ GB | Memory usage depends on embedding model size |
+| Storage | 10 GB | 20+ GB | SSD recommended for ChromaDB performance |
+| OS | Any Linux with Python 3.10+ | Ubuntu 22.04+ | macOS and Windows also supported |
+| Network | Basic connectivity | 100+ Mbps | Low bandwidth once initialized |
+
+### Key Considerations for VPS Deployment
+
+#### Memory Usage Breakdown
+
+The memory footprint consists of three main components:
+- **Sentence Transformer Model**: ~400-600 MB (depends on model)
+- **ChromaDB**: ~200-500 MB (depends on database size)
+- **Python Runtime + Dependencies**: ~200-300 MB
+- **Working Memory for Embeddings**: ~100-500 MB (depends on batch size)
+
+For most deployments, **4 GB RAM** is sufficient for basic operation, but **8 GB** provides better performance for larger memory stores.
+
+#### Storage Requirements
+
+- **ChromaDB**: Starts at ~100 MB, grows ~1 MB per 100 memories
+- **Backups**: Plan for 2-3x the DB size for rotation
+- **Code + Dependencies**: ~300-500 MB
+- **OS + Other**: Variable based on your setup
+
+A **10 GB SSD** is adequate for getting started, but plan for growth if you anticipate storing many thousands of memories.
+
+#### Recommended Docker Deployment for VPS
+
+For VPS deployment, Docker is strongly recommended to simplify installation and management:
+
+```bash
+# On your VPS
+git clone https://github.com/doobidoo/mcp-memory-service.git
+cd mcp-memory-service
+
+# Create directories for persistent storage
+mkdir -p ./data/chroma_db ./data/backups
+
+# Add resource constraints appropriate for your VPS
+docker build -t mcp-memory-service .
+docker run -d \
+  --name mcp-memory \
+  --restart unless-stopped \
+  --memory=4g \
+  --cpus=2 \
+  -p 8000:8000 \
+  -v $(pwd)/data/chroma_db:/app/chroma_db \
+  -v $(pwd)/data/backups:/app/backups \
+  -e MCP_MEMORY_CHROMA_PATH=/app/chroma_db \
+  -e MCP_MEMORY_BACKUPS_PATH=/app/backups \
+  -e MCP_MEMORY_MODEL_NAME=paraphrase-MiniLM-L6-v2 \
+  -e MCP_MEMORY_BATCH_SIZE=4 \
+  mcp-memory-service
+```
+
+This configuration:
+- Limits the container to 4GB RAM and 2 CPUs
+- Uses a balanced model for good performance/resource usage
+- Mounts persistent volumes for data storage
+- Automatically restarts the service if it crashes or on system reboot
+
+#### Optimizations for Low-Resource VPS Environments
+
+If running on a constrained VPS with limited resources:
+
+1. **Use a smaller embedding model**:
+   ```bash
+   export MCP_MEMORY_MODEL_NAME=paraphrase-MiniLM-L3-v2  # Much smaller model
+   ```
+
+2. **Reduce batch size**:
+   ```bash
+   export MCP_MEMORY_BATCH_SIZE=4  # Default is 8
+   ```
+
+3. **Enable CPU optimization**:
+   ```bash
+   export MCP_MEMORY_USE_ONNX=1  # Uses ONNX runtime which can be faster on CPU
+   ```
+
+For more detailed VPS deployment information, see [issue #22](https://github.com/doobidoo/mcp-memory-service/issues/22).
+
 ## Configuration
 
 ### Standard Configuration (Recommended)
