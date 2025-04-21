@@ -37,7 +37,7 @@ pip install uv
 git clone https://github.com/doobidoo/mcp-memory-service.git
 cd mcp-memory-service
 uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate  # On Windows: .venv\\Scripts\\activate
 uv pip install -r requirements.txt
 uv pip install -e .
 
@@ -125,7 +125,7 @@ To verify your Docker-based memory service is working correctly with Claude Desk
    ```
 3. Update your Claude Desktop configuration file:
    - On macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - On Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+   - On Windows: `%APPDATA%\\Claude\\claude_desktop_config.json`
    - On Linux: `~/.config/Claude/claude_desktop_config.json`
 4. Restart Claude Desktop
 5. When Claude starts up, you should see the memory service initialize with a message:
@@ -162,13 +162,13 @@ Add the following to your `claude_desktop_config.json` file to use UV (recommend
     "command": "uv",
     "args": [
       "--directory",
-      "your_mcp_memory_service_directory",  // e.g., "C:\\REPOSITORIES\\mcp-memory-service"
+      "your_mcp_memory_service_directory",  // e.g., "C:\\\\REPOSITORIES\\\\mcp-memory-service"
       "run",
       "memory"
     ],
     "env": {
-      "MCP_MEMORY_CHROMA_PATH": "your_chroma_db_path",  // e.g., "C:\\Users\\John.Doe\\AppData\\Local\\mcp-memory\\chroma_db"
-      "MCP_MEMORY_BACKUPS_PATH": "your_backups_path"  // e.g., "C:\\Users\\John.Doe\\AppData\\Local\\mcp-memory\\backups"
+      "MCP_MEMORY_CHROMA_PATH": "your_chroma_db_path",  // e.g., "C:\\\\Users\\\\John.Doe\\\\AppData\\\\Local\\\\mcp-memory\\\\chroma_db"
+      "MCP_MEMORY_BACKUPS_PATH": "your_backups_path"  // e.g., "C:\\\\Users\\\\John.Doe\\\\AppData\\\\Local\\\\mcp-memory\\\\backups"
     }
   }
 }
@@ -183,11 +183,11 @@ For Windows users, we recommend using the wrapper script to ensure PyTorch is pr
   "memory": {
     "command": "python",
     "args": [
-      "C:\\path\\to\\mcp-memory-service\\memory_wrapper.py"
+      "C:\\\\path\\\\to\\\\mcp-memory-service\\\\memory_wrapper.py"
     ],
     "env": {
-      "MCP_MEMORY_CHROMA_PATH": "C:\\Users\\YourUsername\\AppData\\Local\\mcp-memory\\chroma_db",
-      "MCP_MEMORY_BACKUPS_PATH": "C:\\Users\\YourUsername\\AppData\\Local\\mcp-memory\\backups"
+      "MCP_MEMORY_CHROMA_PATH": "C:\\\\Users\\\\YourUsername\\\\AppData\\\\Local\\\\mcp-memory\\\\chroma_db",
+      "MCP_MEMORY_BACKUPS_PATH": "C:\\\\Users\\\\YourUsername\\\\AppData\\\\Local\\\\mcp-memory\\\\backups"
     }
   }
 }
@@ -212,6 +212,13 @@ The wrapper script will:
 | Linux | x86_64 | ROCm | ✅ Supported |
 | Linux | x86_64 | CPU | ✅ Supported with fallbacks |
 | Linux | ARM64 | CPU | ✅ Supported with fallbacks |
+
+> **⚠️ Note for macOS 15 (Sequoia) users**: If you're using macOS 15 with Apple Silicon and encounter PyTorch package installation errors when using UV, you might need to:
+> 1. Use pip instead of UV: `pip install -e .`
+> 2. Use conda to create a dedicated environment: `conda create -n memory-service python=3.10 && conda activate memory-service && conda install pytorch -c pytorch`
+> 3. Specify a compatible torch version: `pip install torch==2.0.1 --find-links https://download.pytorch.org/whl/torch_stable.html`
+>
+> This issue happens because PyTorch wheels for macOS 15 on arm64 are still being updated. See [issue #29](https://github.com/doobidoo/mcp-memory-service/issues/29) for more details.
 
 ## Memory Operations
 
