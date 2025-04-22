@@ -147,6 +147,7 @@ For detailed installation instructions, platform-specific guides, and troublesho
 
 - [Installation Guide](docs/guides/installation.md) - Comprehensive installation instructions for all platforms
 - [Troubleshooting Guide](docs/guides/troubleshooting.md) - Solutions for common issues
+- [Claude Code Integration](docs/guides/claude-code-integration.md) - Guide for using with Claude Code CLI
 - [Technical Documentation](docs/technical/) - Detailed technical procedures and specifications
 - [Scripts Documentation](docs/guides/scripts.md) - Overview of available scripts and their usage
 
@@ -324,7 +325,7 @@ The memory service provides the following operations through the MCP server:
 5. `exact_match_retrieve` - Find memories with exact content match
 6. `debug_retrieve` - Retrieve memories with similarity scores
 
-For detailed information about tag storage and management, see our [Tag Storage Documentation](docs/technical/tag_storage.md).
+For detailed information about tag storage and management, see our [Tag Storage Documentation](docs/technical/tag-storage.md).
 
 ### Database Management
 
