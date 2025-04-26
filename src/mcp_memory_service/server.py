@@ -631,6 +631,12 @@ class MemoryServer:
                     return await self.handle_exact_match_retrieve(arguments)
                 elif name == "check_database_health":
                     return await self.handle_check_database_health(arguments)
+                elif name == "recall_by_timeframe":
+                    return await self.handle_recall_by_timeframe(arguments)
+                elif name == "delete_by_timeframe":
+                    return await self.handle_delete_by_timeframe(arguments)
+                elif name == "delete_before_date":
+                    return await self.handle_delete_before_date(arguments)
                 else:
                     raise ValueError(f"Unknown tool: {name}")
             except Exception as e:
@@ -908,6 +914,14 @@ class MemoryServer:
             logger.info(f"Cleaned query for semantic search: {cleaned_query}")
             logger.info(f"Parsed time range: {start_timestamp} to {end_timestamp}")
             
+            # Log more detailed timestamp information for debugging
+            if start_timestamp is not None:
+                start_dt = datetime.fromtimestamp(start_timestamp)
+                logger.info(f"Start timestamp: {start_timestamp} ({start_dt.strftime('%Y-%m-%d %H:%M:%S')})")
+            if end_timestamp is not None:
+                end_dt = datetime.fromtimestamp(end_timestamp)
+                logger.info(f"End timestamp: {end_timestamp} ({end_dt.strftime('%Y-%m-%d %H:%M:%S')})")
+            
             if start_timestamp is None and end_timestamp is None:
                 # No time expression found, try direct parsing
                 logger.info("No time expression found in query, trying direct parsing")
@@ -1023,20 +1037,39 @@ class MemoryServer:
             start_timestamp = datetime(start_date.year, start_date.month, start_date.day).timestamp()
             end_timestamp = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59).timestamp()
             
-            # Retrieve memories
-            results = await self.storage.recall(n_results, start_timestamp, end_timestamp)
+            # Log the timestamp values for debugging
+            logger.info(f"Recall by timeframe: {start_date} to {end_date}")
+            logger.info(f"Start timestamp: {start_timestamp} ({datetime.fromtimestamp(start_timestamp).strftime('%Y-%m-%d %H:%M:%S')})")
+            logger.info(f"End timestamp: {end_timestamp} ({datetime.fromtimestamp(end_timestamp).strftime('%Y-%m-%d %H:%M:%S')})")
+            
+            # Retrieve memories with proper parameters - query is None because this is pure time-based filtering
+            results = await self.storage.recall(
+                query=None,
+                n_results=n_results,
+                start_timestamp=start_timestamp,
+                end_timestamp=end_timestamp
+            )
             
             if not results:
-                return [types.TextContent(type="text", text="No memories found in timeframe")]
+                return [types.TextContent(type="text", text=f"No memories found from {start_date} to {end_date}")]
             
             formatted_results = []
             for i, result in enumerate(results):
+                memory_timestamp = datetime.fromtimestamp(float(result.memory.timestamp)) if result.memory.timestamp else None
+                
                 memory_info = [
                     f"Memory {i+1}:",
-                    f"Content: {result.memory.content}",
-                    f"Hash: {result.memory.content_hash}",
-                    f"Relevance Score: {result.similarity:.2f}"
                 ]
+                
+                # Add timestamp if available
+                if memory_timestamp:
+                    memory_info.append(f"Timestamp: {memory_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+                
+                memory_info.extend([
+                    f"Content: {result.memory.content}",
+                    f"Hash: {result.memory.content_hash}"
+                ])
+                
                 if result.memory.tags:
                     memory_info.append(f"Tags: {', '.join(result.memory.tags)}")
                 memory_info.append("---")
@@ -1044,10 +1077,11 @@ class MemoryServer:
             
             return [types.TextContent(
                 type="text",
-                text=f"Found {len(results)} memories:\n\n" + "\n".join(formatted_results)
+                text=f"Found {len(results)} memories from {start_date} to {end_date}:\n\n" + "\n".join(formatted_results)
             )]
             
         except Exception as e:
+            logger.error(f"Error in recall_by_timeframe: {str(e)}\n{traceback.format_exc()}")
             return [types.TextContent(
                 type="text",
                 text=f"Error recalling memories: {str(e)}"
