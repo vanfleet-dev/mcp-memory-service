@@ -280,3 +280,10 @@ MIT License - See LICENSE file for details
 ## Contact
 
 [Telegram](t.me/doobeedoo)
+
+## Integrations
+
+The MCP Memory Service can be extended with various tools and utilities. See [Integrations](docs/integrations.md) for a list of available options, including:
+
+- [MCP Memory Dashboard](https://github.com/doobidoo/mcp-memory-dashboard) - Web UI for browsing and managing memories
+- [Claude Memory Context](https://github.com/doobidoo/claude-memory-context) - Inject memory context into Claude project instructions
