@@ -3,12 +3,16 @@ MCP Memory Service
 Copyright (c) 2024 Heinrich Krupp
 Licensed under the MIT License. See LICENSE file in the project root for full license text.
 """
-import asyncio
+import sys
 import os
+# Add path to your virtual environment's site-packages
+venv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'venv', 'Lib', 'site-packages')
+if os.path.exists(venv_path):
+    sys.path.insert(0, venv_path)
+import asyncio
 import logging
 import traceback
 import argparse
-import sys
 import json
 import platform
 from typing import List, Dict, Any, Optional, Tuple
@@ -36,12 +40,28 @@ from .utils.system_detection import (
 )
 from .utils.time_parser import extract_time_expression, parse_time_expression
 
-# Configure logging
+# Configure logging to go to stderr
+log_level = os.getenv('LOG_LEVEL', 'ERROR').upper()
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=getattr(logging, log_level, logging.ERROR),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stderr
 )
 logger = logging.getLogger(__name__)
+
+# Check if UV is being used
+def check_uv_environment():
+    """Check if UV is being used and provide recommendations if not."""
+    running_with_uv = 'UV_ACTIVE' in os.environ or any('uv' in arg.lower() for arg in sys.argv)
+    
+    if not running_with_uv:
+        logger.info("Memory server is running without UV. For better performance and dependency management, consider using UV:")
+        logger.info("  pip install uv")
+        logger.info("  uv run memory")
+    else:
+        logger.info("Memory server is running with UV")
+    
+    return running_with_uv
 
 # Configure environment variables based on detected system
 def configure_environment():
@@ -124,12 +144,12 @@ class MemoryServer:
             logger.info("Starting async initialization...")
             
             # Print system diagnostics to stderr for visibility
-            print("\n=== System Diagnostics ===", file=sys.stderr)
-            print(f"OS: {self.system_info.os_name} {self.system_info.os_version}", file=sys.stderr)
-            print(f"Architecture: {self.system_info.architecture}", file=sys.stderr)
-            print(f"Memory: {self.system_info.memory_gb:.2f} GB", file=sys.stderr)
-            print(f"Accelerator: {self.system_info.accelerator}", file=sys.stderr)
-            print(f"Python: {platform.python_version()}", file=sys.stderr)
+            print("\n=== System Diagnostics ===", file=sys.stderr, flush=True)
+            print(f"OS: {self.system_info.os_name} {self.system_info.os_version}", file=sys.stderr, flush=True)
+            print(f"Architecture: {self.system_info.architecture}", file=sys.stderr, flush=True)
+            print(f"Memory: {self.system_info.memory_gb:.2f} GB", file=sys.stderr, flush=True)
+            print(f"Accelerator: {self.system_info.accelerator}", file=sys.stderr, flush=True)
+            print(f"Python: {platform.python_version()}", file=sys.stderr, flush=True)
             
             # Validate database health with timeout
             try:
@@ -143,14 +163,14 @@ class MemoryServer:
                 logger.warning("Database health check timed out, continuing anyway")
             
             # Add explicit console error output for Smithery to see
-            print("MCP Memory Service initialization completed", file=sys.stderr)
+            print("MCP Memory Service initialization completed", file=sys.stderr, flush=True)
             
             return True
         except Exception as e:
             logger.error(f"Async initialization error: {str(e)}")
             logger.error(traceback.format_exc())
             # Add explicit console error output for Smithery to see
-            print(f"Initialization error: {str(e)}", file=sys.stderr)
+            print(f"Initialization error: {str(e)}", file=sys.stderr, flush=True)
             # Don't raise the exception, just return False
             return False
 
@@ -256,17 +276,25 @@ class MemoryServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "content": {"type": "string"},
+                            "content": {
+                                "type": "string",
+                                "description": "The memory content to store, such as a fact, note, or piece of information."
+                            },
                             "metadata": {
                                 "type": "object",
+                                "description": "Optional metadata about the memory, including tags and type.",
                                 "properties": {
                                     "tags": {
                                         "oneOf": [
                                             {"type": "array", "items": {"type": "string"}},
                                             {"type": "string"}
-                                        ]
+                                        ],
+                                        "description": "Tags to categorize the memory. Can be a comma-separated string or an array of strings."
                                     },
-                                    "type": {"type": "string"}
+                                    "type": {
+                                        "type": "string",
+                                        "description": "Optional type or category label for the memory, e.g., 'note', 'fact', 'reminder'."
+                                    }
                                 }
                             }
                         },
@@ -296,8 +324,15 @@ class MemoryServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "query": {"type": "string"},
-                            "n_results": {"type": "number", "default": 5}
+                            "query": {
+                                "type": "string",
+                                "description": "Natural language query specifying the time frame or content to recall, e.g., 'last week', 'yesterday afternoon', or a topic."
+                            },
+                            "n_results": {
+                                "type": "number",
+                                "default": 5,
+                                "description": "Maximum number of results to return."
+                            }
                         },
                         "required": ["query"]
                     }
@@ -314,8 +349,15 @@ class MemoryServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "query": {"type": "string"},
-                            "n_results": {"type": "number", "default": 5}
+                            "query": {
+                                "type": "string",
+                                "description": "Search query to find relevant memories based on content."
+                            },
+                            "n_results": {
+                                "type": "number",
+                                "default": 5,
+                                "description": "Maximum number of results to return."
+                            }
                         },
                         "required": ["query"]
                     }
@@ -332,7 +374,11 @@ class MemoryServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "tags": {"type": "array", "items": {"type": "string"}}
+                            "tags": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "List of tags to search for. Returns memories matching ANY of these tags."
+                            }
                         },
                         "required": ["tags"]
                     }
@@ -348,7 +394,10 @@ class MemoryServer:
                                 inputSchema={
                                     "type": "object",
                                     "properties": {
-                                        "content_hash": {"type": "string"}
+                                        "content_hash": {
+                                            "type": "string",
+                                            "description": "Hash of the memory content to delete. Obtainable from memory metadata."
+                                        }
                                     },
                                     "required": ["content_hash"]
                                 }
@@ -365,7 +414,10 @@ class MemoryServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "tag": {"type": "string"}
+                            "tag": {
+                                "type": "string",
+                                "description": "Tag label. All memories containing this tag will be deleted."
+                            }
                         },
                         "required": ["tag"]
                     }
@@ -389,7 +441,10 @@ class MemoryServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "content": {"type": "string"}
+                            "content": {
+                                "type": "string",
+                                "description": "Text content to generate an embedding vector for."
+                            }
                         },
                         "required": ["content"]
                     }
@@ -415,9 +470,20 @@ class MemoryServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "query": {"type": "string"},
-                            "n_results": {"type": "number", "default": 5},
-                            "similarity_threshold": {"type": "number", "default": 0.0}
+                            "query": {
+                                "type": "string",
+                                "description": "Search query for debugging retrieval, e.g., a phrase or keyword."
+                            },
+                            "n_results": {
+                                "type": "number",
+                                "default": 5,
+                                "description": "Maximum number of results to return."
+                            },
+                            "similarity_threshold": {
+                                "type": "number",
+                                "default": 0.0,
+                                "description": "Minimum similarity score threshold for results (0.0 to 1.0)."
+                            }
                         },
                         "required": ["query"]
                     }
@@ -433,7 +499,10 @@ class MemoryServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "content": {"type": "string"}
+                            "content": {
+                                "type": "string",
+                                "description": "Exact content string to match against stored memories."
+                            }
                         },
                         "required": ["content"]
                     }
@@ -459,9 +528,21 @@ class MemoryServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "start_date": {"type": "string", "format": "date"},
-                            "end_date": {"type": "string", "format": "date"},
-                            "n_results": {"type": "number", "default": 5}
+                            "start_date": {
+                                "type": "string",
+                                "format": "date",
+                                "description": "Start date (inclusive) in YYYY-MM-DD format."
+                            },
+                            "end_date": {
+                                "type": "string",
+                                "format": "date",
+                                "description": "End date (inclusive) in YYYY-MM-DD format."
+                            },
+                            "n_results": {
+                                "type": "number",
+                                "default": 5,
+                                "description": "Maximum number of results to return."
+                            }
                         },
                         "required": ["start_date"]
                     }
@@ -480,9 +561,20 @@ class MemoryServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "start_date": {"type": "string", "format": "date"},
-                            "end_date": {"type": "string", "format": "date"},
-                            "tag": {"type": "string"}
+                            "start_date": {
+                                "type": "string",
+                                "format": "date",
+                                "description": "Start date (inclusive) in YYYY-MM-DD format."
+                            },
+                            "end_date": {
+                                "type": "string",
+                                "format": "date",
+                                "description": "End date (inclusive) in YYYY-MM-DD format."
+                            },
+                            "tag": {
+                                "type": "string",
+                                "description": "Optional tag to filter deletions. Only memories with this tag will be deleted."
+                            }
                         },
                         "required": ["start_date"]
                     }
@@ -1022,6 +1114,9 @@ def parse_args():
 async def async_main():
     args = parse_args()
     
+    # Check if running with UV
+    check_uv_environment()
+    
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
         logger.debug("Debug logging enabled")
@@ -1031,15 +1126,15 @@ async def async_main():
     
     # Print system diagnostics to console
     system_info = get_system_info()
-    print("\n=== MCP Memory Service System Diagnostics ===", file=sys.stderr)
-    print(f"OS: {system_info.os_name} {system_info.architecture}", file=sys.stderr)
-    print(f"Python: {platform.python_version()}", file=sys.stderr)
-    print(f"Hardware Acceleration: {system_info.accelerator}", file=sys.stderr)
-    print(f"Memory: {system_info.memory_gb:.2f} GB", file=sys.stderr)
-    print(f"Optimal Model: {system_info.get_optimal_model()}", file=sys.stderr)
-    print(f"Optimal Batch Size: {system_info.get_optimal_batch_size()}", file=sys.stderr)
-    print(f"ChromaDB Path: {CHROMA_PATH}", file=sys.stderr)
-    print("================================================\n", file=sys.stderr)
+    print("\n=== MCP Memory Service System Diagnostics ===", file=sys.stderr, flush=True)
+    print(f"OS: {system_info.os_name} {system_info.architecture}", file=sys.stderr, flush=True)
+    print(f"Python: {platform.python_version()}", file=sys.stderr, flush=True)
+    print(f"Hardware Acceleration: {system_info.accelerator}", file=sys.stderr, flush=True)
+    print(f"Memory: {system_info.memory_gb:.2f} GB", file=sys.stderr, flush=True)
+    print(f"Optimal Model: {system_info.get_optimal_model()}", file=sys.stderr, flush=True)
+    print(f"Optimal Batch Size: {system_info.get_optimal_batch_size()}", file=sys.stderr, flush=True)
+    print(f"ChromaDB Path: {CHROMA_PATH}", file=sys.stderr, flush=True)
+    print("================================================\n", file=sys.stderr, flush=True)
     
     logger.info(f"Starting MCP Memory Service with ChromaDB path: {CHROMA_PATH}")
     
@@ -1106,7 +1201,7 @@ async def async_main():
     except Exception as e:
         logger.error(f"Server error: {str(e)}")
         logger.error(traceback.format_exc())
-        print(f"Fatal server error: {str(e)}", file=sys.stderr)
+        print(f"Fatal server error: {str(e)}", file=sys.stderr, flush=True)
         raise
 
 def main():

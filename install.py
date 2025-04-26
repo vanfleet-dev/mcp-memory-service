@@ -192,18 +192,50 @@ def detect_gpu():
     }
 
 def check_dependencies():
-    """Check for required dependencies."""
+    """Check for required dependencies.
+    
+    Note on package managers:
+    - Traditional virtual environments (venv, virtualenv) include pip by default
+    - Alternative package managers like uv may not include pip or may manage packages differently
+    - We attempt multiple detection methods for pip and only fail if:
+      a) We're not in a virtual environment, or
+      b) We can't detect pip AND can't install dependencies
+    
+    We proceed with installation even if pip isn't detected when in a virtual environment,
+    assuming an alternative package manager (like uv) is handling dependencies.
+    
+    Returns:
+        bool: True if all dependencies are met, False otherwise.
+    """
     print_step("2", "Checking dependencies")
     
     # Check for pip
+    pip_installed = False
+    
+    # Try subprocess check first
     try:
         subprocess.check_call([sys.executable, '-m', 'pip', '--version'], 
                              stdout=subprocess.DEVNULL, 
                              stderr=subprocess.DEVNULL)
+        pip_installed = True
         print_info("pip is installed")
     except subprocess.SubprocessError:
-        print_error("pip is not installed. Please install pip first.")
-        return False
+        # Fallback to import check
+        try:
+            import pip
+            pip_installed = True
+            print_info(f"pip is installed: {pip.__version__}")
+        except ImportError:
+            # Check if we're in a virtual environment
+            in_venv = sys.prefix != sys.base_prefix
+            if in_venv:
+                print_warning("pip could not be detected, but you're in a virtual environment. "
+                            "If you're using uv or another alternative package manager, this is normal. "
+                            "Continuing installation...")
+                pip_installed = True  # Proceed anyway
+            else:
+                print_error("pip is not installed. Please install pip first.")
+                return False
     
     # Check for setuptools
     try:
@@ -211,12 +243,24 @@ def check_dependencies():
         print_info(f"setuptools is installed: {setuptools.__version__}")
     except ImportError:
         print_warning("setuptools is not installed. Will attempt to install it.")
-        try:
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'setuptools'], 
-                                 stdout=subprocess.DEVNULL)
-            print_success("setuptools installed successfully")
-        except subprocess.SubprocessError:
-            print_error("Failed to install setuptools. Please install it manually.")
+        # If pip is available, use it to install setuptools
+        if pip_installed:
+            try:
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'setuptools'], 
+                                    stdout=subprocess.DEVNULL)
+                print_success("setuptools installed successfully")
+            except subprocess.SubprocessError:
+                # Check if in virtual environment
+                in_venv = sys.prefix != sys.base_prefix
+                if in_venv:
+                    print_warning("Failed to install setuptools with pip. If you're using an alternative package manager "
+                                "like uv, please install setuptools manually using that tool (e.g., 'uv pip install setuptools').")
+                else:
+                    print_error("Failed to install setuptools. Please install it manually.")
+                    return False
+        else:
+            # Should be unreachable since pip_installed would only be False if we returned earlier
+            print_error("Cannot install setuptools without pip. Please install setuptools manually.")
             return False
     
     # Check for wheel
@@ -225,12 +269,24 @@ def check_dependencies():
         print_info(f"wheel is installed: {wheel.__version__}")
     except ImportError:
         print_warning("wheel is not installed. Will attempt to install it.")
-        try:
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'wheel'], 
-                                 stdout=subprocess.DEVNULL)
-            print_success("wheel installed successfully")
-        except subprocess.SubprocessError:
-            print_error("Failed to install wheel. Please install it manually.")
+        # If pip is available, use it to install wheel
+        if pip_installed:
+            try:
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'wheel'], 
+                                    stdout=subprocess.DEVNULL)
+                print_success("wheel installed successfully")
+            except subprocess.SubprocessError:
+                # Check if in virtual environment
+                in_venv = sys.prefix != sys.base_prefix
+                if in_venv:
+                    print_warning("Failed to install wheel with pip. If you're using an alternative package manager "
+                                "like uv, please install wheel manually using that tool (e.g., 'uv pip install wheel').")
+                else:
+                    print_error("Failed to install wheel. Please install it manually.")
+                    return False
+        else:
+            # Should be unreachable since pip_installed would only be False if we returned earlier
+            print_error("Cannot install wheel without pip. Please install wheel manually.")
             return False
     
     return True
@@ -249,10 +305,13 @@ def install_pytorch_macos_intel():
     """Install PyTorch specifically for macOS with Intel CPUs."""
     print_step("3a", "Installing PyTorch for macOS Intel CPU")
     
-    # Use a version combination that's known to work with sentence-transformers
-    # and is compatible with Intel Macs
+    # Use the versions known to work well on macOS Intel
     try:
-        torch_version = "2.0.1"  # This version works well with Intel Macs and sentence-transformers
+        # Install specific versions that are known to be compatible with Intel macOS
+        torch_version = "1.13.1"
+        torch_vision_version = "0.14.1"
+        torch_audio_version = "0.13.1"
+        st_version = "2.2.2"
         
         print_info(f"Installing PyTorch {torch_version} for macOS Intel...")
         
@@ -260,15 +319,14 @@ def install_pytorch_macos_intel():
         cmd = [
             sys.executable, '-m', 'pip', 'install',
             f"torch=={torch_version}",
-            f"torchvision=={torch_version}",
-            f"torchaudio=={torch_version}"
+            f"torchvision=={torch_vision_version}",
+            f"torchaudio=={torch_audio_version}"
         ]
         
         print_info(f"Running: {' '.join(cmd)}")
         subprocess.check_call(cmd)
         
         # Install a compatible version of sentence-transformers
-        st_version = "2.2.2"  # This version is known to work with torch 2.0.1
         print_info(f"Installing sentence-transformers {st_version}...")
         
         cmd = [
@@ -279,31 +337,17 @@ def install_pytorch_macos_intel():
         print_info(f"Running: {' '.join(cmd)}")
         subprocess.check_call(cmd)
         
-        print_success("PyTorch and sentence-transformers installed successfully for macOS Intel")
+        print_success(f"PyTorch {torch_version} and sentence-transformers {st_version} installed successfully for macOS Intel")
         return True
     except subprocess.SubprocessError as e:
         print_error(f"Failed to install PyTorch for macOS Intel: {e}")
+        
         # Provide fallback instructions
-        print_warning("You may need to manually install compatible versions:")
-        print_info("pip install torch==2.0.1 torchvision==2.0.1 torchaudio==2.0.1")
+        print_warning("You may need to manually install compatible versions for Intel macOS:")
+        print_info("pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1")
         print_info("pip install sentence-transformers==2.2.2")
         
-        # Try fallback mode if the primary installation failed
-        try:
-            print_info("Attempting fallback installation with looser version constraints...")
-            # Fallback to an older version known to be compatible
-            subprocess.check_call([
-                sys.executable, '-m', 'pip', 'install',
-                "torch==1.13.1", 
-                "torchvision==0.14.1",
-                "torchaudio==0.13.1",
-                "sentence-transformers==2.2.2"
-            ])
-            print_success("Fallback installation successful")
-            return True
-        except subprocess.SubprocessError as fallback_e:
-            print_error(f"Fallback installation failed: {fallback_e}")
-            return False
+        return False
 
 def install_pytorch_windows(gpu_info):
     """Install PyTorch on Windows using the appropriate index URL."""
@@ -375,6 +419,76 @@ def install_pytorch_windows(gpu_info):
         return False
 
 def install_package(args):
+    """Install the package with the appropriate dependencies, supporting pip or uv."""
+    print_step("3", "Installing MCP Memory Service")
+
+    # Determine installation mode
+    install_mode = []
+    if args.dev:
+        install_mode = ['-e']
+        print_info("Installing in development mode")
+
+    # Set environment variables for installation
+    env = os.environ.copy()
+
+    # Detect if pip is available
+    pip_available = False
+    try:
+        subprocess.check_call([sys.executable, '-m', 'pip', '--version'],
+                              stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL)
+        pip_available = True
+    except subprocess.SubprocessError:
+        pip_available = False
+
+    # Detect if uv is available
+    uv_path = shutil.which("uv")
+    uv_available = uv_path is not None
+
+    # Decide installer command prefix
+    if pip_available:
+        installer_cmd = [sys.executable, '-m', 'pip']
+    elif uv_available:
+        installer_cmd = ['uv', 'pip']
+        print_warning("pip not found, but uv detected. Using 'uv pip' for installation.")
+    else:
+        print_error("Neither pip nor uv detected. Cannot install packages.")
+        return False
+
+    # Get system and GPU info
+    system_info = detect_system()
+    gpu_info = detect_gpu()
+
+    # Set environment variables based on detected GPU
+    if gpu_info.get("has_cuda"):
+        print_info("Configuring for CUDA installation")
+    elif gpu_info.get("has_rocm"):
+        print_info("Configuring for ROCm installation")
+        env['MCP_MEMORY_USE_ROCM'] = '1'
+    elif gpu_info.get("has_mps"):
+        print_info("Configuring for Apple Silicon MPS installation")
+        env['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
+    elif gpu_info.get("has_directml"):
+        print_info("Configuring for DirectML installation")
+        env['MCP_MEMORY_USE_DIRECTML'] = '1'
+    else:
+        print_info("Configuring for CPU-only installation")
+        env['MCP_MEMORY_USE_ONNX'] = '1'
+
+    # Handle platform-specific PyTorch installation
+    pytorch_installed = install_pytorch_platform_specific(system_info, gpu_info)
+    if not pytorch_installed:
+        print_warning("Platform-specific PyTorch installation failed, but will continue with package installation")
+
+    try:
+        cmd = installer_cmd + ['install'] + install_mode + ['.']
+        print_info(f"Running: {' '.join(cmd)}")
+        subprocess.check_call(cmd, env=env)
+        print_success("MCP Memory Service installed successfully")
+        return True
+    except subprocess.SubprocessError as e:
+        print_error(f"Failed to install MCP Memory Service: {e}")
+        return False
     """Install the package with the appropriate dependencies."""
     print_step("3", "Installing MCP Memory Service")
     
@@ -509,6 +623,9 @@ def install_package(args):
 def configure_paths(args):
     """Configure paths for the MCP Memory Service."""
     print_step("4", "Configuring paths")
+    
+    # Get system info
+    system_info = detect_system()
     
     # Determine home directory
     home_dir = Path.home()

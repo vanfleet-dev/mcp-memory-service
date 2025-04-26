@@ -125,17 +125,19 @@ The wrapper script will:
 2. Install PyTorch with the correct index URL if needed
 3. Run the memory server with the appropriate configuration
 
-## Usage
+## Usage Guide
 
-To run the memory server directly (for testing):
+For detailed instructions on how to interact with the memory service in Claude Desktop:
 
-```bash
-# Quick run script (recommended for testing)
-python scripts/run_memory_server.py
+- [Invocation Guide](docs/guides/invocation_guide.md) - Learn the specific keywords and phrases that trigger memory operations in Claude
+- [Installation Guide](docs/guides/installation.md) - Detailed setup instructions
 
-# For isolated testing of methods
-python src/chroma_test_isolated.py
-```
+The memory service is invoked through natural language commands in your conversations with Claude. For example:
+- To store: "Please remember that my project deadline is May 15th."
+- To retrieve: "Do you remember what I told you about my project deadline?"
+- To delete: "Please forget what I told you about my address."
+
+See the [Invocation Guide](docs/guides/invocation_guide.md) for a complete list of commands and detailed usage examples.
 
 ## Memory Operations
 
@@ -278,3 +280,10 @@ MIT License - See LICENSE file for details
 ## Contact
 
 [Telegram](t.me/doobeedoo)
+
+## Integrations
+
+The MCP Memory Service can be extended with various tools and utilities. See [Integrations](docs/integrations.md) for a list of available options, including:
+
+- [MCP Memory Dashboard](https://github.com/doobidoo/mcp-memory-dashboard) - Web UI for browsing and managing memories
+- [Claude Memory Context](https://github.com/doobidoo/claude-memory-context) - Inject memory context into Claude project instructions

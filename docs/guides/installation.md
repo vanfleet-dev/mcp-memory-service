@@ -9,7 +9,9 @@ This guide provides detailed instructions for installing the MCP Memory Service 
 - A virtual environment (venv or conda)
 - Git (to clone the repository)
 
-## Standard Installation (All Platforms)
+## Installation Methods
+
+### 1. Standard Installation (All Platforms)
 
 1. **Clone the repository**:
    ```bash
@@ -38,6 +40,46 @@ This guide provides detailed instructions for installing the MCP Memory Service 
    ```bash
    python scripts/verify_environment_enhanced.py
    ```
+
+### 2. Docker Installation (Recommended for Cross-Platform Compatibility)
+
+For the easiest cross-platform deployment, use Docker:
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/doobidoo/mcp-memory-service.git
+   cd mcp-memory-service
+   ```
+
+2. **Build and run with Docker Compose**:
+   ```bash
+   # Create directories for persistent storage
+   mkdir -p ./data/chroma_db ./data/backups
+   
+   # Build and start the service
+   docker-compose up -d
+   ```
+
+3. **Configure Claude Desktop** to use the Docker container:
+   ```json
+   {
+     "memory": {
+       "command": "docker",
+       "args": [
+         "run",
+         "--rm",
+         "-p", "8000:8000",
+         "-v", "/path/to/data/chroma_db:/app/chroma_db",
+         "-v", "/path/to/data/backups:/app/backups",
+         "-e", "MCP_MEMORY_CHROMA_PATH=/app/chroma_db",
+         "-e", "MCP_MEMORY_BACKUPS_PATH=/app/backups",
+         "mcp-memory-service"
+       ]
+     }
+   }
+   ```
+
+For detailed Docker deployment instructions, see [Docker Deployment Guide](../technical/docker-deployment.md).
 
 ## Platform-Specific Installation Instructions
 
@@ -80,48 +122,77 @@ For Apple Silicon Macs:
    python -c "import platform; print(platform.machine())"
    # Should output "arm64"
    ```
+**If not, you can follow these steps to create and run the server in a virtual environment (Recommended)**
+```bash
+# requirements: 1-homebrew 2-python installation (brew install python)
+# for Apple Silicon Macs, make sure to first uninstall pytorch, torch, torchvision if you have any of them installed
+brew uninstall pytorch torchvision
 
-2. **Run the standard installation**:
+# create and activate a virtual environment (first, make sure to delete the .venv folder if you git clone)
+cd /path/to/your/cloned/project/
+python -m venv .venv
+source .venv/bin/activate
+
+# install uv in the virtual environment (as the command that handles the project in JSON is uv, and it is more compatible with the
+# project than python/python3/rye/etc.)
+pip install uv
+
+# make sure to give the JSON config the full PATH to the uv for Claude desktop.  "PATH_TO_YOUR_CLONED_PROJECT/.venv/bin/uv"
+
+# Then install Pytorch manually
+pip install torch torchvision torchaudio
+
+# Then install other dependencies without PyTorch
+pip install -r requirements.txt --no-deps
+
+# Finally install the package
+pip install -e .
+
+#Then check if the server runs
+memory
+```
+
+3. **Run the standard installation**:
    ```bash
    python install.py
    ```
 
-3. **Enable MPS acceleration**:
+4. **Enable MPS acceleration**:
    ```bash
    export PYTORCH_ENABLE_MPS_FALLBACK=1
    ```
 
 #### Intel CPUs
 
-For Intel-based Macs, there are known dependency conflicts between PyTorch and sentence-transformers:
+For Intel-based Macs, there are known dependency conflicts between PyTorch and sentence-transformers. The installation script and memory wrapper have been updated to handle these correctly and now use these specific versions:
 
-1. **Use the installation script with the compatibility flag**:
+- torch==1.13.1
+- torchvision==0.14.1
+- torchaudio==0.13.1
+- sentence-transformers==2.2.2
+
+1. **Use the standard installation script** (now properly detects macOS Intel):
    ```bash
-   python install.py --force-compatible-deps
+   python install.py
    ```
    
-   This installs specific compatible versions (torch==2.0.1 and sentence-transformers==2.2.2).
+   This will now automatically install the correct versions for macOS Intel x86_64.
 
-2. **If installation fails, try the fallback option**:
-   ```bash
-   python install.py --fallback-deps
-   ```
-   
-   This uses older versions (torch==1.13.1) that are also compatible.
-
-3. **Manual installation (if the script fails)**:
+2. **Manual installation** (if the script fails):
    ```bash
    # First remove existing packages
    pip uninstall -y torch torchvision torchaudio sentence-transformers
    
-   # Install compatible versions
-   pip install torch==2.0.1 torchvision==0.15.2 torchaudio==0.15.2
+   # Install compatible versions for Intel macOS
+   pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
    pip install sentence-transformers==2.2.2
    
    # Install remaining dependencies
    pip install --no-deps .
    pip install chromadb==0.5.23 tokenizers==0.20.3 mcp>=1.0.0,<2.0.0
    ```
+   
+> Note: Previous versions recommended using torch==2.0.1, but 1.13.1 has been found to work more reliably across different Intel macOS configurations.
 
 ### Linux
 
@@ -290,22 +361,30 @@ If you see errors like these on macOS with Intel CPUs:
 Could not find a version that satisfies the requirement torch>=1.11.0, sentence-transformers requires that torch>=1.11.0
 ```
 
-This is a known conflict between PyTorch and sentence-transformers versions on Intel Macs.
+Or if you encounter errors about the Windows installation script being used on macOS:
+```
+Installing PyTorch using the Windows-specific installation script
+Installation script not found: /path/to/scripts/install_windows.py
+```
+
+These issues have been fixed in the latest version. The installation scripts now correctly detect macOS on Intel and install the appropriate versions.
 
 **Solutions**:
 
-1. **Use the compatibility flag**:
+1. **Use the updated standard installation** (recommended):
    ```bash
-   python install.py --force-compatible-deps
+   python install.py
    ```
+   
+   The installation script now automatically detects macOS Intel and installs the correct versions (torch==1.13.1, torchvision==0.14.1, torchaudio==0.13.1).
 
-2. **Manual fix**:
+2. **Manual installation**:
    ```bash
    # Uninstall conflicting packages
    pip uninstall -y torch torchvision torchaudio sentence-transformers
    
-   # Install compatible versions in the correct order
-   pip install torch==2.0.1 torchvision==0.15.2 torchaudio==0.15.2
+   # Install the specific versions known to work reliably on Intel macOS
+   pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
    pip install sentence-transformers==2.2.2
    
    # Install the package with --no-deps
@@ -315,11 +394,7 @@ This is a known conflict between PyTorch and sentence-transformers versions on I
    pip install chromadb==0.5.23 tokenizers==0.20.3 mcp>=1.0.0,<2.0.0 websockets>=11.0.3
    ```
 
-3. **Fallback to older versions** (if above solutions fail):
-   ```bash
-   pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
-   pip install sentence-transformers==2.2.2
-   ```
+3. **If you're experiencing issues with memory_wrapper.py**, make sure you have the latest version which now properly handles macOS platform detection and installs the correct PyTorch versions.
 
 ## Debug and Verification Tools
 
