@@ -18,6 +18,7 @@ import json
 import platform
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
+from .utils.utils import ensure_datetime
 
 from mcp.server.models import InitializationOptions
 import mcp.types as types
@@ -960,14 +961,7 @@ class MemoryServer:
             # Format results
             formatted_results = []
             for i, result in enumerate(results):
-                memory_ts = result.memory.timestamp
-                if memory_ts:
-                    if isinstance(memory_ts, datetime):
-                        memory_dt = memory_ts
-                    else:
-                        memory_dt = datetime.fromtimestamp(float(memory_ts))
-                else:
-                    memory_dt = None
+                memory_dt = ensure_datetime(result.memory.timestamp)
                 
                 memory_info = [
                     f"Memory {i+1}:",
@@ -1066,8 +1060,7 @@ class MemoryServer:
             
             formatted_results = []
             for i, result in enumerate(results):
-                memory_timestamp = datetime.fromtimestamp(float(result.memory.timestamp)) if result.memory.timestamp else None
-                
+                memory_timestamp = ensure_datetime(result.memory.timestamp)
                 memory_info = [
                     f"Memory {i+1}:",
                 ]
