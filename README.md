@@ -50,6 +50,29 @@ The `install.py` script will:
 3. Configure the optimal settings for your environment
 4. Verify the installation and provide diagnostics if needed
 
+### Docker Installation
+
+You can run the Memory Service using Docker:
+
+```bash
+# Using Docker Compose (recommended)
+docker-compose up
+
+# Using Docker directly
+docker build -t mcp-memory-service .
+docker run -p 8000:8000 -v /path/to/data:/app/chroma_db -v /path/to/backups:/app/backups mcp-memory-service
+```
+
+We provide multiple Docker Compose configurations for different scenarios:
+- `docker-compose.yml` - Standard configuration using pip install
+- `docker-compose.uv.yml` - Alternative configuration using UV package manager
+- `docker-compose.pythonpath.yml` - Configuration with explicit PYTHONPATH settings
+
+To use an alternative configuration:
+```bash
+docker-compose -f docker-compose.uv.yml up
+```
+
 ### Windows Installation (Special Case)
 
 Windows users may encounter PyTorch installation issues due to platform-specific wheel availability. Use our Windows-specific installation script:
