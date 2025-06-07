@@ -16,6 +16,7 @@ import traceback
 import argparse
 import json
 import platform
+from collections import deque
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from .utils.utils import ensure_datetime
@@ -109,6 +110,9 @@ class MemoryServer:
         self.server = Server(SERVER_NAME)
         self.system_info = get_system_info()
         
+        # Initialize query time tracking
+        self.query_times = deque(maxlen=50)  # Keep last 50 query times for averaging
+        
         try:
             # Initialize paths
             logger.info(f"Creating directories if they don't exist...")
@@ -150,6 +154,20 @@ class MemoryServer:
         except Exception as e:
             logger.error(f"Handler registration test failed: {str(e)}")
             print(f"Handler registration issue: {str(e)}", file=sys.stderr, flush=True)
+    
+    def record_query_time(self, query_time_ms: float):
+        """Record a query time for averaging."""
+        self.query_times.append(query_time_ms)
+        logger.debug(f"Recorded query time: {query_time_ms:.2f}ms")
+    
+    def get_average_query_time(self) -> float:
+        """Get the average query time from recent operations."""
+        if not self.query_times:
+            return 0.0
+        
+        avg = sum(self.query_times) / len(self.query_times)
+        logger.debug(f"Average query time: {avg:.2f}ms (from {len(self.query_times)} samples)")
+        return round(avg, 2)
     
     async def _ensure_storage_initialized(self):
         """Lazily initialize ChromaMemoryStorage when needed."""
@@ -683,6 +701,25 @@ class MemoryServer:
                         inputSchema={"type": "object", "properties": {}}
                     ),
                     types.Tool(
+                        name="dashboard_recall_memory",
+                        description="Dashboard: Recall memories by time expressions and return JSON format.",
+                        inputSchema={
+                            "type": "object",
+                            "properties": {
+                                "query": {
+                                    "type": "string",
+                                    "description": "Natural language query specifying the time frame or content to recall."
+                                },
+                                "n_results": {
+                                    "type": "number",
+                                    "default": 5,
+                                    "description": "Maximum number of results to return."
+                                }
+                            },
+                            "required": ["query"]
+                        }
+                    ),
+                    types.Tool(
                         name="dashboard_retrieve_memory",
                         description="Dashboard: Retrieve memories and return JSON format.",
                         inputSchema={
@@ -793,6 +830,10 @@ class MemoryServer:
                     logger.info("Calling handle_dashboard_check_health")
                     print("Calling handle_dashboard_check_health", file=sys.stderr, flush=True)
                     return await self.handle_dashboard_check_health(arguments)
+                elif name == "dashboard_recall_memory":
+                    logger.info("Calling handle_dashboard_recall_memory")
+                    print("Calling handle_dashboard_recall_memory", file=sys.stderr, flush=True)
+                    return await self.handle_dashboard_recall_memory(arguments)
                 elif name == "dashboard_retrieve_memory":
                     logger.info("Calling handle_dashboard_retrieve_memory")
                     print("Calling handle_dashboard_retrieve_memory", file=sys.stderr, flush=True)
@@ -826,13 +867,16 @@ class MemoryServer:
     async def handle_dashboard_check_health(self, arguments: dict) -> List[types.TextContent]:
         logger.info("=== EXECUTING DASHBOARD_CHECK_HEALTH ===")
         try:
-            # For dashboard health check, we don't need ChromaDB - just check basic server health
+            # Get real average query time from tracked operations
+            avg_query_time = self.get_average_query_time()
+            
+            # Return actual health status with real query time data
             health_status = {
                 "status": "healthy",  # Server is running if we reach this point
                 "health": 100,
-                "avg_query_time": 0
+                "avg_query_time": avg_query_time
             }
-            logger.info(f"Health status: {health_status}")
+            logger.info(f"Health status with real query time: {health_status}")
             result = json.dumps(health_status)
             logger.info(f"Returning JSON: {result}")
             return [types.TextContent(type="text", text=result)]
@@ -840,9 +884,82 @@ class MemoryServer:
             logger.error(f"Error in dashboard_check_health: {str(e)}\n{traceback.format_exc()}")
             return [types.TextContent(type="text", text=json.dumps({"status": "unhealthy", "health": 0, "error": str(e)}))]
 
+    async def handle_dashboard_recall_memory(self, arguments: dict) -> List[types.TextContent]:
+        """Dashboard version of recall_memory that returns JSON."""
+        logger.info("=== EXECUTING DASHBOARD_RECALL_MEMORY ===")
+        start_time = time.time()
+        try:
+            query = arguments.get("query", "")
+            n_results = arguments.get("n_results", 5)
+            
+            if not query:
+                result = {"error": "Query is required", "memories": []}
+                return [types.TextContent(type="text", text=json.dumps(result))]
+            
+            # Initialize storage lazily when needed
+            storage = await self._ensure_storage_initialized()
+            
+            # Parse natural language time expressions (using the same logic as recall_memory)
+            from .utils.time_parser import extract_time_expression, parse_time_expression
+            
+            cleaned_query, (start_timestamp, end_timestamp) = extract_time_expression(query)
+            
+            if start_timestamp is None and end_timestamp is None:
+                # No time expression found, try direct parsing
+                start_timestamp, end_timestamp = parse_time_expression(query)
+            
+            # Measure query time
+            query_start = time.time()
+            
+            # Use recall method with time filtering
+            semantic_query = cleaned_query.strip() if cleaned_query.strip() else None
+            results = await storage.recall(
+                query=semantic_query,
+                n_results=n_results,
+                start_timestamp=start_timestamp,
+                end_timestamp=end_timestamp
+            )
+            
+            query_time_ms = (time.time() - query_start) * 1000
+            # Record the query time for averaging
+            self.record_query_time(query_time_ms)
+            
+            memories = []
+            for result in results:
+                memory_dict = {
+                    "content": result.memory.content,
+                    "content_hash": result.memory.content_hash,
+                    "id": result.memory.content_hash,  # Add ID for delete buttons
+                    "tags": result.memory.tags,
+                    "type": result.memory.memory_type,
+                    "timestamp": result.memory.created_at_iso if hasattr(result.memory, 'created_at_iso') else None,
+                    "metadata": {
+                        "timestamp": result.memory.created_at_iso if hasattr(result.memory, 'created_at_iso') else None
+                    }
+                }
+                
+                # Add relevance score if available
+                if hasattr(result, 'relevance_score') and result.relevance_score is not None:
+                    memory_dict["relevance_score"] = result.relevance_score
+                    memory_dict["similarity"] = result.relevance_score
+                
+                memories.append(memory_dict)
+            
+            response = {"memories": memories}
+            total_time_ms = (time.time() - start_time) * 1000
+            logger.info(f"Dashboard recall completed in {total_time_ms:.2f}ms (query: {query_time_ms:.2f}ms)")
+            return [types.TextContent(type="text", text=json.dumps(response))]
+            
+        except Exception as e:
+            logger.error(f"Error in dashboard_recall_memory: {str(e)}")
+            logger.error(traceback.format_exc())
+            result = {"error": str(e), "memories": []}
+            return [types.TextContent(type="text", text=json.dumps(result))]
+
     async def handle_dashboard_retrieve_memory(self, arguments: dict) -> List[types.TextContent]:
         """Dashboard version of retrieve_memory that returns JSON."""
         logger.info("=== EXECUTING DASHBOARD_RETRIEVE_MEMORY ===")
+        start_time = time.time()
         try:
             query = arguments.get("query")
             n_results = arguments.get("n_results", 5)
@@ -854,21 +971,34 @@ class MemoryServer:
             # Initialize storage lazily when needed
             storage = await self._ensure_storage_initialized()
             
+            # Measure query time
+            query_start = time.time()
             results = await storage.retrieve(query, n_results)
+            query_time_ms = (time.time() - query_start) * 1000
+            
+            # Record the query time for averaging
+            self.record_query_time(query_time_ms)
             
             memories = []
             for result in results:
                 memory_dict = {
                     "content": result.memory.content,
                     "content_hash": result.memory.content_hash,
+                    "id": result.memory.content_hash,  # Add ID for delete buttons
                     "relevance_score": result.relevance_score,
+                    "similarity": result.relevance_score,  # Alias for frontend compatibility
                     "tags": result.memory.tags,
                     "type": result.memory.memory_type,
-                    "timestamp": result.memory.created_at_iso if hasattr(result.memory, 'created_at_iso') else None
+                    "timestamp": result.memory.created_at_iso if hasattr(result.memory, 'created_at_iso') else None,
+                    "metadata": {
+                        "timestamp": result.memory.created_at_iso if hasattr(result.memory, 'created_at_iso') else None
+                    }
                 }
                 memories.append(memory_dict)
             
             response = {"memories": memories}
+            total_time_ms = (time.time() - start_time) * 1000
+            logger.info(f"Dashboard retrieve completed in {total_time_ms:.2f}ms (query: {query_time_ms:.2f}ms)")
             return [types.TextContent(type="text", text=json.dumps(response))]
             
         except Exception as e:
@@ -879,6 +1009,7 @@ class MemoryServer:
     async def handle_dashboard_search_by_tag(self, arguments: dict) -> List[types.TextContent]:
         """Dashboard version of search_by_tag that returns JSON."""
         logger.info("=== EXECUTING DASHBOARD_SEARCH_BY_TAG ===")
+        start_time = time.time()
         try:
             tags = arguments.get("tags", [])
             
@@ -889,20 +1020,32 @@ class MemoryServer:
             # Initialize storage lazily when needed
             storage = await self._ensure_storage_initialized()
             
+            # Measure query time
+            query_start = time.time()
             memories = await storage.search_by_tag(tags)
+            query_time_ms = (time.time() - query_start) * 1000
+            
+            # Record the query time for averaging
+            self.record_query_time(query_time_ms)
             
             memories_list = []
             for memory in memories:
                 memory_dict = {
                     "content": memory.content,
                     "content_hash": memory.content_hash,
+                    "id": memory.content_hash,  # Add ID for delete buttons
                     "tags": memory.tags,
                     "type": memory.memory_type,
-                    "timestamp": memory.created_at_iso if hasattr(memory, 'created_at_iso') else None
+                    "timestamp": memory.created_at_iso if hasattr(memory, 'created_at_iso') else None,
+                    "metadata": {
+                        "timestamp": memory.created_at_iso if hasattr(memory, 'created_at_iso') else None
+                    }
                 }
                 memories_list.append(memory_dict)
             
             response = {"memories": memories_list}
+            total_time_ms = (time.time() - start_time) * 1000
+            logger.info(f"Dashboard search by tag completed in {total_time_ms:.2f}ms (query: {query_time_ms:.2f}ms)")
             return [types.TextContent(type="text", text=json.dumps(response))]
             
         except Exception as e:
