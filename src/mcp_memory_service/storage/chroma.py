@@ -273,7 +273,15 @@ class ChromaMemoryStorage(MemoryStorage):
                             content=doc,
                             content_hash=memory_meta["content_hash"],
                             tags=stored_tags,
-                            memory_type=memory_meta.get("type")
+                            memory_type=memory_meta.get("type"),
+                            # Restore timestamps from stored metadata
+                            created_at=memory_meta.get("created_at"),
+                            created_at_iso=memory_meta.get("created_at_iso"),
+                            updated_at=memory_meta.get("updated_at"),
+                            updated_at_iso=memory_meta.get("updated_at_iso"),
+                            # Include additional metadata
+                            metadata={k: v for k, v in memory_meta.items() 
+                                     if k not in ["content_hash", "tags", "type", "created_at", "created_at_iso", "updated_at", "updated_at_iso"]}
                         )
                         memories.append(memory)
             
@@ -533,21 +541,20 @@ class ChromaMemoryStorage(MemoryStorage):
                         except json.JSONDecodeError:
                             tags = []
                         
-                        # Reconstruct memory object
-                        # timestamp = float(metadata.get("timestamp", time.time()))
-                        raw_timestamp = metadata.get("timestamp", time.time())
-                        if isinstance(raw_timestamp, datetime):
-                            timestamp = time.mktime(raw_timestamp.timetuple())
-                        else:
-                            timestamp = float(raw_timestamp)
+                        # Reconstruct memory object with proper timestamp handling
                         memory = Memory(
                             content=results["documents"][0][i],
                             content_hash=metadata["content_hash"],
                             tags=tags,
                             memory_type=metadata.get("memory_type", ""),
-                            timestamp=timestamp,
+                            # Restore timestamps from stored metadata
+                            created_at=metadata.get("created_at"),
+                            created_at_iso=metadata.get("created_at_iso"),
+                            updated_at=metadata.get("updated_at"),
+                            updated_at_iso=metadata.get("updated_at_iso"),
+                            # Include additional metadata
                             metadata={k: v for k, v in metadata.items() 
-                                    if k not in ["content_hash", "tags", "memory_type", "timestamp"]}
+                                    if k not in ["content_hash", "tags", "memory_type", "created_at", "created_at_iso", "updated_at", "updated_at_iso"]}
                         )
                         
                         # Calculate cosine similarity from distance
@@ -579,20 +586,20 @@ class ChromaMemoryStorage(MemoryStorage):
                 except json.JSONDecodeError:
                     retrieved_tags = []
                 
-                # Ensure timestamp is a float
-                try:
-                    timestamp = float(metadata.get("timestamp", time.time()))
-                except (ValueError, TypeError):
-                    timestamp = time.time()
-
+                # Reconstruct memory object with proper timestamp handling
                 memory = Memory(
                     content=results["documents"][i],
                     content_hash=metadata["content_hash"],
                     tags=retrieved_tags,
                     memory_type=metadata.get("type", ""),
-                    timestamp=timestamp,
+                    # Restore timestamps from stored metadata
+                    created_at=metadata.get("created_at"),
+                    created_at_iso=metadata.get("created_at_iso"),
+                    updated_at=metadata.get("updated_at"),
+                    updated_at_iso=metadata.get("updated_at_iso"),
+                    # Include additional metadata
                     metadata={k: v for k, v in metadata.items() 
-                             if k not in ["type", "content_hash", "tags", "timestamp"]}
+                             if k not in ["type", "content_hash", "tags", "created_at", "created_at_iso", "updated_at", "updated_at_iso"]}
                 )
                 # For time-based retrieval, we don't have a relevance score
                 memory_results.append(MemoryQueryResult(memory=memory, relevance_score=None))
@@ -794,12 +801,20 @@ class ChromaMemoryStorage(MemoryStorage):
                     except (json.JSONDecodeError, TypeError):
                         logger.debug(f"Could not parse tags for memory {metadata.get('content_hash')}")
                 
-                # Reconstruct memory object
+                # Reconstruct memory object with proper timestamp handling
                 memory = Memory(
                     content=results["documents"][0][i],
                     content_hash=metadata["content_hash"],
                     tags=tags,
                     memory_type=metadata.get("memory_type", ""),
+                    # Restore timestamps from stored metadata
+                    created_at=metadata.get("created_at"),
+                    created_at_iso=metadata.get("created_at_iso"),
+                    updated_at=metadata.get("updated_at"),
+                    updated_at_iso=metadata.get("updated_at_iso"),
+                    # Include additional metadata
+                    metadata={k: v for k, v in metadata.items() 
+                             if k not in ["content_hash", "tags", "memory_type", "created_at", "created_at_iso", "updated_at", "updated_at_iso"]}
                 )
                 
                 # Calculate cosine similarity from distance
