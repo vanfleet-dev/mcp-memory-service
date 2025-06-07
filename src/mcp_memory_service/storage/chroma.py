@@ -269,19 +269,25 @@ class ChromaMemoryStorage(MemoryStorage):
                     search_tags = [str(tag).strip() for tag in tags if str(tag).strip()]
                     
                     if any(search_tag in stored_tags for search_tag in search_tags):
+                        # Use stored timestamps or fall back to legacy timestamp field
+                        created_at = memory_meta.get("created_at") or memory_meta.get("timestamp_float") or memory_meta.get("timestamp")
+                        created_at_iso = memory_meta.get("created_at_iso") or memory_meta.get("timestamp_str")
+                        updated_at = memory_meta.get("updated_at") or created_at
+                        updated_at_iso = memory_meta.get("updated_at_iso") or created_at_iso
+                        
                         memory = Memory(
                             content=doc,
                             content_hash=memory_meta["content_hash"],
                             tags=stored_tags,
                             memory_type=memory_meta.get("type"),
-                            # Restore timestamps from stored metadata
-                            created_at=memory_meta.get("created_at"),
-                            created_at_iso=memory_meta.get("created_at_iso"),
-                            updated_at=memory_meta.get("updated_at"),
-                            updated_at_iso=memory_meta.get("updated_at_iso"),
+                            # Restore timestamps with fallback logic
+                            created_at=created_at,
+                            created_at_iso=created_at_iso,
+                            updated_at=updated_at,
+                            updated_at_iso=updated_at_iso,
                             # Include additional metadata
                             metadata={k: v for k, v in memory_meta.items() 
-                                     if k not in ["content_hash", "tags", "type", "created_at", "created_at_iso", "updated_at", "updated_at_iso"]}
+                                     if k not in ["content_hash", "tags", "type", "created_at", "created_at_iso", "updated_at", "updated_at_iso", "timestamp", "timestamp_float", "timestamp_str"]}
                         )
                         memories.append(memory)
             
@@ -542,19 +548,25 @@ class ChromaMemoryStorage(MemoryStorage):
                             tags = []
                         
                         # Reconstruct memory object with proper timestamp handling
+                        # Use stored timestamps or fall back to legacy timestamp field
+                        created_at = metadata.get("created_at") or metadata.get("timestamp_float") or metadata.get("timestamp")
+                        created_at_iso = metadata.get("created_at_iso") or metadata.get("timestamp_str")
+                        updated_at = metadata.get("updated_at") or created_at
+                        updated_at_iso = metadata.get("updated_at_iso") or created_at_iso
+                        
                         memory = Memory(
                             content=results["documents"][0][i],
                             content_hash=metadata["content_hash"],
                             tags=tags,
                             memory_type=metadata.get("memory_type", ""),
-                            # Restore timestamps from stored metadata
-                            created_at=metadata.get("created_at"),
-                            created_at_iso=metadata.get("created_at_iso"),
-                            updated_at=metadata.get("updated_at"),
-                            updated_at_iso=metadata.get("updated_at_iso"),
+                            # Restore timestamps with fallback logic
+                            created_at=created_at,
+                            created_at_iso=created_at_iso,
+                            updated_at=updated_at,
+                            updated_at_iso=updated_at_iso,
                             # Include additional metadata
                             metadata={k: v for k, v in metadata.items() 
-                                    if k not in ["content_hash", "tags", "memory_type", "created_at", "created_at_iso", "updated_at", "updated_at_iso"]}
+                                    if k not in ["content_hash", "tags", "memory_type", "created_at", "created_at_iso", "updated_at", "updated_at_iso", "timestamp", "timestamp_float", "timestamp_str"]}
                         )
                         
                         # Calculate cosine similarity from distance
@@ -587,19 +599,25 @@ class ChromaMemoryStorage(MemoryStorage):
                     retrieved_tags = []
                 
                 # Reconstruct memory object with proper timestamp handling
+                # Use stored timestamps or fall back to legacy timestamp field
+                created_at = metadata.get("created_at") or metadata.get("timestamp_float") or metadata.get("timestamp")
+                created_at_iso = metadata.get("created_at_iso") or metadata.get("timestamp_str")
+                updated_at = metadata.get("updated_at") or created_at
+                updated_at_iso = metadata.get("updated_at_iso") or created_at_iso
+                
                 memory = Memory(
                     content=results["documents"][i],
                     content_hash=metadata["content_hash"],
                     tags=retrieved_tags,
                     memory_type=metadata.get("type", ""),
-                    # Restore timestamps from stored metadata
-                    created_at=metadata.get("created_at"),
-                    created_at_iso=metadata.get("created_at_iso"),
-                    updated_at=metadata.get("updated_at"),
-                    updated_at_iso=metadata.get("updated_at_iso"),
+                    # Restore timestamps with fallback logic
+                    created_at=created_at,
+                    created_at_iso=created_at_iso,
+                    updated_at=updated_at,
+                    updated_at_iso=updated_at_iso,
                     # Include additional metadata
                     metadata={k: v for k, v in metadata.items() 
-                             if k not in ["type", "content_hash", "tags", "created_at", "created_at_iso", "updated_at", "updated_at_iso"]}
+                             if k not in ["type", "content_hash", "tags", "created_at", "created_at_iso", "updated_at", "updated_at_iso", "timestamp", "timestamp_float", "timestamp_str"]}
                 )
                 # For time-based retrieval, we don't have a relevance score
                 memory_results.append(MemoryQueryResult(memory=memory, relevance_score=None))
@@ -802,19 +820,25 @@ class ChromaMemoryStorage(MemoryStorage):
                         logger.debug(f"Could not parse tags for memory {metadata.get('content_hash')}")
                 
                 # Reconstruct memory object with proper timestamp handling
+                # Use stored timestamps or fall back to legacy timestamp field
+                created_at = metadata.get("created_at") or metadata.get("timestamp_float") or metadata.get("timestamp")
+                created_at_iso = metadata.get("created_at_iso") or metadata.get("timestamp_str")
+                updated_at = metadata.get("updated_at") or created_at
+                updated_at_iso = metadata.get("updated_at_iso") or created_at_iso
+                
                 memory = Memory(
                     content=results["documents"][0][i],
                     content_hash=metadata["content_hash"],
                     tags=tags,
                     memory_type=metadata.get("memory_type", ""),
-                    # Restore timestamps from stored metadata
-                    created_at=metadata.get("created_at"),
-                    created_at_iso=metadata.get("created_at_iso"),
-                    updated_at=metadata.get("updated_at"),
-                    updated_at_iso=metadata.get("updated_at_iso"),
+                    # Restore timestamps with fallback logic
+                    created_at=created_at,
+                    created_at_iso=created_at_iso,
+                    updated_at=updated_at,
+                    updated_at_iso=updated_at_iso,
                     # Include additional metadata
                     metadata={k: v for k, v in metadata.items() 
-                             if k not in ["content_hash", "tags", "memory_type", "created_at", "created_at_iso", "updated_at", "updated_at_iso"]}
+                             if k not in ["content_hash", "tags", "memory_type", "created_at", "created_at_iso", "updated_at", "updated_at_iso", "timestamp", "timestamp_float", "timestamp_str"]}
                 )
                 
                 # Calculate cosine similarity from distance
