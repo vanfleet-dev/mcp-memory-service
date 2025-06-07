@@ -767,6 +767,20 @@ class MemoryServer:
                         name="dashboard_create_backup",
                         description="Dashboard: Create database backup and return JSON format.",
                         inputSchema={"type": "object", "properties": {}}
+                    ),
+                    types.Tool(
+                        name="dashboard_delete_memory",
+                        description="Dashboard: Delete a specific memory by ID and return JSON format.",
+                        inputSchema={
+                            "type": "object",
+                            "properties": {
+                                "memory_id": {
+                                    "type": "string",
+                                    "description": "The ID (content hash) of the memory to delete."
+                                }
+                            },
+                            "required": ["memory_id"]
+                        }
                     )
                 ]
                 logger.info(f"Returning {len(tools)} tools")
@@ -854,6 +868,10 @@ class MemoryServer:
                     logger.info("Calling handle_dashboard_create_backup")
                     print("Calling handle_dashboard_create_backup", file=sys.stderr, flush=True)
                     return await self.handle_dashboard_create_backup(arguments)
+                elif name == "dashboard_delete_memory":
+                    logger.info("Calling handle_dashboard_delete_memory")
+                    print("Calling handle_dashboard_delete_memory", file=sys.stderr, flush=True)
+                    return await self.handle_dashboard_delete_memory(arguments)
                 else:
                     logger.warning(f"Unknown tool requested: {name}")
                     print(f"Unknown tool requested: {name}", file=sys.stderr, flush=True)
@@ -1229,6 +1247,42 @@ class MemoryServer:
             
         except Exception as e:
             logger.error(f"Error in dashboard_create_backup: {str(e)}")
+            result = {"status": "error", "message": str(e)}
+            return [types.TextContent(type="text", text=json.dumps(result))]
+
+    async def handle_dashboard_delete_memory(self, arguments: dict) -> List[types.TextContent]:
+        """Dashboard version of delete_memory that returns JSON."""
+        logger.info("=== EXECUTING DASHBOARD_DELETE_MEMORY ===")
+        try:
+            memory_id = arguments.get("memory_id")
+            
+            if not memory_id:
+                result = {"status": "error", "message": "Memory ID is required"}
+                return [types.TextContent(type="text", text=json.dumps(result))]
+            
+            # Initialize storage lazily when needed
+            storage = await self._ensure_storage_initialized()
+            
+            # The memory_id should be the content_hash
+            success, message = await storage.delete(memory_id)
+            
+            if success:
+                result = {
+                    "status": "success", 
+                    "message": message,
+                    "deleted_id": memory_id
+                }
+            else:
+                result = {
+                    "status": "error",
+                    "message": message
+                }
+            
+            logger.info(f"Delete memory result: {result}")
+            return [types.TextContent(type="text", text=json.dumps(result))]
+            
+        except Exception as e:
+            logger.error(f"Error in dashboard_delete_memory: {str(e)}")
             result = {"status": "error", "message": str(e)}
             return [types.TextContent(type="text", text=json.dumps(result))]
 
