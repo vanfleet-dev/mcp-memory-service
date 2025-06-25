@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## v1.3.0 (2025-06-25) - Timestamp Standardization & Codebase Organization
+
+### 📅 Timestamp Standardization
+
+#### Database Maintenance
+- **NEW**: Migration scripts for timestamp format cleanup and standardization
+- **ENHANCED**: Intelligent database path detection from environment or config files
+- **FIXED**: Unique constraint handling during timestamp migration
+- **IMPROVED**: Automatic database backup before migrations
+
+#### Timestamp Format Consolidation
+- **OPTIMIZED**: Standardized all timestamps to integer format in single field
+- **FIXED**: Issue where timestamps were stored in multiple formats (int, float, string)
+- **ENHANCED**: Redundant timestamp field cleanup for better database performance
+- **IMPROVED**: Consistent timestamp storage and retrieval
+
+### 🧹 Codebase Organization
+
+#### Test Organization
+- **ENHANCED**: Structured test directories for unit, integration, and performance testing
+- **IMPROVED**: Better separation of test concerns
+- **ADDED**: Dedicated test configuration and documentation
+- **OPTIMIZED**: Test infrastructure for better maintenance
+
+#### Documentation Improvements
+- **NEW**: Comprehensive migration guides with safety procedures
+- **ENHANCED**: Technical documentation for database structure
+- **ORGANIZED**: Archived obsolete files for cleaner codebase
+- **IMPROVED**: README clarity and organization
+
+### 🛠️ Technical Improvements
+
+#### Database Management
+- **ENHANCED**: More robust error handling during migrations
+- **ADDED**: Database analysis tools for timestamp field proliferation
+- **IMPROVED**: Safe migration with transaction handling
+- **FIXED**: UNIQUE constraint violation during timestamp conversions
+
+#### Development Workflow
+- **ENHANCED**: Better code organization
+- **IMPROVED**: More maintainable directory structure
+- **OPTIMIZED**: Cleaner repository layout
+- **ADDED**: Better branch management
+
 ## v1.2.0 (2025-06-24) - Performance Optimization & Health Check Improvements
 
 ### 🚀 Major Performance Enhancements
@@ -166,6 +210,16 @@ await storage.delete_by_all_tags(["urgent", "important"])    # AND logic
 ---
 
 ## Migration Notes
+
+### From v1.2.0 to v1.3.0
+**Run the migration script for timestamp cleanup!**
+- The script `scripts/migrations/cleanup_mcp_timestamps.py` will:
+  1. Back up your database automatically
+  2. Standardize all timestamps to integer format
+  3. Remove redundant timestamp fields
+  4. Ensure all memories have valid timestamps
+- No changes to code or API are required after migration
+- The script includes safety features to prevent data loss
 
 ### From v1.1.0 to v1.2.0
 **No migration required!** - All changes are backward compatible.
