@@ -736,11 +736,11 @@ class ChromaMemoryStorage(MemoryStorage):
                 
             if start_timestamp is not None:
                 start_timestamp = self.normalize_timestamp(start_timestamp)
-                where_clause["$and"].append({"timestamp": {"$gte": int(start_timestamp)}})
+                where_clause["$and"].append({"timestamp": {"$gte": float(start_timestamp)}})
 
             if end_timestamp is not None:
                 end_timestamp = self.normalize_timestamp(end_timestamp)
-                where_clause["$and"].append({"timestamp": {"$lte": int(end_timestamp)}})
+                where_clause["$and"].append({"timestamp": {"$lte": float(end_timestamp)}})
 
             # If there's no valid where clause, set it to None to avoid ChromaDB errors
             if not where_clause.get("$and", []):
@@ -943,10 +943,11 @@ class ChromaMemoryStorage(MemoryStorage):
         )
         
         # Use streamlined metadata structure
+        # IMPORTANT: Store timestamp as float to preserve sub-second precision
         metadata = {
             "content_hash": memory.content_hash,
             "memory_type": memory.memory_type or "",
-            "timestamp": int(memory.created_at),
+            "timestamp": float(memory.created_at),  # Changed from int() to float()
             "created_at_iso": memory.created_at_iso,
         }
         
