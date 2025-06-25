@@ -11,15 +11,74 @@ This script will:
 import sqlite3
 import shutil
 import os
+import json
 from datetime import datetime
 import sys
+from pathlib import Path
+
+def find_database_path():
+    """Find the database path from Cloud Desktop Config or environment variables."""
+    # First check environment variables (highest priority)
+    if 'MCP_MEMORY_CHROMA_PATH' in os.environ:
+        db_dir = os.environ.get('MCP_MEMORY_CHROMA_PATH')
+        return os.path.join(db_dir, "chroma.sqlite3")
+    
+    # Try to find Cloud Desktop Config
+    config_paths = [
+        os.path.expanduser("~/AppData/Local/DesktopCommander/desktop_config.json"),
+        os.path.expanduser("~/.config/DesktopCommander/desktop_config.json"),
+        os.path.expanduser("~/DesktopCommander/desktop_config.json")
+    ]
+    
+    for config_path in config_paths:
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r') as f:
+                    config = json.load(f)
+                
+                # Look for memory config
+                if 'services' in config and 'memory' in config['services']:
+                    memory_config = config['services']['memory']
+                    if 'env' in memory_config and 'MCP_MEMORY_CHROMA_PATH' in memory_config['env']:
+                        db_dir = memory_config['env']['MCP_MEMORY_CHROMA_PATH']
+                        return os.path.join(db_dir, "chroma.sqlite3")
+            except Exception as e:
+                print(f"Warning: Could not parse config at {config_path}: {e}")
+    
+    # Fallback paths
+    fallback_paths = [
+        os.path.expanduser("~/AppData/Local/mcp-memory/chroma.sqlite3"),
+        os.path.expanduser("~/.local/share/mcp-memory/chroma.sqlite3"),
+    ]
+    
+    for path in fallback_paths:
+        if os.path.exists(path):
+            return path
+    
+    # Ask user if nothing found
+    print("Could not automatically determine database path.")
+    user_path = input("Please enter the full path to the chroma.sqlite3 database: ")
+    return user_path if user_path else None
 
 # Database paths
-DB_PATH = "/Users/hkr/Library/Application Support/mcp-memory/chroma_db/chroma.sqlite3"
-BACKUP_PATH = f"{DB_PATH}.backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+DB_PATH = find_database_path()
+BACKUP_PATH = f"{DB_PATH}.backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}" if DB_PATH else None
 
 def backup_database():
     """Create a backup of the database before migration."""
+    if not DB_PATH or not BACKUP_PATH:
+        print("❌ Cannot create backup: Database path not determined")
+        return False
+    
+    # Ensure backup directory exists
+    backup_dir = os.path.dirname(BACKUP_PATH)
+    if not os.path.exists(backup_dir):
+        try:
+            os.makedirs(backup_dir, exist_ok=True)
+        except Exception as e:
+            print(f"❌ Failed to create backup directory: {e}")
+            return False
+    
     print(f"Creating backup at: {BACKUP_PATH}")
     try:
         shutil.copy2(DB_PATH, BACKUP_PATH)
@@ -116,11 +175,27 @@ def migrate_timestamps(conn):
                 timestamp_value = int(datetime.now().timestamp())
                 print(f"  ⚠️  Memory {memory_id} has no timestamp, using current time")
             
-            # Insert the timestamp value
+            # Check if a timestamp entry already exists for this memory
             cursor.execute("""
-                INSERT INTO embedding_metadata (id, key, string_value, int_value, float_value)
-                VALUES (?, 'timestamp', NULL, ?, NULL)
-            """, (memory_id, timestamp_value))
+                SELECT 1 FROM embedding_metadata 
+                WHERE id = ? AND key = 'timestamp'
+            """, (memory_id,))
+            
+            if cursor.fetchone():
+                # Update existing timestamp record
+                cursor.execute("""
+                    UPDATE embedding_metadata 
+                    SET string_value = NULL, 
+                        int_value = ?, 
+                        float_value = NULL
+                    WHERE id = ? AND key = 'timestamp'
+                """, (timestamp_value, memory_id))
+            else:
+                # Insert new timestamp record
+                cursor.execute("""
+                    INSERT INTO embedding_metadata (id, key, string_value, int_value, float_value)
+                    VALUES (?, 'timestamp', NULL, ?, NULL)
+                """, (memory_id, timestamp_value))
             
             fixed_count += 1
         
@@ -141,8 +216,40 @@ def migrate_timestamps(conn):
     """)
     
     float_fixes = cursor.rowcount
-    conn.commit()
     print(f"  ✅ Converted {float_fixes} float timestamps to integers")
+    
+    # Find timestamps stored as strings that should be ints
+    cursor.execute("""
+        SELECT id, string_value
+        FROM embedding_metadata
+        WHERE key = 'timestamp' 
+        AND string_value IS NOT NULL 
+        AND int_value IS NULL
+    """)
+    
+    string_timestamps = cursor.fetchall()
+    string_fixes = 0
+    
+    for row_id, string_value in string_timestamps:
+        try:
+            # Try to convert string to float then to int
+            int_timestamp = int(float(string_value))
+            
+            # Update the record
+            cursor.execute("""
+                UPDATE embedding_metadata
+                SET int_value = ?,
+                    string_value = NULL
+                WHERE id = ? AND key = 'timestamp'
+            """, (int_timestamp, row_id))
+            
+            string_fixes += 1
+        except (ValueError, TypeError):
+            # Skip strings that can't be converted to float/int
+            print(f"  ⚠️  Could not convert string timestamp for memory {row_id}: '{string_value}'")
+    
+    conn.commit()
+    print(f"  ✅ Converted {string_fixes} string timestamps to integers")
 
 def cleanup_redundant_fields(conn):
     """Remove redundant timestamp fields."""
@@ -241,6 +348,13 @@ def main():
     print("MCP Memory Timestamp Migration Script")
     print("=" * 70)
     
+    # Check if database path was found
+    if not DB_PATH:
+        print("❌ Could not determine database path")
+        return 1
+    
+    print(f"📂 Using database: {DB_PATH}")
+    
     # Check if database exists
     if not os.path.exists(DB_PATH):
         print(f"❌ Database not found at: {DB_PATH}")
@@ -254,6 +368,7 @@ def main():
     # Connect to database
     try:
         conn = sqlite3.connect(DB_PATH)
+        conn.set_trace_callback(print)  # Print all SQL statements for debugging
         print(f"\n✅ Connected to database: {DB_PATH}")
     except Exception as e:
         print(f"❌ Failed to connect to database: {e}")
@@ -280,9 +395,24 @@ def main():
             conn.close()
             return 0
         
-        # Perform migration
-        migrate_timestamps(conn)
-        cleanup_redundant_fields(conn)
+        # Perform migration steps one by one with transaction control
+        try:
+            # Start with ensuring timestamps
+            migrate_timestamps(conn)
+            print("  ✅ Timestamp migration successful")
+        except Exception as e:
+            conn.rollback()
+            print(f"  ❌ Failed during timestamp migration: {e}")
+            raise
+        
+        try:
+            # Then cleanup redundant fields
+            cleanup_redundant_fields(conn)
+            print("  ✅ Cleanup successful")
+        except Exception as e:
+            conn.rollback()
+            print(f"  ❌ Failed during cleanup: {e}")
+            raise
         
         # Verify results
         verify_migration(conn)
