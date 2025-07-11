@@ -11,7 +11,13 @@
       "WebFetch(domain:github.com)",
       "Bash(chmod:*)",
       "Bash(gh issue close:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue comment:*)",
+      "WebFetch(domain:glama.ai)",
+      "WebFetch(domain:alexgarcia.xyz)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }

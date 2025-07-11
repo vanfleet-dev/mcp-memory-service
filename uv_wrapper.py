@@ -53,12 +53,22 @@ def install_uv():
     """Install UV if not already installed."""
     print_info("Installing UV package manager...")
     try:
+        # Try regular pip install first
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'uv'])
         print_success("UV installed successfully!")
         return True
     except subprocess.SubprocessError as e:
-        print_error(f"Failed to install UV: {e}")
-        return False
+        print_warning(f"Failed to install UV with pip: {e}")
+        
+        # Try with --user flag for user installation
+        try:
+            print_info("Trying user installation...")
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--user', 'uv'])
+            print_success("UV installed successfully with --user flag!")
+            return True
+        except subprocess.SubprocessError as e2:
+            print_error(f"Failed to install UV with --user: {e2}")
+            return False
 
 def run_with_uv():
     """Run the memory service using UV."""

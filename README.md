@@ -63,16 +63,29 @@ The `install.py` script will:
 
 ### Docker Installation
 
-You can run the Memory Service using Docker:
+#### Docker Hub (Recommended)
+
+The easiest way to run the Memory Service is using our pre-built Docker images:
 
 ```bash
-# Using Docker Compose (recommended)
-docker-compose up
+# Pull the latest image
+docker pull doobidoo/mcp-memory-service:latest
 
-# Using Docker directly
-docker build -t mcp-memory-service .
-docker run -p 8000:8000 -v /path/to/data:/app/chroma_db -v /path/to/backups:/app/backups mcp-memory-service
+# Run with default settings (for MCP clients like Claude Desktop)
+docker run -d -p 8000:8000 \
+  -v $(pwd)/data/chroma_db:/app/chroma_db \
+  -v $(pwd)/data/backups:/app/backups \
+  doobidoo/mcp-memory-service:latest
+
+# Run in standalone mode (for testing/development)
+docker run -d -p 8000:8000 \
+  -e MCP_STANDALONE_MODE=1 \
+  -v $(pwd)/data/chroma_db:/app/chroma_db \
+  -v $(pwd)/data/backups:/app/backups \
+  doobidoo/mcp-memory-service:latest
 ```
+
+#### Docker Compose
 
 We provide multiple Docker Compose configurations for different scenarios:
 - `docker-compose.yml` - Standard configuration for MCP clients (Claude Desktop)
@@ -80,18 +93,42 @@ We provide multiple Docker Compose configurations for different scenarios:
 - `docker-compose.uv.yml` - Alternative configuration using UV package manager
 - `docker-compose.pythonpath.yml` - Configuration with explicit PYTHONPATH settings
 
-#### Standalone Mode (Recommended for Testing)
-
-To run the service without requiring an active MCP client connection:
 ```bash
+# Using Docker Compose (recommended)
+docker-compose up
+
+# Standalone mode (prevents boot loops)
 docker-compose -f docker-compose.standalone.yml up
 ```
 
-This mode prevents the "boot loop" issue where Docker containers exit immediately after initialization when no MCP client is connected.
+#### Building from Source
 
-To use an alternative configuration:
+If you need to build the Docker image yourself:
+
 ```bash
-docker-compose -f docker-compose.uv.yml up
+# Build the image
+docker build -t mcp-memory-service .
+
+# Run the container
+docker run -p 8000:8000 \
+  -v $(pwd)/data/chroma_db:/app/chroma_db \
+  -v $(pwd)/data/backups:/app/backups \
+  mcp-memory-service
+```
+
+### uvx Installation
+
+You can install and run the Memory Service using uvx for isolated execution:
+
+```bash
+# Install uvx if not already installed
+pip install uvx
+
+# Install and run the memory service
+uvx mcp-memory-service
+
+# Or install from GitHub
+uvx --from git+https://github.com/doobidoo/mcp-memory-service.git mcp-memory-service
 ```
 
 ### Windows Installation (Special Case)

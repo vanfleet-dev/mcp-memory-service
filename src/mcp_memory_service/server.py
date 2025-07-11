@@ -838,6 +838,77 @@ class MemoryServer:
                             },
                             "required": ["memory_id"]
                         }
+                    ),
+                    types.Tool(
+                        name="update_memory_metadata",
+                        description="""Update memory metadata without recreating the entire memory entry.
+                        
+                        This provides efficient metadata updates while preserving the original
+                        memory content, embeddings, and optionally timestamps.
+                        
+                        Examples:
+                        # Add tags to a memory
+                        {
+                            "content_hash": "abc123...",
+                            "updates": {
+                                "tags": ["important", "reference", "new-tag"]
+                            }
+                        }
+                        
+                        # Update memory type and custom metadata
+                        {
+                            "content_hash": "abc123...",
+                            "updates": {
+                                "memory_type": "reminder",
+                                "metadata": {
+                                    "priority": "high",
+                                    "due_date": "2024-01-15"
+                                }
+                            }
+                        }
+                        
+                        # Update custom fields directly
+                        {
+                            "content_hash": "abc123...",
+                            "updates": {
+                                "priority": "urgent",
+                                "status": "active"
+                            }
+                        }""",
+                        inputSchema={
+                            "type": "object",
+                            "properties": {
+                                "content_hash": {
+                                    "type": "string",
+                                    "description": "The content hash of the memory to update."
+                                },
+                                "updates": {
+                                    "type": "object",
+                                    "description": "Dictionary of metadata fields to update.",
+                                    "properties": {
+                                        "tags": {
+                                            "type": "array",
+                                            "items": {"type": "string"},
+                                            "description": "Replace existing tags with this list."
+                                        },
+                                        "memory_type": {
+                                            "type": "string",
+                                            "description": "Update the memory type (e.g., 'note', 'reminder', 'fact')."
+                                        },
+                                        "metadata": {
+                                            "type": "object",
+                                            "description": "Custom metadata fields to merge with existing metadata."
+                                        }
+                                    }
+                                },
+                                "preserve_timestamps": {
+                                    "type": "boolean",
+                                    "default": True,
+                                    "description": "Whether to preserve the original created_at timestamp (default: true)."
+                                }
+                            },
+                            "required": ["content_hash", "updates"]
+                        }
                     )
                 ]
                 logger.info(f"Returning {len(tools)} tools")
@@ -929,6 +1000,10 @@ class MemoryServer:
                     logger.info("Calling handle_dashboard_delete_memory")
                     print("Calling handle_dashboard_delete_memory", file=sys.stderr, flush=True)
                     return await self.handle_dashboard_delete_memory(arguments)
+                elif name == "update_memory_metadata":
+                    logger.info("Calling handle_update_memory_metadata")
+                    print("Calling handle_update_memory_metadata", file=sys.stderr, flush=True)
+                    return await self.handle_update_memory_metadata(arguments)
                 else:
                     logger.warning(f"Unknown tool requested: {name}")
                     print(f"Unknown tool requested: {name}", file=sys.stderr, flush=True)
@@ -1539,6 +1614,47 @@ class MemoryServer:
             logger.error(f"Error cleaning up duplicates: {str(e)}\n{traceback.format_exc()}")
             return [types.TextContent(type="text", text=f"Error cleaning up duplicates: {str(e)}")]
 
+    async def handle_update_memory_metadata(self, arguments: dict) -> List[types.TextContent]:
+        """Handle memory metadata update requests."""
+        try:
+            content_hash = arguments.get("content_hash")
+            updates = arguments.get("updates")
+            preserve_timestamps = arguments.get("preserve_timestamps", True)
+            
+            if not content_hash:
+                return [types.TextContent(type="text", text="Error: content_hash is required")]
+            
+            if not updates:
+                return [types.TextContent(type="text", text="Error: updates dictionary is required")]
+            
+            if not isinstance(updates, dict):
+                return [types.TextContent(type="text", text="Error: updates must be a dictionary")]
+            
+            # Initialize storage lazily when needed
+            storage = await self._ensure_storage_initialized()
+            
+            # Call the storage method
+            success, message = await storage.update_memory_metadata(
+                content_hash=content_hash,
+                updates=updates,
+                preserve_timestamps=preserve_timestamps
+            )
+            
+            if success:
+                logger.info(f"Successfully updated metadata for memory {content_hash}")
+                return [types.TextContent(
+                    type="text", 
+                    text=f"Successfully updated memory metadata. {message}"
+                )]
+            else:
+                logger.warning(f"Failed to update metadata for memory {content_hash}: {message}")
+                return [types.TextContent(type="text", text=f"Failed to update memory metadata: {message}")]
+                
+        except Exception as e:
+            error_msg = f"Error updating memory metadata: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            return [types.TextContent(type="text", text=error_msg)]
+
     async def handle_get_embedding(self, arguments: dict) -> List[types.TextContent]:
         content = arguments.get("content")
         if not content:
@@ -1957,6 +2073,12 @@ class MemoryServer:
 def parse_args():
     parser = argparse.ArgumentParser(
         description="MCP Memory Service - A semantic memory service using the Model Context Protocol"
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"MCP Memory Service {SERVER_VERSION}",
+        help="Show version information"
     )
     parser.add_argument(
         "--debug", 
