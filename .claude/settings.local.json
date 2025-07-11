@@ -49,7 +49,8 @@
       "Bash(timeout:*)",
       "Bash(./setup_claude_mcp.sh:*)",
       "Bash(git fetch:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }
