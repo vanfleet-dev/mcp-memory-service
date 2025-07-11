@@ -40,7 +40,16 @@
       "Bash(mv:*)",
       "Bash(uv run:*)",
       "Bash(npx @modelcontextprotocol/inspector uv:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(echo:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(export MCP_MEMORY_STORAGE_BACKEND=sqlite_vec)",
+      "Bash(./start_sqlite_vec.sh:*)",
+      "Bash(timeout:*)",
+      "Bash(./setup_claude_mcp.sh:*)",
+      "Bash(git fetch:*)",
+      "Bash(git rebase:*)"
     ],
     "deny": []
   }
