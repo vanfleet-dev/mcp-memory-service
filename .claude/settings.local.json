@@ -6,7 +6,12 @@
       "Bash(timeout 10s python -m src.mcp_memory_service.server:*)",
       "Bash(uv:*)",
       "Bash(GTK_IM_MODULE=\"\" python -m src.mcp_memory_service.server --debug)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(chmod:*)",
+      "Bash(gh issue close:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

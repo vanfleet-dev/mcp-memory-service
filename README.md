@@ -75,9 +75,19 @@ docker run -p 8000:8000 -v /path/to/data:/app/chroma_db -v /path/to/backups:/app
 ```
 
 We provide multiple Docker Compose configurations for different scenarios:
-- `docker-compose.yml` - Standard configuration using pip install
+- `docker-compose.yml` - Standard configuration for MCP clients (Claude Desktop)
+- `docker-compose.standalone.yml` - **Standalone mode** for testing/development (prevents boot loops)
 - `docker-compose.uv.yml` - Alternative configuration using UV package manager
 - `docker-compose.pythonpath.yml` - Configuration with explicit PYTHONPATH settings
+
+#### Standalone Mode (Recommended for Testing)
+
+To run the service without requiring an active MCP client connection:
+```bash
+docker-compose -f docker-compose.standalone.yml up
+```
+
+This mode prevents the "boot loop" issue where Docker containers exit immediately after initialization when no MCP client is connected.
 
 To use an alternative configuration:
 ```bash

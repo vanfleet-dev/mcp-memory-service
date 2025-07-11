@@ -2033,31 +2033,63 @@ async def async_main():
                     logger.info(f"Waiting 2 seconds before retry...")
                     await asyncio.sleep(2)
         
-        # Start the server
-        async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
-            logger.info("Server started and ready to handle requests")
-            await memory_server.server.run(
-                read_stream,
-                write_stream,
-                InitializationOptions(
-                    server_name=SERVER_NAME,
-                    server_version=SERVER_VERSION,
-                    # Explicitly specify the protocol version that matches Claude's request
-                    # Use the latest protocol version to ensure compatibility with all clients
-                    protocol_version="2024-11-05",
-                    capabilities=memory_server.server.get_capabilities(
-                        notification_options=NotificationOptions(),
-                        experimental_capabilities={
-                            "hardware_info": {
-                                "architecture": system_info.architecture,
-                                "accelerator": system_info.accelerator,
-                                "memory_gb": system_info.memory_gb,
-                                "cpu_count": system_info.cpu_count
-                            }
-                        },
-                    ),
-                ),
-            )
+        # Check if running in standalone mode (Docker without active client)
+        standalone_mode = os.environ.get('MCP_STANDALONE_MODE', '').lower() == '1'
+        running_in_docker = os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER', False)
+        
+        if standalone_mode:
+            logger.info("Running in standalone mode - keeping server alive without active client")
+            print("MCP Memory Service running in standalone mode", file=sys.stderr, flush=True)
+            
+            # Keep the server running indefinitely
+            try:
+                while True:
+                    await asyncio.sleep(60)  # Sleep for 60 seconds at a time
+                    logger.debug("Standalone server heartbeat")
+            except asyncio.CancelledError:
+                logger.info("Standalone server cancelled")
+                raise
+        else:
+            # Start the server with stdio
+            async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
+                logger.info("Server started and ready to handle requests")
+                
+                if running_in_docker:
+                    logger.info("Detected Docker environment - ensuring proper stdio handling")
+                    print("MCP Memory Service running in Docker container", file=sys.stderr, flush=True)
+                
+                try:
+                    await memory_server.server.run(
+                        read_stream,
+                        write_stream,
+                        InitializationOptions(
+                            server_name=SERVER_NAME,
+                            server_version=SERVER_VERSION,
+                            # Explicitly specify the protocol version that matches Claude's request
+                            # Use the latest protocol version to ensure compatibility with all clients
+                            protocol_version="2024-11-05",
+                            capabilities=memory_server.server.get_capabilities(
+                                notification_options=NotificationOptions(),
+                                experimental_capabilities={
+                                    "hardware_info": {
+                                        "architecture": system_info.architecture,
+                                        "accelerator": system_info.accelerator,
+                                        "memory_gb": system_info.memory_gb,
+                                        "cpu_count": system_info.cpu_count
+                                    }
+                                },
+                            ),
+                        ),
+                    )
+                except asyncio.CancelledError:
+                    logger.info("Server run cancelled")
+                    raise
+                except Exception as e:
+                    logger.error(f"Error in server.run: {str(e)}")
+                    logger.error(traceback.format_exc())
+                    raise
+                finally:
+                    logger.info("Server run completed")
     except Exception as e:
         logger.error(f"Server error: {str(e)}")
         logger.error(traceback.format_exc())
@@ -2065,7 +2097,22 @@ async def async_main():
         raise
 
 def main():
+    import signal
+    
+    # Set up signal handlers for graceful shutdown
+    def signal_handler(signum, frame):
+        logger.info(f"Received signal {signum}, shutting down gracefully...")
+        sys.exit(0)
+    
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
     try:
+        # Check if running in Docker
+        if os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER', False):
+            logger.info("Running in Docker container")
+            print("MCP Memory Service starting in Docker mode", file=sys.stderr, flush=True)
+        
         asyncio.run(async_main())
     except KeyboardInterrupt:
         logger.info("Shutting down gracefully...")
