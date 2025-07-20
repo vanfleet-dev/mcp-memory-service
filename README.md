@@ -1,5 +1,3 @@
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/doobidoo-mcp-memory-service-badge.png)](https://mseep.ai/app/doobidoo-mcp-memory-service)
-
 # MCP Memory Service
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -10,6 +8,8 @@ An MCP server providing semantic memory and persistent storage capabilities for 
 
 <img width="240" alt="grafik" src="https://github.com/user-attachments/assets/eab1f341-ca54-445c-905e-273cd9e89555" />
 <a href="https://glama.ai/mcp/servers/bzvl3lz34o"><img width="380" height="200" src="https://glama.ai/mcp/servers/bzvl3lz34o/badge" alt="Memory Service MCP server" /></a>
+
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/doobidoo-mcp-memory-service-badge.png)](https://mseep.ai/app/doobidoo-mcp-memory-service)
 
 ## Help
 Talk to the Repo with [TalkToGitHub](https://talktogithub.com/doobidoo/mcp-memory-service)!
