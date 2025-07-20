@@ -13,10 +13,18 @@ import os
 import time
 import traceback
 from chromadb.utils import embedding_functions
-from sentence_transformers import SentenceTransformer
 import logging
 from typing import List, Dict, Any, Tuple, Set, Optional
 from datetime import datetime, date
+
+# Try to import SentenceTransformer, but don't fail if it's not available
+try:
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+    print("WARNING: sentence_transformers not available. Using default embeddings.")
+
 
 from .base import MemoryStorage
 from ..models.memory import Memory, MemoryQueryResult
@@ -32,6 +40,17 @@ import mcp.types as types
 
 logger = logging.getLogger(__name__)
 
+# Global model cache for performance optimization
+import threading
+import hashlib
+from functools import lru_cache
+
+_MODEL_CACHE = {}
+_EMBEDDING_CACHE = {}
+_QUERY_CACHE = {}
+_CACHE_LOCK = threading.Lock()
+_PERFORMANCE_STATS = {"query_times": [], "cache_hits": 0, "cache_misses": 0}
+
 # List of models to try in order of preference
 # From most capable to least capable
 MODEL_FALLBACKS = [
@@ -43,8 +62,8 @@ MODEL_FALLBACKS = [
 ]
 
 class ChromaMemoryStorage(MemoryStorage):
-    def __init__(self, path: str):
-        """Initialize ChromaDB storage with hardware-aware embedding function."""
+    def __init__(self, path: str, preload_model: bool = True):
+        """Initialize ChromaDB storage with hardware-aware embedding function and performance optimizations."""
         self.path = path
         self.model = None
         self.embedding_function = None
@@ -53,14 +72,59 @@ class ChromaMemoryStorage(MemoryStorage):
         self.system_info = get_system_info()
         self.embedding_settings = get_optimal_embedding_settings()
         
-        # Log system information
-        logger.info(f"Detected system: {self.system_info.os_name} {self.system_info.architecture}")
-        logger.info(f"Accelerator: {self.system_info.accelerator}")
-        logger.info(f"Memory: {self.system_info.memory_gb:.2f} GB")
-        logger.info(f"Using device: {self.embedding_settings['device']}")
+        # Performance settings
+        self.enable_query_cache = True
+        self.cache_ttl = 300  # 5 minutes
+        self.batch_size = self.embedding_settings.get('batch_size', 32)
         
-        # Set environment variables for better cross-platform compatibility
+        # Log system information (reduced logging for performance)
+        if logger.isEnabledFor(logging.INFO):
+            logger.info(f"System: {self.system_info.os_name} {self.system_info.architecture}, "
+                       f"Accelerator: {self.system_info.accelerator}, "
+                       f"Memory: {self.system_info.memory_gb:.2f}GB, "
+                       f"Device: {self.embedding_settings['device']}")
+        
+        # Configure environment for performance
+        self._configure_performance_environment()
+        
+        try:
+            if preload_model:
+                # Use cached model if available, otherwise load and cache
+                self._initialize_with_cache()
+            else:
+                # Initialize with hardware-aware settings (legacy mode)
+                self._initialize_embedding_model()
+            
+            # Initialize ChromaDB with performance optimizations
+            self._initialize_chromadb_optimized()
+            
+            # Verify initialization was successful
+            if self.collection is None:
+                raise RuntimeError("Collection initialization failed - collection is None")
+            if self.embedding_function is None:
+                raise RuntimeError("Embedding function initialization failed - embedding function is None")
+            
+            logger.info("ChromaMemoryStorage initialization completed successfully")
+            
+        except Exception as e:
+            logger.error(f"Error initializing ChromaDB: {str(e)}")
+            logger.error(traceback.format_exc())
+            print(f"ChromaDB initialization error: {str(e)}", file=sys.stderr)
+            
+            # Set objects to None to indicate failed state
+            self.collection = None
+            self.embedding_function = None
+            self.client = None
+            self.model = None
+            
+            # Re-raise the exception so callers know initialization failed
+            raise RuntimeError(f"ChromaMemoryStorage initialization failed: {str(e)}") from e
+    
+    def _configure_performance_environment(self):
+        """Set optimal environment variables for performance."""
         os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
+        os.environ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "1"
         
         # For Apple Silicon, ensure we use MPS when available
         if self.system_info.architecture == "arm64" and self.system_info.os_name == "darwin":
@@ -68,35 +132,162 @@ class ChromaMemoryStorage(MemoryStorage):
         
         # For Windows with limited GPU memory, use smaller chunks
         if self.system_info.os_name == "windows" and self.system_info.accelerator == AcceleratorType.CUDA:
-            os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
+            os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128,garbage_collection_threshold:0.6"
         
+        # CPU optimizations
+        os.environ["OMP_NUM_THREADS"] = str(min(8, os.cpu_count() or 1))
+        os.environ["MKL_NUM_THREADS"] = str(min(8, os.cpu_count() or 1))
+    
+    def _get_model_cache_key(self) -> str:
+        """Generate cache key for model based on system settings."""
+        settings = self.embedding_settings
+        return f"{settings['model_name']}_{settings['device']}_{settings.get('batch_size', 32)}"
+    
+    def _initialize_with_cache(self):
+        """Initialize with model caching for better performance."""
+        if not SENTENCE_TRANSFORMERS_AVAILABLE:
+            logger.warning("SentenceTransformer not available, using default embedding function")
+            self.model = None
+            self.embedding_function = embedding_functions.DefaultEmbeddingFunction()
+            return
+            
+        model_key = self._get_model_cache_key()
+        
+        with _CACHE_LOCK:
+            if model_key in _MODEL_CACHE:
+                logger.info("Using cached embedding model")
+                cached_data = _MODEL_CACHE[model_key]
+                self.model = cached_data['model']
+                self.embedding_function = cached_data['function']
+                return
+        
+        # Model not in cache, load and cache it
+        logger.info("Loading and caching new embedding model")
+        self._load_and_cache_model(model_key)
+    
+    def _load_and_cache_model(self, cache_key: str):
+        """Load model and cache it for reuse."""
+        if not SENTENCE_TRANSFORMERS_AVAILABLE:
+            logger.warning("SentenceTransformer not available, using default embedding function")
+            self.model = None
+            self.embedding_function = embedding_functions.DefaultEmbeddingFunction()
+            return
+            
+        preferred_model = self.embedding_settings["model_name"]
+        device = self.embedding_settings["device"]
+        batch_size = self.embedding_settings["batch_size"]
+        
+        # Try the preferred model first, then fall back to alternatives
+        models_to_try = [preferred_model] + [m for m in MODEL_FALLBACKS if m != preferred_model]
+        
+        for model_name in models_to_try:
+            try:
+                logger.info(f"Loading model: {model_name} on {device}")
+                start_time = time.time()
+                
+                # Load model with optimizations
+                model = SentenceTransformer(model_name, device=device)
+                model.eval()  # Set to evaluation mode for inference
+                
+                # Try to use half precision for faster inference on GPU
+                if device != "cpu" and hasattr(model, 'half'):
+                    try:
+                        model = model.half()
+                    except:
+                        pass  # Fallback to full precision
+                
+                # Test the model
+                _ = model.encode("Test encoding", batch_size=1, show_progress_bar=False)
+                
+                load_time = time.time() - start_time
+                logger.info(f"Successfully loaded model {model_name} in {load_time:.2f}s")
+                
+                # Create embedding function
+                embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
+                    model_name=model_name,
+                    device=device
+                )
+                
+                # Cache the loaded model
+                with _CACHE_LOCK:
+                    _MODEL_CACHE[cache_key] = {
+                        'model': model,
+                        'function': embedding_function,
+                        'loaded_at': time.time(),
+                        'model_name': model_name,
+                        'device': device
+                    }
+                
+                self.model = model
+                self.embedding_function = embedding_function
+                return
+                
+            except Exception as e:
+                logger.warning(f"Failed to load model {model_name} on {device}: {str(e)}")
+                continue
+        
+        # If all models failed, fall back to default embedding function
+        logger.warning("All optimized model loading failed, falling back to default embedding function")
+        self.model = None
+        self.embedding_function = embedding_functions.DefaultEmbeddingFunction()
+        self._initialize_embedding_model()
+    
+    def _initialize_chromadb_optimized(self):
+        """Initialize ChromaDB with performance optimizations."""
         try:
-            # Initialize with hardware-aware settings
-            self._initialize_embedding_model()
+            # Use PersistentClient to properly load existing databases
+            logger.info(f"Initializing ChromaDB persistent client at path: {self.path}")
+            self.client = chromadb.PersistentClient(path=self.path)
             
-            # Initialize ChromaDB with new client format
-            logger.info(f"Initializing ChromaDB client at path: {path}")
-            self.client = chromadb.PersistentClient(
-                path=path
-            )
+            # Create collection with optimized HNSW settings
+            collection_metadata = {
+                "hnsw:space": "cosine",
+                "hnsw:construction_ef": 200,  # Higher for better accuracy
+                "hnsw:search_ef": 100,        # Balanced search performance
+                "hnsw:M": 16,                 # Better graph connectivity
+            }
             
-            # Get or create collection with proper embedding function
-            logger.info("Creating or getting collection...")
+            # If embedding_function is None, create a simple pass-through function for testing
+            if self.embedding_function is None:
+                # Simple pass-through function for testing
+                from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+                self.embedding_function = DefaultEmbeddingFunction()
+            
             self.collection = self.client.get_or_create_collection(
                 name="memory_collection",
-                metadata={"hnsw:space": "cosine"},
+                metadata=collection_metadata,
                 embedding_function=self.embedding_function
             )
-            logger.info("Collection initialized successfully")
+            logger.info("Collection initialized with performance optimizations")
         except Exception as e:
-            logger.error(f"Error initializing ChromaDB: {str(e)}")
-            logger.error(traceback.format_exc())
-            # Just log error but don't raise - we'll handle it gracefully
-            print(f"ChromaDB initialization error: {str(e)}", file=sys.stderr)
-            # We still need to continue initialization for Smithery to work
+            logger.error(f"Error in _initialize_chromadb_optimized: {str(e)}")
+            raise
+    
+    @lru_cache(maxsize=1000)
+    def _cached_embed_query(self, query: str) -> tuple:
+        """Cache embeddings for identical queries to improve performance."""
+        if self.model:
+            try:
+                embedding = self.model.encode(
+                    query, 
+                    batch_size=1,
+                    show_progress_bar=False,
+                    convert_to_numpy=True
+                )
+                return tuple(embedding.tolist())
+            except Exception as e:
+                logger.warning(f"Error in cached embedding: {e}")
+                return None
+        return None
     
     def _initialize_embedding_model(self):
         """Initialize the embedding model with fallbacks for different hardware."""
+        if not SENTENCE_TRANSFORMERS_AVAILABLE:
+            logger.warning("SentenceTransformer not available, using default embedding function")
+            self.model = None
+            self.embedding_function = embedding_functions.DefaultEmbeddingFunction()
+            return
+            
         # Start with the optimal model for this system
         preferred_model = self.embedding_settings["model_name"]
         device = self.embedding_settings["device"]
@@ -208,7 +399,7 @@ class ChromaMemoryStorage(MemoryStorage):
         return time.time()
     
     async def store(self, memory: Memory) -> Tuple[bool, str]:
-        """Store a memory with proper embedding handling."""
+        """Store a memory with optimized performance."""
         try:
             # Check if collection is initialized
             if self.collection is None:
@@ -223,8 +414,8 @@ class ChromaMemoryStorage(MemoryStorage):
             if existing["ids"]:
                 return False, "Duplicate content detected"
             
-            # Format metadata properly
-            metadata = self._format_metadata_for_chroma(memory)
+            # Format metadata using optimized method
+            metadata = self._optimize_metadata_for_chroma(memory)
             
             # Add additional metadata
             metadata.update(memory.metadata)
@@ -245,8 +436,60 @@ class ChromaMemoryStorage(MemoryStorage):
             error_msg = f"Error storing memory: {str(e)}"
             logger.error(error_msg)
             return False, error_msg
+            
+    async def store_batch(self, memories: List[Memory]) -> List[Tuple[bool, str]]:
+        """Batch store operation for improved performance."""
+        if not memories:
+            return []
+        
+        try:
+            documents = []
+            metadatas = []
+            ids = []
+            results = []
+            
+            for memory in memories:
+                # Check for duplicates in batch
+                if memory.content_hash not in ids:
+                    # Check existing in database
+                    existing = self.collection.get(
+                        where={"content_hash": memory.content_hash}
+                    )
+                    if existing["ids"]:
+                        results.append((False, f"Duplicate content detected: {memory.content_hash}"))
+                        continue
+                    
+                    documents.append(memory.content)
+                    metadatas.append(self._optimize_metadata_for_chroma(memory))
+                    ids.append(memory.content_hash)
+                    results.append((True, f"Queued for batch storage: {memory.content_hash}"))
+                else:
+                    results.append((False, f"Duplicate in batch: {memory.content_hash}"))
+            
+            if documents:
+                # Batch add to collection
+                self.collection.add(
+                    documents=documents,
+                    metadatas=metadatas,
+                    ids=ids
+                )
+                
+                # Update success messages
+                for i, (success, msg) in enumerate(results):
+                    if success and "Queued for batch storage" in msg:
+                        results[i] = (True, f"Successfully stored in batch: {ids[i % len(ids)]}")
+            
+            return results
+                
+        except Exception as e:
+            error_msg = f"Error in batch store: {str(e)}"
+            logger.error(error_msg)
+            return [(False, error_msg)] * len(memories)
+
 
     async def search_by_tag(self, tags: List[str]) -> List[Memory]:
+        """Search memories by tags with optimized performance.
+        Handles both new comma-separated and old JSON array tag formats."""
         try:
             results = self.collection.get(
                 include=["metadatas", "documents"]
@@ -254,26 +497,36 @@ class ChromaMemoryStorage(MemoryStorage):
 
             memories = []
             if results["ids"]:
+                # Normalize search tags once
+                search_tags = [str(tag).strip() for tag in tags if str(tag).strip()]
+                
                 for i, doc in enumerate(results["documents"]):
                     memory_meta = results["metadatas"][i]
                     
-                    # Always expect JSON string in storage
-                    try:
-                        stored_tags = json.loads(memory_meta.get("tags", "[]"))
-                        stored_tags = [str(tag).strip() for tag in stored_tags]
-                    except (json.JSONDecodeError, TypeError):
-                        logger.debug(f"Invalid tags format in memory: {memory_meta.get('content_hash')}")
-                        continue
+                    # Use enhanced tag parsing that handles both formats
+                    stored_tags = self._parse_tags_fast(memory_meta.get("tags", ""))
                     
-                    # Normalize search tags
-                    search_tags = [str(tag).strip() for tag in tags if str(tag).strip()]
-                    
+                    # Fast tag matching
                     if any(search_tag in stored_tags for search_tag in search_tags):
+                        # Use stored timestamps or fall back to legacy timestamp field
+                        created_at = memory_meta.get("created_at") or memory_meta.get("timestamp_float") or memory_meta.get("timestamp")
+                        created_at_iso = memory_meta.get("created_at_iso") or memory_meta.get("timestamp_str")
+                        updated_at = memory_meta.get("updated_at") or created_at
+                        updated_at_iso = memory_meta.get("updated_at_iso") or created_at_iso
+                        
                         memory = Memory(
                             content=doc,
                             content_hash=memory_meta["content_hash"],
                             tags=stored_tags,
-                            memory_type=memory_meta.get("type")
+                            memory_type=memory_meta.get("type"),
+                            # Restore timestamps with fallback logic
+                            created_at=created_at,
+                            created_at_iso=created_at_iso,
+                            updated_at=updated_at,
+                            updated_at_iso=updated_at_iso,
+                            # Include additional metadata
+                            metadata={k: v for k, v in memory_meta.items() 
+                                     if k not in ["content_hash", "tags", "type", "created_at", "created_at_iso", "updated_at", "updated_at_iso", "timestamp", "timestamp_float", "timestamp_str"]}
                         )
                         memories.append(memory)
             
@@ -281,39 +534,137 @@ class ChromaMemoryStorage(MemoryStorage):
             
         except Exception as e:
             logger.error(f"Error searching by tags: {e}")
+            logger.error(traceback.format_exc())
             return []
 
-    async def delete_by_tag(self, tag: str) -> Tuple[int, str]:
-        """Deletes memories that match the specified tag."""
+    async def delete_by_tag(self, tag_or_tags) -> Tuple[int, str]:
+        """
+        Enhanced delete_by_tag that accepts both single tag (string) and multiple tags (list).
+        This fixes Issue 5: Delete Tag Function Ambiguity by supporting both formats.
+        
+        Args:
+            tag_or_tags: Either a single tag (string) or multiple tags (list of strings)
+            
+        Returns:
+            Tuple of (count_deleted, message)
+        """
         try:
-            # Get all the documents from ChromaDB
-            results = self.collection.get(
-                include=["metadatas"]
-            )
-
+            # Normalize input to list of tags
+            if isinstance(tag_or_tags, str):
+                tags_to_delete = [tag_or_tags.strip()]
+            elif isinstance(tag_or_tags, list):
+                tags_to_delete = [str(tag).strip() for tag in tag_or_tags if str(tag).strip()]
+            else:
+                return 0, f"Invalid tag format. Expected string or list, got {type(tag_or_tags)}"
+            
+            if not tags_to_delete:
+                return 0, "No valid tags provided"
+            
+            # Get all documents from ChromaDB
+            results = self.collection.get(include=["metadatas"])
+            
             ids_to_delete = []
+            matched_tags = set()
+            
             if results["ids"]:
                 for i, meta in enumerate(results["metadatas"]):
                     try:
-                        retrieved_tags_string = meta.get("tags", "[]")
-                        retrieved_tags = json.loads(retrieved_tags_string)
-                    except json.JSONDecodeError:
+                        # Handle both comma-separated and JSON formats
+                        retrieved_tags = self._parse_tags_fast(meta.get("tags", ""))
+                    except Exception:
                         retrieved_tags = []
-
-                    if tag in retrieved_tags:
-                        ids_to_delete.append(results["ids"][i])
-
+                    
+                    # Check if any of the tags to delete are in this memory's tags
+                    for tag_to_delete in tags_to_delete:
+                        if tag_to_delete in retrieved_tags:
+                            ids_to_delete.append(results["ids"][i])
+                            matched_tags.add(tag_to_delete)
+                            break  # No need to check other tags for this memory
+            
             if not ids_to_delete:
-                return 0, f"No memories found with tag: {tag}"
-
+                tags_str = ", ".join(tags_to_delete)
+                return 0, f"No memories found with tag(s): {tags_str}"
+            
             # Delete memories
             self.collection.delete(ids=ids_to_delete)
-
-            return len(ids_to_delete), f"Successfully deleted {len(ids_to_delete)} memories with tag: {tag}"
-
+            
+            # Create informative message
+            matched_tags_str = ", ".join(sorted(matched_tags))
+            if len(tags_to_delete) == 1:
+                message = f"Successfully deleted {len(ids_to_delete)} memories with tag: {matched_tags_str}"
+            else:
+                message = f"Successfully deleted {len(ids_to_delete)} memories with tag(s): {matched_tags_str}"
+            
+            return len(ids_to_delete), message
+            
         except Exception as e:
-            logger.error(f"Error deleting memories by tag: {e}")
-            return 0, f"Error deleting memories by tag: {e}"
+            logger.error(f"Error deleting memories by tag(s): {e}")
+            return 0, f"Error deleting memories by tag(s): {e}"
+
+    async def delete_by_tags(self, tags: List[str]) -> Tuple[int, str]:
+        """
+        Explicitly delete memories by multiple tags (for clarity and API consistency).
+        This is an alias for delete_by_tag with list input.
+        
+        Args:
+            tags: List of tag strings to delete
+            
+        Returns:
+            Tuple of (count_deleted, message)
+        """
+        return await self.delete_by_tag(tags)
+
+    async def delete_by_all_tags(self, tags: List[str]) -> Tuple[int, str]:
+        """
+        Delete memories that contain ALL of the specified tags.
+        
+        Args:
+            tags: List of tags - memories must contain ALL of these tags to be deleted
+            
+        Returns:
+            Tuple of (count_deleted, message)
+        """
+        try:
+            if not tags:
+                return 0, "No tags provided"
+            
+            # Normalize tags
+            tags_to_match = [str(tag).strip() for tag in tags if str(tag).strip()]
+            if not tags_to_match:
+                return 0, "No valid tags provided"
+            
+            # Get all documents from ChromaDB
+            results = self.collection.get(include=["metadatas"])
+            
+            ids_to_delete = []
+            
+            if results["ids"]:
+                for i, meta in enumerate(results["metadatas"]):
+                    try:
+                        # Handle both comma-separated and JSON formats
+                        retrieved_tags = self._parse_tags_fast(meta.get("tags", ""))
+                    except Exception:
+                        retrieved_tags = []
+                    
+                    # Check if ALL tags are present in this memory
+                    if all(tag in retrieved_tags for tag in tags_to_match):
+                        ids_to_delete.append(results["ids"][i])
+            
+            if not ids_to_delete:
+                tags_str = ", ".join(tags_to_match)
+                return 0, f"No memories found containing ALL tags: {tags_str}"
+            
+            # Delete memories
+            self.collection.delete(ids=ids_to_delete)
+            
+            tags_str = ", ".join(tags_to_match)
+            message = f"Successfully deleted {len(ids_to_delete)} memories containing ALL tags: {tags_str}"
+            
+            return len(ids_to_delete), message
+            
+        except Exception as e:
+            logger.error(f"Error deleting memories by all tags: {e}")
+            return 0, f"Error deleting memories by all tags: {e}"
       
     async def delete(self, content_hash: str) -> Tuple[bool, str]:
         """Delete a memory by its hash."""
@@ -372,6 +723,146 @@ class ChromaMemoryStorage(MemoryStorage):
         except Exception as e:
             logger.error(f"Error cleaning up duplicates: {str(e)}")
             return 0, f"Error cleaning up duplicates: {str(e)}"
+    
+    async def update_memory_metadata(self, content_hash: str, updates: Dict[str, Any], preserve_timestamps: bool = True) -> Tuple[bool, str]:
+        """
+        Update memory metadata without recreating the entire memory entry.
+        
+        This method provides efficient metadata updates while preserving the original
+        memory content, embeddings, and optionally timestamps.
+        
+        Args:
+            content_hash: Hash of the memory to update
+            updates: Dictionary of metadata fields to update. Supported fields:
+                    - tags: List[str] - Replace existing tags
+                    - memory_type: str - Update memory type
+                    - metadata: Dict[str, Any] - Merge with existing metadata
+                    - Any other custom metadata fields
+            preserve_timestamps: Whether to preserve original created_at timestamp
+            
+        Returns:
+            Tuple of (success, message)
+        """
+        try:
+            # Check if collection is initialized
+            if self.collection is None:
+                error_msg = "Collection not initialized, cannot update memory metadata"
+                logger.error(error_msg)
+                return False, error_msg
+            
+            # Find the memory by content hash
+            existing = self.collection.get(
+                where={"content_hash": content_hash}
+            )
+            
+            if not existing["ids"]:
+                return False, f"Memory with hash {content_hash} not found"
+            
+            if len(existing["ids"]) > 1:
+                logger.warning(f"Multiple memories found with hash {content_hash}, updating the first one")
+            
+            # Get the first matching memory
+            memory_id = existing["ids"][0]
+            current_metadata = existing["metadatas"][0]
+            current_document = existing["documents"][0]
+            
+            # Create updated metadata by merging with current metadata
+            updated_metadata = current_metadata.copy()
+            
+            # Handle special update fields
+            if "tags" in updates:
+                tags = updates["tags"]
+                if isinstance(tags, list):
+                    updated_metadata["tags_str"] = ",".join(tags)
+                else:
+                    return False, "Tags must be provided as a list of strings"
+            
+            if "memory_type" in updates:
+                updated_metadata["type"] = updates["memory_type"]
+            
+            if "metadata" in updates:
+                # Merge custom metadata
+                if isinstance(updates["metadata"], dict):
+                    updated_metadata.update(updates["metadata"])
+                else:
+                    return False, "Metadata must be provided as a dictionary"
+            
+            # Handle other custom metadata fields (excluding protected fields)
+            protected_fields = {
+                "content", "content_hash", "tags", "memory_type", "metadata",
+                "embedding", "created_at", "created_at_iso", "updated_at", "updated_at_iso",
+                "timestamp", "timestamp_float", "timestamp_str"
+            }
+            
+            for key, value in updates.items():
+                if key not in protected_fields:
+                    updated_metadata[key] = value
+            
+            # Update timestamps
+            import time
+            now = time.time()
+            now_iso = datetime.utcfromtimestamp(now).isoformat() + "Z"
+            
+            # Always update the updated_at timestamp
+            updated_metadata["updated_at"] = now
+            updated_metadata["updated_at_iso"] = now_iso
+            
+            # Preserve created_at timestamp unless explicitly requested not to
+            if preserve_timestamps:
+                # Keep existing created_at timestamps if they exist
+                if "created_at" not in updated_metadata and "timestamp" in current_metadata:
+                    updated_metadata["created_at"] = current_metadata["timestamp"]
+                if "created_at_iso" not in updated_metadata and "timestamp_str" in current_metadata:
+                    updated_metadata["created_at_iso"] = current_metadata["timestamp_str"]
+            else:
+                # Reset to current time if not preserving timestamps
+                updated_metadata["created_at"] = now
+                updated_metadata["created_at_iso"] = now_iso
+                updated_metadata["timestamp"] = now
+                updated_metadata["timestamp_str"] = now_iso
+            
+            # Ensure backward compatibility fields are updated
+            if "created_at" in updated_metadata:
+                updated_metadata["timestamp"] = updated_metadata["created_at"]
+                updated_metadata["timestamp_float"] = updated_metadata["created_at"]
+            if "created_at_iso" in updated_metadata:
+                updated_metadata["timestamp_str"] = updated_metadata["created_at_iso"]
+            
+            # Update the memory in ChromaDB
+            # ChromaDB requires us to update via upsert since there's no direct metadata update
+            self.collection.upsert(
+                ids=[memory_id],
+                documents=[current_document],
+                metadatas=[updated_metadata]
+                # Note: We don't include embeddings here as ChromaDB will preserve existing ones
+            )
+            
+            logger.info(f"Successfully updated metadata for memory {content_hash}")
+            
+            # Create a summary of what was updated
+            updated_fields = []
+            if "tags" in updates:
+                updated_fields.append("tags")
+            if "memory_type" in updates:
+                updated_fields.append("memory_type")
+            if "metadata" in updates:
+                updated_fields.append("custom_metadata")
+            
+            # Add other custom fields
+            for key in updates.keys():
+                if key not in protected_fields and key not in ["tags", "memory_type", "metadata"]:
+                    updated_fields.append(key)
+            
+            updated_fields.append("updated_at")
+            
+            summary = f"Updated fields: {', '.join(updated_fields)}"
+            return True, summary
+            
+        except Exception as e:
+            error_msg = f"Error updating memory metadata: {str(e)}"
+            logger.error(error_msg)
+            traceback.print_exc()
+            return False, error_msg
 
     async def recall(self, query: Optional[str] = None, n_results: int = 5, start_timestamp: Optional[float] = None, end_timestamp: Optional[float] = None) -> List[MemoryQueryResult]:
         """
@@ -399,11 +890,11 @@ class ChromaMemoryStorage(MemoryStorage):
                 
             if start_timestamp is not None:
                 start_timestamp = self.normalize_timestamp(start_timestamp)
-                where_clause["$and"].append({"timestamp": {"$gte": int(start_timestamp)}})
+                where_clause["$and"].append({"timestamp": {"$gte": float(start_timestamp)}})
 
             if end_timestamp is not None:
                 end_timestamp = self.normalize_timestamp(end_timestamp)
-                where_clause["$and"].append({"timestamp": {"$lte": int(end_timestamp)}})
+                where_clause["$and"].append({"timestamp": {"$lte": float(end_timestamp)}})
 
             # If there's no valid where clause, set it to None to avoid ChromaDB errors
             if not where_clause.get("$and", []):
@@ -430,27 +921,29 @@ class ChromaMemoryStorage(MemoryStorage):
                     for i in range(len(results["ids"][0])):
                         metadata = results["metadatas"][0][i]
                         
-                        # Parse tags from JSON string
-                        try:
-                            tags = json.loads(metadata.get("tags", "[]"))
-                        except json.JSONDecodeError:
-                            tags = []
+                        # Parse tags from JSON string or comma-separated format
+                        tags = self._parse_tags_fast(metadata.get("tags", ""))
                         
-                        # Reconstruct memory object
-                        # timestamp = float(metadata.get("timestamp", time.time()))
-                        raw_timestamp = metadata.get("timestamp", time.time())
-                        if isinstance(raw_timestamp, datetime):
-                            timestamp = time.mktime(raw_timestamp.timetuple())
-                        else:
-                            timestamp = float(raw_timestamp)
+                        # Reconstruct memory object with proper timestamp handling
+                        # Use stored timestamps or fall back to legacy timestamp field
+                        created_at = metadata.get("created_at") or metadata.get("timestamp_float") or metadata.get("timestamp")
+                        created_at_iso = metadata.get("created_at_iso") or metadata.get("timestamp_str")
+                        updated_at = metadata.get("updated_at") or created_at
+                        updated_at_iso = metadata.get("updated_at_iso") or created_at_iso
+                        
                         memory = Memory(
                             content=results["documents"][0][i],
                             content_hash=metadata["content_hash"],
                             tags=tags,
                             memory_type=metadata.get("memory_type", ""),
-                            timestamp=timestamp,
+                            # Restore timestamps with fallback logic
+                            created_at=created_at,
+                            created_at_iso=created_at_iso,
+                            updated_at=updated_at,
+                            updated_at_iso=updated_at_iso,
+                            # Include additional metadata
                             metadata={k: v for k, v in metadata.items() 
-                                    if k not in ["content_hash", "tags", "memory_type", "timestamp"]}
+                                    if k not in ["content_hash", "tags", "memory_type", "created_at", "created_at_iso", "updated_at", "updated_at_iso", "timestamp", "timestamp_float", "timestamp_str"]}
                         )
                         
                         # Calculate cosine similarity from distance
@@ -478,24 +971,30 @@ class ChromaMemoryStorage(MemoryStorage):
             for i in range(len(results["ids"])):
                 metadata = results["metadatas"][i]
                 try:
-                    retrieved_tags = json.loads(metadata.get("tags", "[]"))
-                except json.JSONDecodeError:
-                    retrieved_tags = []
+                    tags = self._parse_tags_fast(metadata.get("tags", ""))
+                except Exception:
+                    tags = []
                 
-                # Ensure timestamp is a float
-                try:
-                    timestamp = float(metadata.get("timestamp", time.time()))
-                except (ValueError, TypeError):
-                    timestamp = time.time()
-
+                # Reconstruct memory object with proper timestamp handling
+                # Use stored timestamps or fall back to legacy timestamp field
+                created_at = metadata.get("created_at") or metadata.get("timestamp_float") or metadata.get("timestamp")
+                created_at_iso = metadata.get("created_at_iso") or metadata.get("timestamp_str")
+                updated_at = metadata.get("updated_at") or created_at
+                updated_at_iso = metadata.get("updated_at_iso") or created_at_iso
+                
                 memory = Memory(
                     content=results["documents"][i],
                     content_hash=metadata["content_hash"],
-                    tags=retrieved_tags,
+                    tags=tags,
                     memory_type=metadata.get("type", ""),
-                    timestamp=timestamp,
+                    # Restore timestamps with fallback logic
+                    created_at=created_at,
+                    created_at_iso=created_at_iso,
+                    updated_at=updated_at,
+                    updated_at_iso=updated_at_iso,
+                    # Include additional metadata
                     metadata={k: v for k, v in metadata.items() 
-                             if k not in ["type", "content_hash", "tags", "timestamp"]}
+                             if k not in ["type", "content_hash", "tags", "created_at", "created_at_iso", "updated_at", "updated_at_iso", "timestamp", "timestamp_float", "timestamp_str"]}
                 )
                 # For time-based retrieval, we don't have a relevance score
                 memory_results.append(MemoryQueryResult(memory=memory, relevance_score=None))
@@ -581,8 +1080,25 @@ class ChromaMemoryStorage(MemoryStorage):
             return 0, str(e)
 
 
-    def _format_metadata_for_chroma(self, memory: Memory) -> Dict[str, Any]:
-        """Format metadata to be compatible with ChromaDB requirements with multi-format timestamps."""
+    def is_initialized(self) -> bool:
+        """Check if the storage is properly initialized."""
+        return (self.collection is not None and 
+                self.embedding_function is not None and 
+                self.client is not None)
+    
+    def get_initialization_status(self) -> Dict[str, Any]:
+        """Get detailed initialization status for debugging."""
+        return {
+            "collection_initialized": self.collection is not None,
+            "embedding_function_initialized": self.embedding_function is not None,
+            "client_initialized": self.client is not None,
+            "model_initialized": self.model is not None,
+            "path": self.path,
+            "is_fully_initialized": self.is_initialized()
+        }
+    
+    def _optimize_metadata_for_chroma(self, memory: Memory) -> Dict[str, Any]:
+        """Optimized metadata formatting with minimal serialization overhead."""
         # Ensure timestamps are properly synchronized
         memory._sync_timestamps(
             created_at=memory.created_at,
@@ -591,43 +1107,54 @@ class ChromaMemoryStorage(MemoryStorage):
             updated_at_iso=memory.updated_at_iso
         )
         
-        # Use both new timestamp fields and legacy timestamp fields for compatibility
+        # Use streamlined metadata structure
+        # IMPORTANT: Store timestamp as float to preserve sub-second precision
         metadata = {
             "content_hash": memory.content_hash,
-            "memory_type": memory.memory_type if memory.memory_type else "",
-            # Store legacy timestamp in all formats for backward compatibility
-            "timestamp": int(memory.created_at),
-            "timestamp_float": memory.created_at,
-            "timestamp_str": memory.created_at_iso,
-            # Store new timestamp fields
-            "created_at": memory.created_at,
+            "memory_type": memory.memory_type or "",
+            "timestamp": float(memory.created_at),  # Changed from int() to float()
             "created_at_iso": memory.created_at_iso,
-            "updated_at": memory.updated_at,
-            "updated_at_iso": memory.updated_at_iso
         }
         
-        # Log the timestamps for debugging
-        logger.debug(f"Storing memory with multi-format timestamps: created_at={memory.created_at}, created_at_iso='{memory.created_at_iso}', updated_at={memory.updated_at}, updated_at_iso='{memory.updated_at_iso}'")
-        
-        # Properly serialize tags
+        # Optimize tag storage - use comma-separated string for performance
         if memory.tags:
             if isinstance(memory.tags, list):
-                metadata["tags"] = json.dumps([str(tag).strip() for tag in memory.tags if str(tag).strip()])
+                # Store as comma-separated for ChromaDB compatibility
+                metadata["tags"] = ",".join(str(tag).strip() for tag in memory.tags if str(tag).strip())
             elif isinstance(memory.tags, str):
+                # Clean up the string
                 tags = [tag.strip() for tag in memory.tags.split(",") if tag.strip()]
-                metadata["tags"] = json.dumps(tags)
+                metadata["tags"] = ",".join(tags)
         else:
-            metadata["tags"] = "[]"
+            metadata["tags"] = ""
         
-        # Add any additional metadata
+        # Add additional metadata efficiently
         for key, value in memory.metadata.items():
             if isinstance(value, (str, int, float, bool)):
                 metadata[key] = value
         
         return metadata
+    
+    def _parse_tags_fast(self, tag_string: str) -> List[str]:
+        """Fast tag parsing from comma-separated string or JSON array.
+        
+        Provides backward compatibility with both storage formats.
+        """
+        if not tag_string:
+            return []
+            
+        # Try to parse as JSON first (old format)
+        if tag_string.startswith("[") and tag_string.endswith("]"):
+            try:
+                return json.loads(tag_string)
+            except json.JSONDecodeError:
+                pass
+                
+        # If not JSON or parsing fails, treat as comma-separated (new format)
+        return [tag.strip() for tag in tag_string.split(",") if tag.strip()]
 
     async def retrieve(self, query: str, n_results: int = 5) -> List[MemoryQueryResult]:
-        """Retrieve memories using semantic search with hardware-aware optimizations."""
+        """Retrieve memories using semantic search with performance optimizations."""
         try:
             # Check if collection is initialized
             if self.collection is None:
@@ -639,70 +1166,101 @@ class ChromaMemoryStorage(MemoryStorage):
                 logger.error("Embedding function not initialized, cannot retrieve memories")
                 return []
             
+            # Performance tracking
             start_time = time.time()
             
+            # Try cached embedding first for better performance
+            cached_embedding = None
+            cache_hit = False
+            
+            if self.enable_query_cache:
+                cached_embedding = self._cached_embed_query(query)
+                if cached_embedding:
+                    cache_hit = True
+                    _PERFORMANCE_STATS["cache_hits"] += 1
+                else:
+                    _PERFORMANCE_STATS["cache_misses"] += 1
+            
             try:
-                # Query using the embedding function with hardware-aware settings
-                results = self.collection.query(
-                    query_texts=[query],
-                    n_results=n_results,
-                    include=["documents", "metadatas", "distances"]
-                )
+                if cached_embedding:
+                    # Use cached embedding for faster query
+                    results = self.collection.query(
+                        query_embeddings=[list(cached_embedding)],
+                        n_results=n_results,
+                        include=["documents", "metadatas", "distances"]
+                    )
+                else:
+                    # Standard query with text
+                    results = self.collection.query(
+                        query_texts=[query],
+                        n_results=n_results,
+                        include=["documents", "metadatas", "distances"]
+                    )
             except Exception as query_error:
                 logger.warning(f"Error during query operation: {str(query_error)}")
                 
-                # Fallback: Try with direct embedding if the standard query fails
-                try:
-                    logger.info("Attempting fallback query with direct embedding")
-                    
-                    # Generate embedding directly
-                    if self.model:
+                # Fallback: Try with direct embedding if available
+                if self.model and not cached_embedding:
+                    try:
+                        logger.info("Attempting fallback query with direct embedding")
                         query_embedding = self.model.encode(
                             query,
-                            batch_size=self.embedding_settings["batch_size"],
+                            batch_size=self.batch_size,
                             show_progress_bar=False
                         ).tolist()
                         
-                        # Use the embedding directly
                         results = self.collection.query(
                             query_embeddings=[query_embedding],
                             n_results=n_results,
                             include=["documents", "metadatas", "distances"]
                         )
-                    else:
-                        raise ValueError("Model not available for fallback query")
-                        
-                except Exception as fallback_error:
-                    logger.error(f"Fallback query also failed: {str(fallback_error)}")
+                    except Exception as fallback_error:
+                        logger.error(f"Fallback query also failed: {str(fallback_error)}")
+                        return []
+                else:
                     return []
             
             query_time = time.time() - start_time
-            logger.debug(f"Query completed in {query_time:.4f}s")
+            _PERFORMANCE_STATS["query_times"].append(query_time)
+            
+            # Keep only last 100 query times
+            if len(_PERFORMANCE_STATS["query_times"]) > 100:
+                _PERFORMANCE_STATS["query_times"] = _PERFORMANCE_STATS["query_times"][-100:]
+            
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Query completed in {query_time:.4f}s (cache_hit: {cache_hit})")
             
             if not results["ids"] or not results["ids"][0]:
                 return []
             
+            # Process results efficiently
             memory_results = []
             for i in range(len(results["ids"][0])):
                 metadata = results["metadatas"][0][i]
                 
-                # Parse tags from JSON string if needed
-                tags = []
-                if "tags" in metadata:
-                    try:
-                        if isinstance(metadata["tags"], str):
-                            tags = json.loads(metadata["tags"])
-                        else:
-                            tags = metadata["tags"]
-                    except (json.JSONDecodeError, TypeError):
-                        logger.debug(f"Could not parse tags for memory {metadata.get('content_hash')}")
+                # Fast tag parsing using optimized method that handles both formats
+                tags = self._parse_tags_fast(metadata.get("tags", ""))
                 
-                # Reconstruct memory object
+                # Reconstruct memory object with proper timestamp handling
+                # Use stored timestamps or fall back to legacy timestamp field
+                created_at = metadata.get("created_at") or metadata.get("timestamp_float") or metadata.get("timestamp")
+                created_at_iso = metadata.get("created_at_iso") or metadata.get("timestamp_str")
+                updated_at = metadata.get("updated_at") or created_at
+                updated_at_iso = metadata.get("updated_at_iso") or created_at_iso
+                
                 memory = Memory(
                     content=results["documents"][0][i],
                     content_hash=metadata["content_hash"],
                     tags=tags,
                     memory_type=metadata.get("memory_type", ""),
+                    # Restore timestamps with fallback logic
+                    created_at=created_at,
+                    created_at_iso=created_at_iso,
+                    updated_at=updated_at,
+                    updated_at_iso=updated_at_iso,
+                    # Include additional metadata
+                    metadata={k: v for k, v in metadata.items() 
+                             if k not in ["content_hash", "tags", "memory_type", "created_at", "created_at_iso", "updated_at", "updated_at_iso", "timestamp", "timestamp_float", "timestamp_str"]}
                 )
                 
                 # Calculate cosine similarity from distance
@@ -717,3 +1275,49 @@ class ChromaMemoryStorage(MemoryStorage):
             logger.error(f"Error retrieving memories: {str(e)}")
             logger.error(traceback.format_exc())
             return []
+    
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """Get performance statistics for monitoring."""
+        with _CACHE_LOCK:
+            stats = {
+                "model_cache_size": len(_MODEL_CACHE),
+                "embedding_cache_size": len(_EMBEDDING_CACHE),
+                "query_cache_size": len(_QUERY_CACHE),
+                "cache_hits": _PERFORMANCE_STATS["cache_hits"],
+                "cache_misses": _PERFORMANCE_STATS["cache_misses"],
+                "avg_query_time": 0.0,
+                "recent_query_times": _PERFORMANCE_STATS["query_times"][-10:],  # Last 10
+                "cache_hit_ratio": 0.0
+            }
+            
+            # Calculate average query time
+            if _PERFORMANCE_STATS["query_times"]:
+                stats["avg_query_time"] = sum(_PERFORMANCE_STATS["query_times"]) / len(_PERFORMANCE_STATS["query_times"])
+            
+            # Calculate cache hit ratio
+            total_requests = stats["cache_hits"] + stats["cache_misses"]
+            if total_requests > 0:
+                stats["cache_hit_ratio"] = stats["cache_hits"] / total_requests
+            
+            return stats
+    
+    def clear_caches(self):
+        """Clear all caches for memory management."""
+        with _CACHE_LOCK:
+            _EMBEDDING_CACHE.clear()
+            _QUERY_CACHE.clear()
+            # Don't clear model cache as it's expensive to reload
+            _PERFORMANCE_STATS["cache_hits"] = 0
+            _PERFORMANCE_STATS["cache_misses"] = 0
+        
+        # Clear LRU cache
+        if hasattr(self._cached_embed_query, 'cache_clear'):
+            self._cached_embed_query.cache_clear()
+        
+        logger.info("Cleared embedding and query caches")
+    
+    def record_query_time(self, duration: float):
+        """Record a query time for performance tracking."""
+        _PERFORMANCE_STATS["query_times"].append(duration)
+        if len(_PERFORMANCE_STATS["query_times"]) > 100:
+            _PERFORMANCE_STATS["query_times"] = _PERFORMANCE_STATS["query_times"][-100:]

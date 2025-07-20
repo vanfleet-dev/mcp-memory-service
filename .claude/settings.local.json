@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo $HOME)",
+      "Bash(python:*)",
+      "Bash(timeout 10s python -m src.mcp_memory_service.server:*)",
+      "Bash(uv:*)",
+      "Bash(GTK_IM_MODULE=\"\" python -m src.mcp_memory_service.server --debug)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(chmod:*)",
+      "Bash(gh issue close:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue comment:*)",
+      "WebFetch(domain:glama.ai)",
+      "WebFetch(domain:alexgarcia.xyz)",
+      "Bash(rg:*)",
+      "mcp__memory__check_database_health",
+      "mcp__memory__store_memory",
+      "mcp__memory__retrieve_memory",
+      "mcp__memory__search_by_tag",
+      "mcp__memory__recall_memory",
+      "Bash(/bin/bash -c \"git status\")",
+      "Bash(ls:*)",
+      "Bash(bash -c 'export PATH=\"\"/usr/bin:/bin:$PATH\"\" && git status')",
+      "Bash(bash -l -c 'git status')"
+    ],
+    "deny": []
+  }
+}

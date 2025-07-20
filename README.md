@@ -4,6 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![smithery badge](https://smithery.ai/badge/@doobidoo/mcp-memory-service)](https://smithery.ai/server/@doobidoo/mcp-memory-service)
+[![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/0513fb92-e941-4fe0-9948-2a1dbb870dcf)
 
 An MCP server providing semantic memory and persistent storage capabilities for Claude Desktop using ChromaDB and sentence transformers. This service enables long-term memory storage with semantic search capabilities, making it ideal for maintaining context across conversations and instances.
 
@@ -16,6 +17,7 @@ Talk to the Repo with [TalkToGitHub](https://talktogithub.com/doobidoo/mcp-memor
 
 - Semantic search using sentence transformers
 - **Natural language time-based recall** (e.g., "last week", "yesterday morning")
+- **Enhanced tag deletion system** with flexible multi-tag support
 - Tag-based memory retrieval system
 - Persistent storage using ChromaDB
 - Automatic database backups
@@ -28,6 +30,13 @@ Talk to the Repo with [TalkToGitHub](https://talktogithub.com/doobidoo/mcp-memor
 - **Cross-platform compatibility** (Apple Silicon, Intel, Windows, Linux)
 - **Hardware-aware optimizations** for different environments
 - **Graceful fallbacks** for limited hardware resources
+
+### Recent Enhancements
+
+- ✅ **API Consistency**: Enhanced `delete_by_tag` to support both single and multiple tags
+- ✅ **New Delete Methods**: Added `delete_by_tags` (OR logic) and `delete_by_all_tags` (AND logic)
+- ✅ **Backward Compatibility**: All existing code continues to work unchanged
+- ✅ **Dashboard Integration**: Enhanced UI with multiple tag selection capabilities
 
 ## Installation
 
@@ -56,25 +65,72 @@ The `install.py` script will:
 
 ### Docker Installation
 
-You can run the Memory Service using Docker:
+#### Docker Hub (Recommended)
+
+The easiest way to run the Memory Service is using our pre-built Docker images:
+
+```bash
+# Pull the latest image
+docker pull doobidoo/mcp-memory-service:latest
+
+# Run with default settings (for MCP clients like Claude Desktop)
+docker run -d -p 8000:8000 \
+  -v $(pwd)/data/chroma_db:/app/chroma_db \
+  -v $(pwd)/data/backups:/app/backups \
+  doobidoo/mcp-memory-service:latest
+
+# Run in standalone mode (for testing/development)
+docker run -d -p 8000:8000 \
+  -e MCP_STANDALONE_MODE=1 \
+  -v $(pwd)/data/chroma_db:/app/chroma_db \
+  -v $(pwd)/data/backups:/app/backups \
+  doobidoo/mcp-memory-service:latest
+```
+
+#### Docker Compose
+
+We provide multiple Docker Compose configurations for different scenarios:
+- `docker-compose.yml` - Standard configuration for MCP clients (Claude Desktop)
+- `docker-compose.standalone.yml` - **Standalone mode** for testing/development (prevents boot loops)
+- `docker-compose.uv.yml` - Alternative configuration using UV package manager
+- `docker-compose.pythonpath.yml` - Configuration with explicit PYTHONPATH settings
 
 ```bash
 # Using Docker Compose (recommended)
 docker-compose up
 
-# Using Docker directly
-docker build -t mcp-memory-service .
-docker run -p 8000:8000 -v /path/to/data:/app/chroma_db -v /path/to/backups:/app/backups mcp-memory-service
+# Standalone mode (prevents boot loops)
+docker-compose -f docker-compose.standalone.yml up
 ```
 
-We provide multiple Docker Compose configurations for different scenarios:
-- `docker-compose.yml` - Standard configuration using pip install
-- `docker-compose.uv.yml` - Alternative configuration using UV package manager
-- `docker-compose.pythonpath.yml` - Configuration with explicit PYTHONPATH settings
+#### Building from Source
 
-To use an alternative configuration:
+If you need to build the Docker image yourself:
+
 ```bash
-docker-compose -f docker-compose.uv.yml up
+# Build the image
+docker build -t mcp-memory-service .
+
+# Run the container
+docker run -p 8000:8000 \
+  -v $(pwd)/data/chroma_db:/app/chroma_db \
+  -v $(pwd)/data/backups:/app/backups \
+  mcp-memory-service
+```
+
+### uvx Installation
+
+You can install and run the Memory Service using uvx for isolated execution:
+
+```bash
+# Install uvx if not already installed
+pip install uvx
+
+# Install and run the memory service
+uvx mcp-memory-service
+
+# Or install from GitHub
+uvx --from git+https://github.com/doobidoo/mcp-memory-service.git mcp-memory-service
 ```
 
 ### Windows Installation (Special Case)
@@ -190,8 +246,47 @@ The memory service provides the following operations through the MCP server:
 ### Memory Management
 
 12. `delete_memory` - Delete specific memory by hash
-13. `delete_by_tag` - Delete all memories with specific tag
-14. `cleanup_duplicates` - Remove duplicate entries
+13. `delete_by_tag` - **Enhanced**: Delete memories with specific tag(s) - supports both single tags and multiple tags
+14. `delete_by_tags` - **New**: Explicitly delete memories containing any of the specified tags (OR logic)
+15. `delete_by_all_tags` - **New**: Delete memories containing all specified tags (AND logic)
+16. `cleanup_duplicates` - Remove duplicate entries
+
+### API Consistency Improvements
+
+**Issue 5 Resolution**: Enhanced tag deletion functionality for consistent API design.
+
+- **Before**: `search_by_tag` accepted arrays, `delete_by_tag` only accepted single strings
+- **After**: Both operations now support flexible tag handling
+
+```javascript
+// Single tag deletion (backward compatible)
+delete_by_tag("temporary")
+
+// Multiple tag deletion (new!)
+delete_by_tag(["temporary", "outdated", "test"])  // OR logic
+
+// Explicit methods for clarity
+delete_by_tags(["tag1", "tag2"])                  // OR logic  
+delete_by_all_tags(["urgent", "important"])       // AND logic
+```
+
+### Example Usage
+
+```javascript
+// Store memories with tags
+store_memory("Project deadline is May 15th", {tags: ["work", "deadlines", "important"]})
+store_memory("Grocery list: milk, eggs, bread", {tags: ["personal", "shopping"]})
+store_memory("Meeting notes from sprint planning", {tags: ["work", "meetings", "important"]})
+
+// Search by multiple tags (existing functionality)
+search_by_tag(["work", "important"])  // Returns memories with either tag
+
+// Enhanced deletion options (new!)
+delete_by_tag("temporary")                    // Delete single tag (backward compatible)
+delete_by_tag(["temporary", "outdated"])     // Delete memories with any of these tags
+delete_by_tags(["personal", "shopping"])     // Explicit multi-tag deletion
+delete_by_all_tags(["work", "important"])    // Delete only memories with BOTH tags
+```
 
 ## Configuration Options
 
@@ -253,6 +348,24 @@ python scripts/verify_pytorch_windows.py
 # Perform comprehensive installation verification
 python scripts/test_installation.py
 ```
+
+## FAQ
+
+### Can I run the MCP Memory Service in both Claude Desktop and Claude Code simultaneously?
+
+**Yes!** The MCP Memory Service is designed to support concurrent access from multiple clients. Both Claude Desktop and Claude Code can safely use the same memory service instance simultaneously, and they will share the same memory store.
+
+**Key benefits:**
+- Shared memory across both applications
+- No file conflicts or locking issues
+- Seamless experience when switching between clients
+
+**Technical details:**
+- ChromaDB uses SQLite which handles concurrent database access safely
+- No application-level file locking that would prevent multiple instances
+- Each client creates its own connection but accesses the same shared database
+
+**Configuration tip:** Ensure both clients use the same database paths by setting identical `MCP_MEMORY_CHROMA_PATH` and `MCP_MEMORY_BACKUPS_PATH` environment variables.
 
 ## Troubleshooting
 
