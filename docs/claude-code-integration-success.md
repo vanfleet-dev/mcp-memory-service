@@ -6,12 +6,66 @@ The MCP Memory Service is now fully integrated and tested with Claude Code. All 
 
 ## Working Configuration
 
-### MCP Configuration (claude_desktop_config.json)
+### macOS Configuration (Recommended)
+
+For macOS systems, use the wrapper script approach in Claude Code's `settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "/Users/hkr/Documents/GitHub/mcp-memory-service/claude_code_wrapper.sh"
+    }
+  }
+}
+```
+
+The `claude_code_wrapper.sh` wrapper script handles environment setup:
+
+```bash
+#!/bin/bash
+# Wrapper script for Claude Code to run MCP Memory Service with proper environment variables
+
+export MCP_MEMORY_CHROMA_PATH="/Users/hkr/Library/Application Support/mcp-memory/chroma_db"
+export MCP_MEMORY_BACKUPS_PATH="/Users/hkr/Library/Application Support/mcp-memory/backups"
+
+# Run the memory service using uv
+cd /Users/hkr/Documents/GitHub/mcp-memory-service
+uv run memory
+```
+
+### Windows Configuration (Simple Approach)
+
+On Windows machines, you can directly copy the Claude Desktop configuration into Claude Code's `settings.json`:
 
 ```json
 {
   "mcpServers": {
     "mcp-memory-service": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "C:\\path\\to\\mcp-memory-service",
+        "run",
+        "memory"
+      ],
+      "env": {
+        "MCP_MEMORY_CHROMA_PATH": "C:\\Users\\YourUsername\\AppData\\Local\\mcp-memory\\chroma_db",
+        "MCP_MEMORY_BACKUPS_PATH": "C:\\Users\\YourUsername\\AppData\\Local\\mcp-memory\\backups"
+      }
+    }
+  }
+}
+```
+
+### Alternative: Direct Configuration (All Platforms)
+
+If you prefer not to use the wrapper script on macOS:
+
+```json
+{
+  "mcpServers": {
+    "memory": {
       "command": "uv",
       "args": [
         "--directory",
@@ -23,18 +77,6 @@ The MCP Memory Service is now fully integrated and tested with Claude Code. All 
         "MCP_MEMORY_CHROMA_PATH": "/Users/hkr/Library/Application Support/mcp-memory/chroma_db",
         "MCP_MEMORY_BACKUPS_PATH": "/Users/hkr/Library/Application Support/mcp-memory/backups"
       }
-    }
-  }
-}
-```
-
-### Alternative Configuration (using wrapper script)
-
-```json
-{
-  "mcpServers": {
-    "mcp-memory-service": {
-      "command": "/Users/hkr/Documents/GitHub/mcp-memory-service/claude_code_wrapper.sh"
     }
   }
 }
