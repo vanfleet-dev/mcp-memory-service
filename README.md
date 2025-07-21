@@ -12,7 +12,9 @@ An MCP server providing semantic memory and persistent storage capabilities for 
 [![MseeP.ai Security Assessment Badge](https://mseep.net/pr/doobidoo-mcp-memory-service-badge.png)](https://mseep.ai/app/doobidoo-mcp-memory-service)
 
 ## Help
-Talk to the Repo with [TalkToGitHub](https://talktogithub.com/doobidoo/mcp-memory-service)!
+- Talk to the Repo with [TalkToGitHub](https://talktogithub.com/doobidoo/mcp-memory-service)!
+- Use Gitprobe to digg deeper: [GitProbe](https://gitprobe.com/doobidoo/mcp-memory-service)!
+
 ## Features
 
 - Semantic search using sentence transformers
