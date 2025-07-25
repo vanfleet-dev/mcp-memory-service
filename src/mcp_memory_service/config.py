@@ -196,3 +196,21 @@ COLLECTION_METADATA = {
     "hnsw:M": 16,                 # Better graph connectivity (was not set)
     "hnsw:max_elements": 100000   # Pre-allocate space for better performance
 }
+
+# HTTP Server Configuration
+HTTP_ENABLED = os.getenv('MCP_HTTP_ENABLED', 'false').lower() == 'true'
+HTTP_PORT = int(os.getenv('MCP_HTTP_PORT', '8000'))
+HTTP_HOST = os.getenv('MCP_HTTP_HOST', '0.0.0.0')
+CORS_ORIGINS = os.getenv('MCP_CORS_ORIGINS', '*').split(',')
+SSE_HEARTBEAT_INTERVAL = int(os.getenv('MCP_SSE_HEARTBEAT', '30'))
+API_KEY = os.getenv('MCP_API_KEY', None)  # Optional authentication
+
+# Database path for HTTP interface (use SQLite-vec by default)
+if STORAGE_BACKEND == 'sqlite_vec' and SQLITE_VEC_PATH:
+    DATABASE_PATH = SQLITE_VEC_PATH
+else:
+    # Fallback to a default SQLite-vec path for HTTP interface
+    DATABASE_PATH = os.path.join(BASE_DIR, 'memory_http.db')
+
+# Embedding model configuration
+EMBEDDING_MODEL_NAME = os.getenv('MCP_EMBEDDING_MODEL', 'all-MiniLM-L6-v2')

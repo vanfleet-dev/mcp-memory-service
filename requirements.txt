@@ -4,6 +4,14 @@ tokenizers==0.20.3
 websockets>=11.0.3
 mcp>=1.0.0,<2.0.0
 
+# HTTP/SSE interface dependencies
+fastapi>=0.115.0
+uvicorn>=0.30.0
+python-multipart>=0.0.9
+sse-starlette>=2.1.0
+aiofiles>=23.2.1
+psutil>=5.9.0
+
 # Platform-specific recommendations (DO NOT UNCOMMENT - handled by install.py)
 
 # For macOS with Intel CPUs:

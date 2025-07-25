@@ -50,7 +50,8 @@
       "Bash(./setup_claude_mcp.sh:*)",
       "Bash(git fetch:*)",
       "Bash(git rebase:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
