@@ -27,6 +27,8 @@ from .dependencies import set_storage, get_storage
 from .api.health import router as health_router
 from .api.memories import router as memories_router
 from .api.search import router as search_router
+from .api.events import router as events_router
+from .sse import sse_manager
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +51,10 @@ async def lifespan(app: FastAPI):
         await storage.initialize()
         set_storage(storage)  # Set the global storage instance
         logger.info(f"SQLite-vec storage initialized at {DATABASE_PATH}")
+        
+        # Start SSE manager
+        await sse_manager.start()
+        logger.info("SSE Manager started")
     except Exception as e:
         logger.error(f"Failed to initialize storage: {e}")
         raise
@@ -57,6 +63,11 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Shutting down MCP Memory Service HTTP interface...")
+    
+    # Stop SSE manager
+    await sse_manager.stop()
+    logger.info("SSE Manager stopped")
+    
     if storage:
         await storage.close()
 
@@ -86,6 +97,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router, prefix="/api", tags=["health"])
     app.include_router(memories_router, prefix="/api", tags=["memories"])
     app.include_router(search_router, prefix="/api", tags=["search"])
+    app.include_router(events_router, prefix="/api", tags=["events"])
     
     # Serve static files (dashboard)
     static_path = os.path.join(os.path.dirname(__file__), "static")
@@ -131,10 +143,16 @@ def create_app() -> FastAPI:
                 <li>GET /api/search/similar/{hash} - Find similar memories</li>
             </ul>
             
+            <h3>Real-time Events</h3>
+            <ul>
+                <li><a href="/api/events">Server-Sent Events Stream</a></li>
+                <li><a href="/api/events/stats">SSE Connection Stats</a></li>
+            </ul>
+            
             <h3>Coming Soon</h3>
             <ul>
-                <li><a href="/events">Server-Sent Events</a></li>
                 <li>Interactive Dashboard</li>
+                <li>WebSocket Support</li>
             </ul>
             
             <p><em>Powered by SQLite-vec + FastAPI</em></p>

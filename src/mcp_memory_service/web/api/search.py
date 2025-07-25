@@ -4,6 +4,7 @@ Search endpoints for the HTTP interface.
 Provides semantic search, tag-based search, and time-based recall functionality.
 """
 
+import logging
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
@@ -14,8 +15,10 @@ from ...storage.sqlite_vec import SqliteVecMemoryStorage
 from ...models.memory import Memory, MemoryQueryResult
 from ..dependencies import get_storage
 from .memories import MemoryResponse, memory_to_response
+from ..sse import sse_manager, create_search_completed_event
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 # Request Models
@@ -109,6 +112,18 @@ async def semantic_search(
         
         processing_time = (time.time() - start_time) * 1000
         
+        # Broadcast SSE event for search completion
+        try:
+            event = create_search_completed_event(
+                query=request.query,
+                search_type="semantic",
+                results_count=len(search_results),
+                processing_time_ms=processing_time
+            )
+            await sse_manager.broadcast_event(event)
+        except Exception as e:
+            logger.warning(f"Failed to broadcast search_completed event: {e}")
+        
         return SearchResponse(
             results=search_results,
             total_found=len(search_results),
@@ -162,10 +177,24 @@ async def tag_search(
         
         processing_time = (time.time() - start_time) * 1000
         
+        query_string = f"Tags: {', '.join(request.tags)} ({match_type})"
+        
+        # Broadcast SSE event for search completion
+        try:
+            event = create_search_completed_event(
+                query=query_string,
+                search_type="tag",
+                results_count=len(search_results),
+                processing_time_ms=processing_time
+            )
+            await sse_manager.broadcast_event(event)
+        except Exception as e:
+            logger.warning(f"Failed to broadcast search_completed event: {e}")
+        
         return SearchResponse(
             results=search_results,
             total_found=len(search_results),
-            query=f"Tags: {', '.join(request.tags)} ({match_type})",
+            query=query_string,
             search_type="tag",
             processing_time_ms=processing_time
         )

@@ -2,6 +2,7 @@
 Memory CRUD endpoints for the HTTP interface.
 """
 
+import logging
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -12,8 +13,10 @@ from ...storage.sqlite_vec import SqliteVecMemoryStorage
 from ...models.memory import Memory
 from ...utils.hashing import generate_content_hash
 from ..dependencies import get_storage
+from ..sse import sse_manager, create_memory_stored_event, create_memory_deleted_event
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 # Request/Response Models
@@ -105,6 +108,20 @@ async def store_memory(
         success, message = await storage.store(memory)
         
         if success:
+            # Broadcast SSE event for successful memory storage
+            try:
+                memory_data = {
+                    "content_hash": content_hash,
+                    "content": memory.content,
+                    "tags": memory.tags,
+                    "memory_type": memory.memory_type
+                }
+                event = create_memory_stored_event(memory_data)
+                await sse_manager.broadcast_event(event)
+            except Exception as e:
+                # Don't fail the request if SSE broadcasting fails
+                logger.warning(f"Failed to broadcast memory_stored event: {e}")
+            
             return MemoryCreateResponse(
                 success=True,
                 message=message,
@@ -215,6 +232,14 @@ async def delete_memory(
     """
     try:
         success, message = await storage.delete(content_hash)
+        
+        # Broadcast SSE event for memory deletion
+        try:
+            event = create_memory_deleted_event(content_hash, success)
+            await sse_manager.broadcast_event(event)
+        except Exception as e:
+            # Don't fail the request if SSE broadcasting fails
+            logger.warning(f"Failed to broadcast memory_deleted event: {e}")
         
         return MemoryDeleteResponse(
             success=success,
