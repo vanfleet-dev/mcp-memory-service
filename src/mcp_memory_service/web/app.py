@@ -26,6 +26,7 @@ from ..storage.sqlite_vec import SqliteVecMemoryStorage
 from .dependencies import set_storage, get_storage
 from .api.health import router as health_router
 from .api.memories import router as memories_router
+from .api.search import router as search_router
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     # Include API routers
     app.include_router(health_router, prefix="/api", tags=["health"])
     app.include_router(memories_router, prefix="/api", tags=["memories"])
+    app.include_router(search_router, prefix="/api", tags=["search"])
     
     # Serve static files (dashboard)
     static_path = os.path.join(os.path.dirname(__file__), "static")
@@ -103,12 +105,39 @@ def create_app() -> FastAPI:
         </head>
         <body>
             <h1>MCP Memory Service</h1>
-            <p>HTTP/SSE interface is running!</p>
+            <p>HTTP/SSE interface with SQLite-vec backend</p>
+            
+            <h2>API Endpoints</h2>
+            <h3>Health & Info</h3>
             <ul>
                 <li><a href="/api/health">Health Check</a></li>
-                <li><a href="/api/docs">API Documentation</a></li>
-                <li><a href="/events">Server-Sent Events</a> (coming soon)</li>
+                <li><a href="/api/health/detailed">Detailed Health</a></li>
+                <li><a href="/api/docs">API Documentation (Swagger)</a></li>
             </ul>
+            
+            <h3>Memory Management</h3>
+            <ul>
+                <li>POST /api/memories - Store new memory</li>
+                <li>GET /api/memories - List memories with pagination</li>
+                <li>GET /api/memories/{hash} - Get specific memory</li>
+                <li>DELETE /api/memories/{hash} - Delete memory</li>
+            </ul>
+            
+            <h3>Search Operations</h3>
+            <ul>
+                <li>POST /api/search - Semantic similarity search</li>
+                <li>POST /api/search/by-tag - Tag-based search</li>
+                <li>POST /api/search/by-time - Time-based recall</li>  
+                <li>GET /api/search/similar/{hash} - Find similar memories</li>
+            </ul>
+            
+            <h3>Coming Soon</h3>
+            <ul>
+                <li><a href="/events">Server-Sent Events</a></li>
+                <li>Interactive Dashboard</li>
+            </ul>
+            
+            <p><em>Powered by SQLite-vec + FastAPI</em></p>
         </body>
         </html>
         """
