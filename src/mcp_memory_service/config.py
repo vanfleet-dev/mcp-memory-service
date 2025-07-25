@@ -138,7 +138,7 @@ except Exception as e:
 
 # Server settings
 SERVER_NAME = "memory"
-SERVER_VERSION = "0.2.0"
+SERVER_VERSION = "0.2.2"
 
 # Storage backend configuration
 SUPPORTED_BACKENDS = ['chroma', 'sqlite_vec', 'sqlite-vec']

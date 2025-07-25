@@ -637,6 +637,175 @@ class SqliteVecMemoryStorage(MemoryStorage):
         # Return JSON string representation of the array
         return json.dumps(tags)
     
+    async def recall(self, query: Optional[str] = None, n_results: int = 5, start_timestamp: Optional[float] = None, end_timestamp: Optional[float] = None) -> List[MemoryQueryResult]:
+        """
+        Retrieve memories with combined time filtering and optional semantic search.
+        
+        Args:
+            query: Optional semantic search query. If None, only time filtering is applied.
+            n_results: Maximum number of results to return.
+            start_timestamp: Optional start time for filtering.
+            end_timestamp: Optional end time for filtering.
+            
+        Returns:
+            List of MemoryQueryResult objects.
+        """
+        try:
+            if not self.conn:
+                logger.error("Database not initialized, cannot retrieve memories")
+                return []
+            
+            # Build time filtering WHERE clause
+            time_conditions = []
+            params = []
+            
+            if start_timestamp is not None:
+                time_conditions.append("created_at >= ?")
+                params.append(float(start_timestamp))
+            
+            if end_timestamp is not None:
+                time_conditions.append("created_at <= ?")
+                params.append(float(end_timestamp))
+            
+            time_where = " AND ".join(time_conditions) if time_conditions else ""
+            
+            logger.info(f"Time filtering conditions: {time_where}, params: {params}")
+            
+            # Determine whether to use semantic search or just time-based filtering
+            if query and self.embedding_model:
+                # Combined semantic search with time filtering
+                try:
+                    # Generate query embedding
+                    query_embedding = self._generate_embedding(query)
+                    
+                    # Build SQL query with time filtering
+                    base_query = '''
+                        SELECT m.content_hash, m.content, m.tags, m.memory_type, m.metadata,
+                               m.created_at, m.updated_at, m.created_at_iso, m.updated_at_iso, 
+                               e.distance
+                        FROM memories m
+                        JOIN (
+                            SELECT rowid, distance 
+                            FROM memory_embeddings 
+                            WHERE content_embedding MATCH ?
+                            ORDER BY distance
+                            LIMIT ?
+                        ) e ON m.id = e.rowid
+                    '''
+                    
+                    if time_where:
+                        base_query += f" WHERE {time_where}"
+                    
+                    base_query += " ORDER BY e.distance"
+                    
+                    # Prepare parameters: embedding, limit, then time filter params
+                    query_params = [serialize_float32(query_embedding), n_results] + params
+                    
+                    cursor = self.conn.execute(base_query, query_params)
+                    
+                    results = []
+                    for row in cursor.fetchall():
+                        try:
+                            # Parse row data
+                            content_hash, content, tags_str, memory_type, metadata_str = row[:5]
+                            created_at, updated_at, created_at_iso, updated_at_iso, distance = row[5:]
+                            
+                            # Parse tags and metadata
+                            tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()] if tags_str else []
+                            metadata = json.loads(metadata_str) if metadata_str else {}
+                            
+                            # Create Memory object
+                            memory = Memory(
+                                content=content,
+                                content_hash=content_hash,
+                                tags=tags,
+                                memory_type=memory_type,
+                                metadata=metadata,
+                                created_at=created_at,
+                                updated_at=updated_at,
+                                created_at_iso=created_at_iso,
+                                updated_at_iso=updated_at_iso
+                            )
+                            
+                            # Calculate relevance score (lower distance = higher relevance)
+                            relevance_score = max(0.0, 1.0 - distance)
+                            
+                            results.append(MemoryQueryResult(
+                                memory=memory,
+                                relevance_score=relevance_score,
+                                debug_info={"distance": distance, "backend": "sqlite-vec", "time_filtered": bool(time_where)}
+                            ))
+                            
+                        except Exception as parse_error:
+                            logger.warning(f"Failed to parse memory result: {parse_error}")
+                            continue
+                    
+                    logger.info(f"Retrieved {len(results)} memories for semantic query with time filter")
+                    return results
+                    
+                except Exception as query_error:
+                    logger.error(f"Error in semantic search with time filter: {str(query_error)}")
+                    # Fall back to time-based retrieval on error
+                    logger.info("Falling back to time-based retrieval")
+            
+            # Time-based filtering only (or fallback from failed semantic search)
+            base_query = '''
+                SELECT content_hash, content, tags, memory_type, metadata,
+                       created_at, updated_at, created_at_iso, updated_at_iso
+                FROM memories
+            '''
+            
+            if time_where:
+                base_query += f" WHERE {time_where}"
+            
+            base_query += " ORDER BY created_at DESC LIMIT ?"
+            
+            # Add limit parameter
+            params.append(n_results)
+            
+            cursor = self.conn.execute(base_query, params)
+            
+            results = []
+            for row in cursor.fetchall():
+                try:
+                    content_hash, content, tags_str, memory_type, metadata_str = row[:5]
+                    created_at, updated_at, created_at_iso, updated_at_iso = row[5:]
+                    
+                    # Parse tags and metadata
+                    tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()] if tags_str else []
+                    metadata = json.loads(metadata_str) if metadata_str else {}
+                    
+                    memory = Memory(
+                        content=content,
+                        content_hash=content_hash,
+                        tags=tags,
+                        memory_type=memory_type,
+                        metadata=metadata,
+                        created_at=created_at,
+                        updated_at=updated_at,
+                        created_at_iso=created_at_iso,
+                        updated_at_iso=updated_at_iso
+                    )
+                    
+                    # For time-based retrieval, we don't have a relevance score
+                    results.append(MemoryQueryResult(
+                        memory=memory,
+                        relevance_score=None,
+                        debug_info={"backend": "sqlite-vec", "time_filtered": bool(time_where), "query_type": "time_based"}
+                    ))
+                    
+                except Exception as parse_error:
+                    logger.warning(f"Failed to parse memory result: {parse_error}")
+                    continue
+            
+            logger.info(f"Retrieved {len(results)} memories for time-based query")
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error in recall: {str(e)}")
+            logger.error(traceback.format_exc())
+            return []
+    
     def close(self):
         """Close the database connection."""
         if self.conn:
