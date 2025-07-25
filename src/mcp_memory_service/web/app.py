@@ -25,6 +25,7 @@ from ..config import (
 from ..storage.sqlite_vec import SqliteVecMemoryStorage
 from .dependencies import set_storage, get_storage
 from .api.health import router as health_router
+from .api.memories import router as memories_router
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,7 @@ def create_app() -> FastAPI:
     
     # Include API routers
     app.include_router(health_router, prefix="/api", tags=["health"])
+    app.include_router(memories_router, prefix="/api", tags=["memories"])
     
     # Serve static files (dashboard)
     static_path = os.path.join(os.path.dirname(__file__), "static")
