@@ -62,8 +62,8 @@ def memory_query_result_to_search_result(query_result: MemoryQueryResult) -> Sea
     """Convert MemoryQueryResult to SearchResult format."""
     return SearchResult(
         memory=memory_to_response(query_result.memory),
-        similarity_score=query_result.similarity_score,
-        relevance_reason=f"Semantic similarity: {query_result.similarity_score:.3f}" if query_result.similarity_score else None
+        similarity_score=query_result.relevance_score,
+        relevance_reason=f"Semantic similarity: {query_result.relevance_score:.3f}" if query_result.relevance_score else None
     )
 
 
@@ -101,7 +101,7 @@ async def semantic_search(
         if request.similarity_threshold is not None:
             query_results = [
                 result for result in query_results
-                if result.similarity_score and result.similarity_score >= request.similarity_threshold
+                if result.relevance_score and result.relevance_score >= request.similarity_threshold
             ]
         
         # Convert to search results
