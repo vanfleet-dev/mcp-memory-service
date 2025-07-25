@@ -1,0 +1,179 @@
+{
+  "timestamp": "2025-07-24T23:13:12.258996",
+  "phase": "Phase 2 - Baseline Testing",
+  "tests": {
+    "memory_operations": {
+      "store_memory": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "retrieve_memory": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "recall_memory": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "search_by_tag": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      }
+    },
+    "delete_operations": {
+      "delete_memory": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "delete_by_tag": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "delete_by_tags": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "delete_by_all_tags": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "delete_by_timeframe": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "delete_before_date": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      }
+    },
+    "dashboard_operations": {
+      "dashboard_check_health": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "dashboard_recall_memory": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "dashboard_retrieve_memory": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "dashboard_search_by_tag": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "dashboard_get_stats": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "dashboard_optimize_db": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "dashboard_create_backup": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "dashboard_delete_memory": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      }
+    },
+    "debug_operations": {
+      "debug_retrieve": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "debug_similarity_analysis": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "check_database_health": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "debug_memory_info": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "debug_storage_validation": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "debug_system_info": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "debug_embedding_test": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      }
+    },
+    "admin_operations": {
+      "create_backup": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "list_backups": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "restore_backup": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "cleanup_old_backups": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      }
+    },
+    "maintenance_operations": {
+      "optimize_db": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "database_maintenance": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "update_memory_metadata": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "recall_by_timeframe": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      }
+    },
+    "import_export": {
+      "export_memories": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      },
+      "import_memories": {
+        "status": "pending",
+        "note": "Requires MCP tool invocation"
+      }
+    },
+    "installation": {
+      "install_py": {
+        "status": "pending",
+        "note": "Manual verification required"
+      },
+      "uv_installation": {
+        "status": "pending",
+        "note": "Manual verification required"
+      },
+      "docker_builds": {
+        "status": "pending",
+        "note": "Manual verification required"
+      },
+      "mcp_inspector": {
+        "status": "pending",
+        "note": "Manual verification required"
+      }
+    },
+    "integration": {}
+  }
+}

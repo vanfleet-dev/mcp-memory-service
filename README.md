@@ -123,8 +123,10 @@ docker run -p 8000:8000 \
 You can install and run the Memory Service using uvx for isolated execution:
 
 ```bash
-# Install uvx if not already installed
-pip install uvx
+# Install uv (which includes uvx) if not already installed
+pip install uv
+# Or use the installer script:
+# curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install and run the memory service
 uvx mcp-memory-service

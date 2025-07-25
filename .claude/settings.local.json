@@ -23,13 +23,22 @@
       "mcp__memory__retrieve_memory",
       "mcp__memory__search_by_tag",
       "mcp__memory__recall_memory",
+      "mcp__memory__debug_retrieve",
+      "mcp__memory__create_backup",
+      "mcp__memory__list_backups",
+      "mcp__memory__optimize_db",
+      "mcp__memory__export_memories",
+      "mcp__memory__debug_system_info",
       "Bash(/bin/bash -c \"git status\")",
       "Bash(ls:*)",
       "Bash(bash -c 'export PATH=\"\"/usr/bin:/bin:$PATH\"\" && git status')",
       "Bash(bash -l -c 'git status')",
       "Bash(pytest:*)",
       "Bash(docker build:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(uv run:*)"
     ],
     "deny": []
   }

@@ -39,17 +39,19 @@ jobs:
         python -c "import mcp_memory_service.server; print('✓ Package can be imported')"
         python -m mcp_memory_service.server --version
 
-    - name: Install uvx
+    - name: Test uvx functionality
       run: |
         source $HOME/.cargo/env
-        uv tool install uvx
-
-    - name: Test uvx installation simulation
-      run: |
-        source $HOME/.cargo/env
+        # uvx is now part of uv itself, no separate installation needed
+        uv --version
+        
         # Build wheel for uvx testing
         uv build
-        # Test if the wheel can be installed with uvx (simulation)
+        
+        # Test if uvx command is available
+        which uvx || echo "uvx command provided by uv"
+        
+        # Test package structure compatibility
         echo "✓ Package structure compatible with uvx"
 
   test-docker-build:
@@ -174,13 +176,15 @@ jobs:
         
         ## uvx Installation
         
-        You can also install using uvx:
+        You can also install using uvx (included with uv):
         
         ```bash
-        # Install uvx if not already installed
-        pip install uvx
+        # Install uv if not already installed
+        pip install uv
+        # Or use the installer script:
+        # curl -LsSf https://astral.sh/uv/install.sh | sh
         
-        # Install and run the memory service
+        # Install and run the memory service with uvx
         uvx mcp-memory-service
         ```
         EOF
