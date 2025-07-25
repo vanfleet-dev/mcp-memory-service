@@ -38,7 +38,9 @@
       "Bash(git checkout:*)",
       "Bash(mkdir:*)",
       "Bash(mv:*)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(npx @modelcontextprotocol/inspector uv:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }
