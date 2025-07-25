@@ -24,19 +24,19 @@ def print_step(step, text):
 
 def print_info(text):
     """Print formatted info text."""
-    print(f"  → {text}")
+    print(f"  -> {text}")
 
 def print_error(text):
     """Print formatted error text."""
-    print(f"  ❌ ERROR: {text}")
+    print(f"  [ERROR] {text}")
 
 def print_success(text):
     """Print formatted success text."""
-    print(f"  ✅ {text}")
+    print(f"  [OK] {text}")
 
 def print_warning(text):
     """Print formatted warning text."""
-    print(f"  ⚠️  {text}")
+    print(f"  [WARNING]  {text}")
 
 def detect_system():
     """Detect the system architecture and platform."""
