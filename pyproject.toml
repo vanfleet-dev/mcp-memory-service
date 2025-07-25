@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling", "python-semantic-release"]
+requires = ["hatchling", "python-semantic-release", "build"]
 build-backend = "hatchling.build"
 
 [project]
@@ -38,6 +38,7 @@ version_variable = [
 branch = "main"
 changelog_file = "CHANGELOG.md"
 build_command = "python -m build"
+build_command_env = []
 dist_path = "dist/"
 upload_to_pypi = true
 upload_to_release = true
