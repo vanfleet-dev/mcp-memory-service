@@ -43,37 +43,46 @@ jobs:
     - name: Python Semantic Release
       id: release
       run: |
+        # Isolate all output to prevent contamination
+        exec 3>&1 4>&2
+        
         # Run semantic-release to determine next version without pushing
         export GIT_COMMITTER_NAME="github-actions[bot]"
         export GIT_COMMITTER_EMAIL="github-actions[bot]@users.noreply.github.com"
         
-        # Capture current version (suppress all warnings)
-        CURRENT_VERSION=$(python -c "import sys, warnings; warnings.filterwarnings('ignore'); sys.stderr = open('/dev/null', 'w'); exec('try:\n    from src.mcp_memory_service import __version__\n    print(__version__)\nexcept:\n    print(\'0.0.0\')')")
-        echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        # Capture current version (read directly from file)
+        CURRENT_VERSION=$(grep -E "^__version__" src/mcp_memory_service/__init__.py | cut -d'"' -f2 || echo "0.0.0")
         
-        # Run semantic-release in dry-run mode to check if release is needed
-        if semantic-release version --dry-run --print 2>/dev/null | grep -q "^[0-9]"; then
-          # A new version would be created, so run semantic-release without pushing
-          NEW_VERSION=$(semantic-release version --dry-run --print 2>/dev/null)
-          echo "New version would be: $NEW_VERSION"
+        # Run semantic-release in dry-run mode with all output redirected
+        if semantic-release version --dry-run --print >/dev/null 2>&1 && semantic-release version --dry-run --print 2>/dev/null | grep -q "^[0-9]"; then
+          # A new version would be created, capture it cleanly
+          NEW_VERSION=$(semantic-release version --dry-run --print 2>/dev/null | head -1)
+          echo "New version would be: $NEW_VERSION" >&3
           
-          # Actually create the version locally (but don't push)
-          semantic-release version --no-push --no-vcs-release
+          # Actually create the version locally (suppress all output)
+          semantic-release version --no-push --no-vcs-release >/dev/null 2>&1
           
-          # Capture the new version (suppress all warnings)
-          NEW_VERSION_ACTUAL=$(python -c "import sys, warnings; warnings.filterwarnings('ignore'); sys.stderr = open('/dev/null', 'w'); exec('try:\n    from src.mcp_memory_service import __version__\n    print(__version__)\nexcept:\n    print(\'0.0.0\')')")
-          echo "released=true" >> $GITHUB_OUTPUT
-          echo "version=$NEW_VERSION_ACTUAL" >> $GITHUB_OUTPUT
-          echo "tag=v$NEW_VERSION_ACTUAL" >> $GITHUB_OUTPUT
+          # Capture the new version directly from file
+          NEW_VERSION_ACTUAL=$(grep -E "^__version__" src/mcp_memory_service/__init__.py | cut -d'"' -f2 || echo "0.0.0")
           
-          # Create tag manually using GitHub API
+          # Write to GITHUB_OUTPUT with clean environment
+          {
+            echo "released=true"
+            echo "version=$NEW_VERSION_ACTUAL" 
+            echo "tag=v$NEW_VERSION_ACTUAL"
+          } >> $GITHUB_OUTPUT
+          
+          # Create tag manually
           git tag "v$NEW_VERSION_ACTUAL"
-          echo "Tag v$NEW_VERSION_ACTUAL created locally"
+          echo "Tag v$NEW_VERSION_ACTUAL created locally" >&3
         else
-          echo "No release needed"
-          echo "released=false" >> $GITHUB_OUTPUT
-          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "tag=" >> $GITHUB_OUTPUT
+          echo "No release needed" >&3
+          # Write to GITHUB_OUTPUT with clean environment
+          {
+            echo "released=false"
+            echo "version=$CURRENT_VERSION"
+            echo "tag="
+          } >> $GITHUB_OUTPUT
         fi
 
   # Test uvx compatibility
