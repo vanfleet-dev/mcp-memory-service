@@ -63,6 +63,9 @@ python install.py
 
 ### 🎯 Hardware-Specific Installation
 
+**For Intel Macs:**
+For detailed setup instructions specific to Intel Macs, see our [Intel Mac Setup Guide](docs/INTEL_MAC_SETUP.md).
+
 **For Legacy Hardware (2013-2017 Intel Macs):**
 ```bash
 python install.py --legacy-hardware
@@ -555,6 +558,7 @@ See the [Installation Guide](docs/guides/installation.md#troubleshooting-common-
 - **[Migration Guide](MIGRATION_GUIDE.md)** - ChromaDB to SQLite-vec migration instructions
 
 ### Platform-Specific Guides
+- **[Intel Mac Setup Guide](docs/INTEL_MAC_SETUP.md)** - Comprehensive guide for Intel Mac users
 - **[Legacy Mac Guide](docs/platforms/macos-intel-legacy.md)** - Optimized for 2015 MacBook Pro and older Intel Macs
 - **[Windows Setup](docs/guides/windows-setup.md)** - Windows-specific installation and troubleshooting
 - **[Ubuntu Setup](docs/guides/UBUNTU_SETUP.md)** - Linux server installation guide
