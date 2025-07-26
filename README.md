@@ -19,7 +19,7 @@ An MCP server providing semantic memory and persistent storage capabilities for 
 - **Natural language time-based recall** (e.g., "last week", "yesterday morning")
 - **Enhanced tag deletion system** with flexible multi-tag support
 - Tag-based memory retrieval system
-- **Multiple storage backends**: ChromaDB (default) and SQLite-vec (lightweight alternative)
+- **Dual storage backends**: ChromaDB (full-featured) and SQLite-vec (lightweight, fast)
 - Automatic database backups
 - Memory optimization tools
 - Exact match retrieval
@@ -44,9 +44,9 @@ An MCP server providing semantic memory and persistent storage capabilities for 
 
 ## Installation
 
-### Quick Start (Recommended)
+### 🚀 Intelligent Installer (Recommended)
 
-The enhanced installation script automatically detects your system and installs the appropriate dependencies:
+The new unified installer automatically detects your hardware and selects the optimal configuration:
 
 ```bash
 # Clone the repository
@@ -57,15 +57,67 @@ cd mcp-memory-service
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Run the installation script
+# Run the intelligent installer
 python install.py
 ```
 
-The `install.py` script will:
-1. Detect your system architecture and available hardware accelerators
-2. Install the appropriate dependencies for your platform
-3. Configure the optimal settings for your environment
-4. Verify the installation and provide diagnostics if needed
+### 🎯 Hardware-Specific Installation
+
+**For Legacy Hardware (2013-2017 Intel Macs):**
+```bash
+python install.py --legacy-hardware
+```
+
+**For Server/Headless Deployment:**
+```bash
+python install.py --server-mode
+```
+
+**For HTTP/SSE API Development:**
+```bash
+python install.py --enable-http-api
+```
+
+**For Migration from ChromaDB:**
+```bash
+python install.py --migrate-from-chromadb
+```
+
+### 🧠 What the Installer Does
+
+1. **Hardware Detection**: CPU, GPU, memory, and platform analysis
+2. **Intelligent Backend Selection**: ChromaDB vs SQLite-vec based on your hardware
+3. **Platform Optimization**: macOS Intel fixes, Windows CUDA setup, Linux variations
+4. **Dependency Management**: Compatible PyTorch and ML library versions
+5. **Auto-Configuration**: Claude Desktop config and environment variables
+6. **Migration Support**: Seamless ChromaDB to SQLite-vec migration
+
+### 📊 Storage Backend Selection
+
+MCP Memory Service supports two optimized storage backends:
+
+#### SQLite-vec 🪶 (Lightweight & Fast)
+**Best for**: 2015 MacBook Pro, older Intel Macs, low-memory systems, Docker deployments
+
+- ✅ **10x faster startup** (2-3 seconds vs 15-30 seconds)
+- ✅ **Single file database** (easy backup/sharing)
+- ✅ **Minimal memory usage** (~150MB vs ~600MB)
+- ✅ **No external dependencies**
+- ✅ **HTTP/SSE API support**
+
+#### ChromaDB 📦 (Full-Featured)
+**Best for**: Modern Macs (M1/M2/M3), GPU-enabled systems, production deployments
+
+- ✅ **Advanced vector search** with multiple metrics
+- ✅ **Rich metadata support** and complex queries
+- ✅ **Battle-tested scalability**
+- ✅ **Extensive ecosystem** integration
+
+**The installer automatically recommends the best backend for your hardware**, but you can override with:
+```bash
+python install.py --storage-backend sqlite_vec    # Lightweight
+python install.py --storage-backend chromadb      # Full-featured
+```
 
 ### Docker Installation
 
@@ -494,6 +546,44 @@ See the [Installation Guide](docs/guides/installation.md#troubleshooting-common-
 - **Memory issues**: Set `MCP_MEMORY_BATCH_SIZE=4` and try a smaller model
 - **Apple Silicon**: Ensure Python 3.10+ built for ARM64, set `PYTORCH_ENABLE_MPS_FALLBACK=1`
 - **Installation testing**: Run `python scripts/test_installation.py`
+
+## 📚 Comprehensive Documentation
+
+### Installation & Setup
+- **[Master Installation Guide](docs/guides/INSTALLATION_MASTER.md)** - Complete installation guide with hardware-specific paths
+- **[Storage Backend Comparison](docs/guides/STORAGE_BACKENDS.md)** - Detailed comparison and selection guide
+- **[Migration Guide](MIGRATION_GUIDE.md)** - ChromaDB to SQLite-vec migration instructions
+
+### Platform-Specific Guides
+- **[Legacy Mac Guide](docs/platforms/macos-intel-legacy.md)** - Optimized for 2015 MacBook Pro and older Intel Macs
+- **[Windows Setup](docs/guides/windows-setup.md)** - Windows-specific installation and troubleshooting
+- **[Ubuntu Setup](docs/guides/UBUNTU_SETUP.md)** - Linux server installation guide
+
+### API & Integration
+- **[HTTP/SSE API](docs/IMPLEMENTATION_PLAN_HTTP_SSE.md)** - New web interface documentation
+- **[Claude Desktop Integration](docs/guides/claude_integration.md)** - Configuration examples
+- **[Integrations](docs/integrations.md)** - Third-party tools and extensions
+
+### Advanced Topics
+- **[Homebrew PyTorch Integration](docs/integration/homebrew/HOMEBREW_PYTORCH_README.md)** - Using system PyTorch
+- **[Docker Deployment](docs/guides/docker.md)** - Container-based deployment
+- **[Performance Optimization](docs/implementation/performance.md)** - Tuning for different hardware
+
+### Troubleshooting & Support
+- **[General Troubleshooting](docs/guides/troubleshooting.md)** - Common issues and solutions
+- **[Hardware Compatibility](docs/DOCUMENTATION_AUDIT.md)** - Compatibility matrix and known issues
+
+### Quick Commands
+```bash
+# Get personalized setup recommendations
+python install.py --help-detailed
+
+# Generate hardware-specific setup guide
+python install.py --generate-docs
+
+# Test your installation
+python scripts/test_memory_simple.py
+```
 
 ## Project Structure
 

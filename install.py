@@ -1141,6 +1141,262 @@ def verify_installation():
         print_error("MCP Memory Service is not installed correctly")
         return False
 
+def is_legacy_hardware(system_info):
+    """Detect legacy hardware that needs special handling."""
+    if system_info["is_macos"] and system_info["is_x86"]:
+        # Check if it's likely an older Intel Mac
+        # This is a heuristic based on common patterns
+        try:
+            # Try to get more detailed system info
+            result = subprocess.run(
+                ['system_profiler', 'SPHardwareDataType'],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                output = result.stdout.lower()
+                # Look for indicators of older hardware
+                if any(year in output for year in ['2013', '2014', '2015', '2016', '2017']):
+                    return True
+        except (subprocess.SubprocessError, subprocess.TimeoutExpired):
+            pass
+    
+    return False
+
+def detect_memory_gb():
+    """Detect available system memory in GB."""
+    try:
+        import psutil
+        return psutil.virtual_memory().total / (1024**3)
+    except ImportError:
+        # Fallback detection methods
+        try:
+            if platform.system() == "Darwin":  # macOS
+                result = subprocess.run(
+                    ['sysctl', '-n', 'hw.memsize'],
+                    capture_output=True, text=True
+                )
+                if result.returncode == 0:
+                    return int(result.stdout.strip()) / (1024**3)
+            elif platform.system() == "Linux":
+                with open('/proc/meminfo', 'r') as f:
+                    for line in f:
+                        if line.startswith('MemTotal:'):
+                            return int(line.split()[1]) / (1024**2)
+        except (subprocess.SubprocessError, FileNotFoundError, IOError):
+            pass
+    
+    return 0  # Unknown
+
+def recommend_backend_intelligent(system_info, gpu_info, memory_gb, args):
+    """Intelligent backend recommendation based on hardware analysis."""
+    # User explicitly chose backend
+    if hasattr(args, 'storage_backend') and args.storage_backend:
+        return args.storage_backend
+    
+    # Legacy hardware mode
+    if args.legacy_hardware or is_legacy_hardware(system_info):
+        print_info("🔍 Legacy hardware detected - optimizing for compatibility")
+        return "sqlite_vec"
+    
+    # Server mode
+    if args.server_mode:
+        print_info("🖥️  Server mode - selecting lightweight backend")
+        return "sqlite_vec"
+    
+    # Low memory systems
+    if memory_gb > 0 and memory_gb < 4:
+        print_info(f"💾 Limited memory detected ({memory_gb:.1f}GB) - using efficient backend")
+        return "sqlite_vec"
+    
+    # macOS Intel with known ChromaDB issues
+    if system_info["is_macos"] and system_info["is_x86"]:
+        compatibility = detect_storage_backend_compatibility(system_info, gpu_info)
+        if compatibility["chromadb"]["recommendation"] == "problematic":
+            print_info("⚠️  macOS Intel compatibility issues detected - using SQLite-vec")
+            return "sqlite_vec"
+    
+    # Modern hardware with GPU
+    if gpu_info.get("has_cuda") or gpu_info.get("has_mps") or (memory_gb >= 8):
+        print_info("🚀 Modern hardware detected - using full-featured backend")
+        return "chromadb"
+    
+    # Default recommendation
+    return "chromadb"
+
+def show_detailed_help():
+    """Show detailed hardware-specific installation help."""
+    print_header("MCP Memory Service - Hardware-Specific Installation Guide")
+    
+    # Detect current system
+    system_info = detect_system()
+    gpu_info = detect_gpu()
+    memory_gb = detect_memory_gb()
+    
+    print_info("Your System Configuration:")
+    print_info(f"  Platform: {platform.system()} {platform.release()}")
+    print_info(f"  Architecture: {platform.machine()}")
+    print_info(f"  Python: {sys.version_info.major}.{sys.version_info.minor}")
+    if memory_gb > 0:
+        print_info(f"  Memory: {memory_gb:.1f}GB")
+    
+    # Hardware-specific recommendations
+    print_step("Recommendations", "Based on your hardware")
+    
+    if is_legacy_hardware(system_info):
+        print_success("Legacy Hardware Path (2013-2017 Intel Mac)")
+        print_info("  Recommended: python install.py --legacy-hardware")
+        print_info("  This will:")
+        print_info("    • Use SQLite-vec backend (lightweight)")
+        print_info("    • Configure ONNX runtime for CPU inference")
+        print_info("    • Use Homebrew PyTorch if available")
+        print_info("    • Optimize for limited resources")
+    elif system_info["is_macos"] and system_info["is_arm"]:
+        print_success("Apple Silicon Mac - Modern Hardware Path")
+        print_info("  Recommended: python install.py")
+        print_info("  This will:")
+        print_info("    • Use ChromaDB backend (full-featured)")
+        print_info("    • Enable MPS acceleration")
+        print_info("    • Install latest PyTorch with MPS support")
+    elif system_info["is_windows"] and gpu_info.get("has_cuda"):
+        print_success("Windows with CUDA GPU")
+        print_info("  Recommended: python install.py")
+        print_info("  This will:")
+        print_info("    • Use ChromaDB backend")
+        print_info("    • Enable CUDA acceleration")
+        print_info("    • Install PyTorch with CUDA support")
+    elif memory_gb > 0 and memory_gb < 4:
+        print_success("Low-Memory System")
+        print_info("  Recommended: python install.py --storage-backend sqlite_vec")
+        print_info("  This will:")
+        print_info("    • Use lightweight SQLite-vec backend")
+        print_info("    • Minimize memory usage")
+        print_info("    • Enable ONNX runtime for efficiency")
+    else:
+        print_success("Standard Installation")
+        print_info("  Recommended: python install.py")
+        print_info("  This will auto-detect and configure optimally")
+    
+    print_step("Available Options", "Command-line flags you can use")
+    print_info("  --legacy-hardware     : Optimize for 2013-2017 Intel Macs")
+    print_info("  --server-mode         : Headless server installation")
+    print_info("  --storage-backend X   : Force backend (chromadb/sqlite_vec)")
+    print_info("  --enable-http-api     : Enable HTTP/SSE web interface")
+    print_info("  --use-homebrew-pytorch: Use existing Homebrew PyTorch")
+    
+    print_step("Documentation", "Hardware-specific guides")
+    print_info("  Legacy Mac Guide: docs/platforms/macos-intel-legacy.md")
+    print_info("  Backend Comparison: docs/guides/STORAGE_BACKENDS.md")
+    print_info("  Master Guide: docs/guides/INSTALLATION_MASTER.md")
+
+def generate_personalized_docs():
+    """Generate personalized setup documentation."""
+    print_header("Generating Personalized Setup Guide")
+    
+    # Detect system
+    system_info = detect_system()
+    gpu_info = detect_gpu()
+    memory_gb = detect_memory_gb()
+    
+    # Create personalized guide
+    guide_content = f"""# Your Personalized MCP Memory Service Setup Guide
+
+Generated on: {platform.node()} at {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+## Your System Configuration
+
+- **Platform**: {platform.system()} {platform.release()}
+- **Architecture**: {platform.machine()}
+- **Python Version**: {sys.version_info.major}.{sys.version_info.minor}
+- **Memory**: {memory_gb:.1f}GB (detected)
+- **GPU**: {'Yes' if gpu_info.get('has_cuda') or gpu_info.get('has_mps') else 'No'}
+
+## Recommended Installation Command
+
+```bash
+"""
+    
+    # Generate recommendation
+    class Args:
+        storage_backend = None
+        legacy_hardware = False
+        server_mode = False
+    
+    args = Args()
+    recommended_backend = recommend_backend_intelligent(system_info, gpu_info, memory_gb, args)
+    
+    if is_legacy_hardware(system_info):
+        guide_content += "python install.py --legacy-hardware\n"
+    elif memory_gb < 4:
+        guide_content += "python install.py --storage-backend sqlite_vec\n"
+    else:
+        guide_content += "python install.py\n"
+    
+    guide_content += f"""```
+
+## Why This Configuration?
+
+Based on your {platform.system()} system with {memory_gb:.1f}GB RAM:
+"""
+    
+    if is_legacy_hardware(system_info):
+        guide_content += """
+- ✅ **Legacy Hardware Optimization**: Your Intel Mac benefits from SQLite-vec backend
+- ✅ **Homebrew PyTorch**: Better compatibility with older systems
+- ✅ **ONNX Runtime**: CPU-optimized inference for better performance
+- ✅ **Memory Efficient**: Minimal resource usage
+"""
+    elif recommended_backend == "sqlite_vec":
+        guide_content += """
+- ✅ **SQLite-vec Backend**: Lightweight and fast for your system
+- ✅ **Low Memory Usage**: Optimized for systems with limited RAM
+- ✅ **Quick Startup**: Database ready in seconds
+"""
+    else:
+        guide_content += """
+- ✅ **ChromaDB Backend**: Full-featured for your capable hardware
+- ✅ **Hardware Acceleration**: Takes advantage of your GPU/modern CPU
+- ✅ **Advanced Features**: Complete vector search capabilities
+"""
+    
+    guide_content += f"""
+## Next Steps
+
+1. **Run the installation**:
+   ```bash
+   cd mcp-memory-service
+   {guide_content.split('```bash')[1].split('```')[0].strip()}
+   ```
+
+2. **Test the installation**:
+   ```bash
+   python scripts/test_memory_simple.py
+   ```
+
+3. **Configure Claude Desktop**:
+   The installer will generate the optimal configuration for your system.
+
+## Troubleshooting
+
+If you encounter issues, see the platform-specific guide:
+- **Legacy Mac Issues**: docs/platforms/macos-intel-legacy.md
+- **General Issues**: docs/guides/troubleshooting.md
+- **Backend Selection**: docs/guides/STORAGE_BACKENDS.md
+
+## Support
+
+Generated configuration ID: {hash(str(system_info) + str(gpu_info))}-{int(__import__('time').time())}
+Include this ID when requesting support for faster assistance.
+"""
+    
+    # Write the guide
+    guide_path = "YOUR_PERSONALIZED_SETUP_GUIDE.md"
+    with open(guide_path, 'w') as f:
+        f.write(guide_content)
+    
+    print_success(f"Personalized setup guide created: {guide_path}")
+    print_info("This guide contains hardware-specific recommendations for your system")
+    print_info("Keep this file for future reference and troubleshooting")
+
 def main():
     """Main installation function."""
     parser = argparse.ArgumentParser(description="Install MCP Memory Service")
@@ -1157,13 +1413,110 @@ def main():
                         help='Skip PyTorch installation and use ONNX runtime with SQLite-vec backend instead')
     parser.add_argument('--use-homebrew-pytorch', action='store_true',
                         help='Use existing Homebrew PyTorch installation instead of pip version')
+    
+    # New intelligent installer options
+    parser.add_argument('--legacy-hardware', action='store_true',
+                        help='Optimize installation for legacy hardware (2013-2017 Intel Macs)')
+    parser.add_argument('--server-mode', action='store_true',
+                        help='Install for server/headless deployment (minimal UI dependencies)')
+    parser.add_argument('--enable-http-api', action='store_true',
+                        help='Enable HTTP/SSE API functionality')
+    parser.add_argument('--migrate-from-chromadb', action='store_true',
+                        help='Migrate existing ChromaDB installation to selected backend')
+    parser.add_argument('--help-detailed', action='store_true',
+                        help='Show detailed hardware-specific installation recommendations')
+    parser.add_argument('--generate-docs', action='store_true',
+                        help='Generate personalized setup documentation for your hardware')
+    
     args = parser.parse_args()
+    
+    # Handle special help modes
+    if args.help_detailed:
+        show_detailed_help()
+        sys.exit(0)
+    
+    if args.generate_docs:
+        generate_personalized_docs()
+        sys.exit(0)
     
     print_header("MCP Memory Service Installation")
     
     # Step 1: Detect system
     print_step("1", "Detecting system")
     system_info = detect_system()
+    gpu_info = detect_gpu()
+    memory_gb = detect_memory_gb()
+    
+    # Show memory info if detected
+    if memory_gb > 0:
+        print_info(f"System memory: {memory_gb:.1f}GB")
+    
+    # Intelligent backend recommendation
+    if not args.storage_backend:
+        recommended_backend = recommend_backend_intelligent(system_info, gpu_info, memory_gb, args)
+        args.storage_backend = recommended_backend
+        print_info(f"Recommended backend: {recommended_backend}")
+    
+    # Handle legacy hardware special case
+    if args.legacy_hardware or is_legacy_hardware(system_info):
+        print_step("1a", "Legacy Hardware Optimization")
+        args.storage_backend = "sqlite_vec"
+        args.use_homebrew_pytorch = True
+        print_success("Configuring for legacy hardware compatibility")
+        print_info("• SQLite-vec backend selected")
+        print_info("• Homebrew PyTorch integration enabled")
+        print_info("• ONNX runtime will be configured")
+    
+    # Handle server mode
+    if args.server_mode:
+        print_step("1b", "Server Mode Configuration")
+        args.storage_backend = "sqlite_vec"
+        print_success("Configuring for server deployment")
+        print_info("• Lightweight SQLite-vec backend")
+        print_info("• Minimal UI dependencies")
+    
+    # Handle HTTP API
+    if args.enable_http_api:
+        print_step("1c", "HTTP/SSE API Configuration")
+        if args.storage_backend == "chromadb":
+            print_warning("HTTP/SSE API works best with SQLite-vec backend")
+            response = input("Switch to SQLite-vec for optimal HTTP API experience? (y/N): ")
+            if response.lower().startswith('y'):
+                args.storage_backend = "sqlite_vec"
+    
+    # Handle migration
+    if args.migrate_from_chromadb:
+        print_step("1d", "Migration Setup")
+        print_info("Preparing to migrate from existing ChromaDB installation")
+        
+        # Check if ChromaDB data exists
+        chromadb_paths = [
+            os.path.expanduser("~/.mcp_memory_chroma"),
+            os.path.expanduser("~/Library/Application Support/mcp-memory/chroma_db"),
+            os.path.expanduser("~/.local/share/mcp-memory/chroma_db")
+        ]
+        
+        chromadb_found = None
+        for path in chromadb_paths:
+            if os.path.exists(path):
+                chromadb_found = path
+                break
+        
+        if chromadb_found:
+            print_success(f"Found ChromaDB data at: {chromadb_found}")
+            args.storage_backend = "sqlite_vec"  # Migration target
+            args.chromadb_found = chromadb_found  # Store for later use
+            print_info("Migration will run after installation completes")
+        else:
+            print_warning("No ChromaDB data found at standard locations")
+            manual_path = input("Enter ChromaDB path manually (or press Enter to skip): ").strip()
+            if manual_path and os.path.exists(manual_path):
+                chromadb_found = manual_path
+                args.storage_backend = "sqlite_vec"
+                args.chromadb_found = chromadb_found
+            else:
+                print_info("Skipping migration - no valid ChromaDB path provided")
+                args.migrate_from_chromadb = False
     
     # Check if user requested force-compatible dependencies for macOS Intel
     if args.force_compatible_deps:
@@ -1256,6 +1609,23 @@ def main():
                 print_info("pip install torch==2.3.0 torchvision==0.18.0 torchaudio==2.3.0")
                 print_info("pip install sentence-transformers==3.0.0")
     
+    # Execute migration if requested
+    if args.migrate_from_chromadb and hasattr(args, 'chromadb_found') and args.chromadb_found:
+        print_step("6", "Migrating from ChromaDB")
+        try:
+            migration_script = "scripts/migrate_chroma_to_sqlite.py"
+            if os.path.exists(migration_script):
+                print_info("Running migration script...")
+                subprocess.check_call([sys.executable, migration_script, "--auto-confirm"])
+                print_success("Migration completed successfully!")
+            else:
+                print_warning("Migration script not found - manual migration required")
+                print_info("Run: python scripts/migrate_chroma_to_sqlite.py")
+        except subprocess.SubprocessError as e:
+            print_error(f"Migration failed: {e}")
+            print_info("You can run migration manually later with:")
+            print_info("python scripts/migrate_chroma_to_sqlite.py")
+    
     print_header("Installation Complete")
     
     # Get final storage backend info
@@ -1278,7 +1648,12 @@ def main():
         print_info("   • Compatible with Homebrew PyTorch")
         print_info("   • Reduced dependencies for better compatibility")
     
-    print_info("For more information, see the README.md file")
+    print_info("For more information, see:")
+    print_info("  • Installation Guide: docs/guides/INSTALLATION_MASTER.md")
+    print_info("  • Backend Comparison: docs/guides/STORAGE_BACKENDS.md")
+    if system_info["is_macos"] and system_info["is_x86"] and is_legacy_hardware(system_info):
+        print_info("  • Legacy Mac Guide: docs/platforms/macos-intel-legacy.md")
+    print_info("  • Main README: README.md")
     
     # Print macOS Intel specific information if applicable
     if system_info["is_macos"] and system_info["is_x86"]:

@@ -52,7 +52,13 @@
       "Bash(git rebase:*)",
       "Bash(rm:*)",
       "Bash(curl:*)",
-      "Bash(start /B python:*)"
+      "Bash(start /B python:*)",
+      "Bash(where uv)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "mcp__memory__store_memory",
+      "Bash(git merge-base:*)"
     ],
     "deny": []
   }
