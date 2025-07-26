@@ -61,8 +61,13 @@
       "Bash(git merge-base:*)",
       "Bash(git fetch:*)",
       "Bash(git rebase:*)",
-      "Bash(claude mcp:*)"
+      "Bash(claude mcp:*)",
+      "mcp__memory__check_embedding_model"
     ],
     "deny": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "memory"
+  ]
 }
