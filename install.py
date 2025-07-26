@@ -1347,15 +1347,16 @@ Based on your {platform.system()} system with {memory_gb:.1f}GB RAM:
 """
     elif recommended_backend == "sqlite_vec":
         guide_content += """
-- [OK] **SQLite-vec Backend**: Lightweight and fast for your system
+- [OK] **SQLite-vec Backend**: Lightweight with complete vector search capabilities
 - [OK] **Low Memory Usage**: Optimized for systems with limited RAM
 - [OK] **Quick Startup**: Database ready in seconds
+- [OK] **Full Feature Set**: Semantic search, tagging, time-based recall
 """
     else:
         guide_content += """
-- [OK] **ChromaDB Backend**: Full-featured for your capable hardware
+- [OK] **ChromaDB Backend**: Full-featured with advanced indexing for your capable hardware
 - [OK] **Hardware Acceleration**: Takes advantage of your GPU/modern CPU
-- [OK] **Advanced Features**: Complete vector search capabilities
+- [OK] **Scalable Performance**: Optimized for large datasets and complex queries
 """
     
     guide_content += f"""
