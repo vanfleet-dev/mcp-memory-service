@@ -42,13 +42,39 @@ jobs:
 
     - name: Python Semantic Release
       id: release
-      uses: python-semantic-release/python-semantic-release@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        root_options: "-v version --no-push"
-      env:
-        GIT_COMMITTER_NAME: github-actions[bot]
-        GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
+      run: |
+        # Run semantic-release to determine next version without pushing
+        export GIT_COMMITTER_NAME="github-actions[bot]"
+        export GIT_COMMITTER_EMAIL="github-actions[bot]@users.noreply.github.com"
+        
+        # Capture current version
+        CURRENT_VERSION=$(python -c "from src.mcp_memory_service import __version__; print(__version__)")
+        echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        
+        # Run semantic-release in dry-run mode to check if release is needed
+        if semantic-release version --dry-run --print 2>/dev/null | grep -q "^[0-9]"; then
+          # A new version would be created, so run semantic-release without pushing
+          NEW_VERSION=$(semantic-release version --dry-run --print 2>/dev/null)
+          echo "New version would be: $NEW_VERSION"
+          
+          # Actually create the version locally (but don't push)
+          semantic-release version --no-push --no-vcs-release
+          
+          # Capture the new version
+          NEW_VERSION_ACTUAL=$(python -c "from src.mcp_memory_service import __version__; print(__version__)")
+          echo "released=true" >> $GITHUB_OUTPUT
+          echo "version=$NEW_VERSION_ACTUAL" >> $GITHUB_OUTPUT
+          echo "tag=v$NEW_VERSION_ACTUAL" >> $GITHUB_OUTPUT
+          
+          # Create tag manually using GitHub API
+          git tag "v$NEW_VERSION_ACTUAL"
+          echo "Tag v$NEW_VERSION_ACTUAL created locally"
+        else
+          echo "No release needed"
+          echo "released=false" >> $GITHUB_OUTPUT
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=" >> $GITHUB_OUTPUT
+        fi
 
   # Test uvx compatibility
   test-uvx-compatibility:
