@@ -1215,13 +1215,22 @@ def recommend_backend_intelligent(system_info, gpu_info, memory_gb, args):
             print_info("[WARNING] macOS Intel compatibility issues detected - using SQLite-vec")
             return "sqlite_vec"
     
-    # Modern hardware with GPU
-    if gpu_info.get("has_cuda") or gpu_info.get("has_mps") or (memory_gb >= 8):
-        print_info("[MODERN] Modern hardware detected - using full-featured backend")
+    # Hardware with GPU acceleration - ChromaDB can utilize this
+    if gpu_info.get("has_cuda") or gpu_info.get("has_mps"):
+        print_info("[GPU] GPU acceleration detected - ChromaDB recommended for performance")
         return "chromadb"
     
-    # Default recommendation
-    return "chromadb"
+    # High memory systems without GPU - explain the choice
+    if memory_gb >= 16:
+        print_info("[CHOICE] High-memory system without GPU detected")
+        print_info("  -> ChromaDB: Better for large datasets (10K+ memories), production use")
+        print_info("  -> SQLite-vec: Faster startup, simpler setup, same features for typical use")
+        print_info("  -> Defaulting to SQLite-vec for simplicity (use --storage-backend chromadb to override)")
+        return "sqlite_vec"
+    
+    # Default recommendation for most users
+    print_info("[DEFAULT] Recommending SQLite-vec for optimal user experience")
+    return "sqlite_vec"
 
 def show_detailed_help():
     """Show detailed hardware-specific installation help."""
@@ -1258,10 +1267,10 @@ def show_detailed_help():
         print_info("    • Enable MPS acceleration")
         print_info("    • Install latest PyTorch with MPS support")
     elif system_info["is_windows"] and gpu_info.get("has_cuda"):
-        print_success("Windows with CUDA GPU")
+        print_success("Windows with CUDA GPU - High Performance Path")
         print_info("  Recommended: python install.py")
         print_info("  This will:")
-        print_info("    • Use ChromaDB backend")
+        print_info("    • Use ChromaDB backend (GPU acceleration advantage)")
         print_info("    • Enable CUDA acceleration")
         print_info("    • Install PyTorch with CUDA support")
     elif memory_gb > 0 and memory_gb < 4:
@@ -1271,10 +1280,20 @@ def show_detailed_help():
         print_info("    • Use lightweight SQLite-vec backend")
         print_info("    • Minimize memory usage")
         print_info("    • Enable ONNX runtime for efficiency")
+    elif memory_gb >= 16 and not (gpu_info.get("has_cuda") or gpu_info.get("has_mps")):
+        print_success("High-Memory System (No GPU) - Choose Your Path")
+        print_info("  Option 1 (Recommended): python install.py")
+        print_info("    • SQLite-vec: Fast startup, simple setup, same features")
+        print_info("  Option 2: python install.py --storage-backend chromadb")
+        print_info("    • ChromaDB: Better for 10K+ memories, production deployments")
+        print_info("  Most users benefit from SQLite-vec's simplicity")
     else:
         print_success("Standard Installation")
         print_info("  Recommended: python install.py")
-        print_info("  This will auto-detect and configure optimally")
+        print_info("  This will:")
+        print_info("    • Use SQLite-vec backend (optimal for most users)")
+        print_info("    • Fast startup and simple setup")
+        print_info("    • Full semantic search capabilities")
     
     print_step("Available Options", "Command-line flags you can use")
     print_info("  --legacy-hardware     : Optimize for 2013-2017 Intel Macs")
@@ -1347,7 +1366,17 @@ Based on your {platform.system()} system with {memory_gb:.1f}GB RAM:
 - [OK] **Full Feature Set**: Complete semantic search, tagging, and time-based recall capabilities
 """
     elif recommended_backend == "sqlite_vec":
-        guide_content += """
+        if memory_gb >= 16 and not (gpu_info.get("has_cuda") or gpu_info.get("has_mps")):
+            guide_content += """
+- [OK] **Smart Choice**: SQLite-vec recommended for high-memory systems without GPU
+- [OK] **No GPU Needed**: ChromaDB's advantages require GPU acceleration you don't have
+- [OK] **Faster Startup**: Database ready in 2-3 seconds vs ChromaDB's 15-30 seconds
+- [OK] **Simpler Setup**: Single-file database, no complex dependencies
+- [OK] **Full Feature Set**: Complete semantic search, tagging, and time-based recall capabilities
+- [INFO] **Alternative**: Use `--storage-backend chromadb` if you plan 10K+ memories
+"""
+        else:
+            guide_content += """
 - [OK] **SQLite-vec Backend**: Lightweight with complete vector search capabilities
 - [OK] **Low Memory Usage**: Optimized for systems with limited RAM
 - [OK] **Quick Startup**: Database ready in seconds
@@ -1356,7 +1385,7 @@ Based on your {platform.system()} system with {memory_gb:.1f}GB RAM:
     else:
         guide_content += """
 - [OK] **ChromaDB Backend**: Production-grade with advanced HNSW indexing and rich ecosystem
-- [OK] **Hardware Acceleration**: Takes advantage of GPU/MPS acceleration when available
+- [OK] **Hardware Acceleration**: Takes advantage of your GPU/MPS acceleration
 - [OK] **Scalable Performance**: Optimized for large datasets (10K+ memories) and complex metadata queries
 - [OK] **Full Feature Set**: Complete semantic search, tagging, and time-based recall capabilities
 """
