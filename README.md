@@ -64,7 +64,7 @@ python install.py
 ### 🎯 Hardware-Specific Installation
 
 **For Intel Macs:**
-For detailed setup instructions specific to Intel Macs, see our [Intel Mac Setup Guide](docs/INTEL_MAC_SETUP.md).
+For detailed setup instructions specific to Intel Macs, see our [Intel Mac Setup Guide](docs/INTEL_MAC_SETUP.md). Intel Mac users should also check out our [Legacy Intel Mac Scripts](scripts/legacy_intel_mac/README.md) for specialized startup scripts.
 
 **For Legacy Hardware (2013-2017 Intel Macs):**
 ```bash

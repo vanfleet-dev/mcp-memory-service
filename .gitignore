@@ -13,6 +13,7 @@ env/
 .venv/
 venv/
 py310_venv/
+venv_py310/
 build/
 develop-eggs/
 dist/

@@ -45,9 +45,13 @@ Intel-based Mac systems require special consideration for several reasons:
    pip install numpy==1.25.2
    ```
 
-5. **Use the provided script** to start the memory service:
+5. **Use one of the provided scripts** to start the memory service:
    ```bash
-   ./claude_memory.sh
+   # For foreground mode (shows all output, can be stopped with Ctrl+C)
+   ./scripts/legacy_intel_mac/claude_memory.sh
+   
+   # For background mode (can close terminal after starting)
+   ./scripts/legacy_intel_mac/start_memory_for_claude.sh
    ```
 
 ## Troubleshooting
