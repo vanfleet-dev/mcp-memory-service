@@ -1216,8 +1216,9 @@ def recommend_backend_intelligent(system_info, gpu_info, memory_gb, args):
             return "sqlite_vec"
     
     # Hardware with GPU acceleration - ChromaDB can utilize this
-    if gpu_info.get("has_cuda") or gpu_info.get("has_mps"):
-        print_info("[GPU] GPU acceleration detected - ChromaDB recommended for performance")
+    if gpu_info.get("has_cuda") or gpu_info.get("has_mps") or gpu_info.get("has_directml"):
+        gpu_type = "CUDA" if gpu_info.get("has_cuda") else "MPS" if gpu_info.get("has_mps") else "DirectML"
+        print_info(f"[GPU] {gpu_type} acceleration detected - ChromaDB recommended for performance")
         return "chromadb"
     
     # High memory systems without GPU - explain the choice
@@ -1280,13 +1281,21 @@ def show_detailed_help():
         print_info("    • Use lightweight SQLite-vec backend")
         print_info("    • Minimize memory usage")
         print_info("    • Enable ONNX runtime for efficiency")
-    elif memory_gb >= 16 and not (gpu_info.get("has_cuda") or gpu_info.get("has_mps")):
+    elif memory_gb >= 16 and not (gpu_info.get("has_cuda") or gpu_info.get("has_mps") or gpu_info.get("has_directml")):
         print_success("High-Memory System (No GPU) - Choose Your Path")
         print_info("  Option 1 (Recommended): python install.py")
         print_info("    • SQLite-vec: Fast startup, simple setup, same features")
         print_info("  Option 2: python install.py --storage-backend chromadb")
         print_info("    • ChromaDB: Better for 10K+ memories, production deployments")
         print_info("  Most users benefit from SQLite-vec's simplicity")
+    elif gpu_info.get("has_cuda") or gpu_info.get("has_mps") or gpu_info.get("has_directml"):
+        gpu_type = "CUDA" if gpu_info.get("has_cuda") else "MPS" if gpu_info.get("has_mps") else "DirectML"
+        print_success(f"GPU-Accelerated System ({gpu_type}) - High Performance Path")
+        print_info("  Recommended: python install.py")
+        print_info("  This will:")
+        print_info(f"    • Use ChromaDB backend (takes advantage of {gpu_type})")
+        print_info("    • Enable hardware acceleration")
+        print_info("    • Optimize for performance and large datasets")
     else:
         print_success("Standard Installation")
         print_info("  Recommended: python install.py")
@@ -1366,7 +1375,7 @@ Based on your {platform.system()} system with {memory_gb:.1f}GB RAM:
 - [OK] **Full Feature Set**: Complete semantic search, tagging, and time-based recall capabilities
 """
     elif recommended_backend == "sqlite_vec":
-        if memory_gb >= 16 and not (gpu_info.get("has_cuda") or gpu_info.get("has_mps")):
+        if memory_gb >= 16 and not (gpu_info.get("has_cuda") or gpu_info.get("has_mps") or gpu_info.get("has_directml")):
             guide_content += """
 - [OK] **Smart Choice**: SQLite-vec recommended for high-memory systems without GPU
 - [OK] **No GPU Needed**: ChromaDB's advantages require GPU acceleration you don't have
