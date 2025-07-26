@@ -1336,7 +1336,7 @@ Generated on: {platform.node()} at {__import__('datetime').datetime.now().strfti
 - **Architecture**: {platform.machine()}
 - **Python Version**: {sys.version_info.major}.{sys.version_info.minor}
 - **Memory**: {memory_gb:.1f}GB (detected)
-- **GPU**: {'Yes' if gpu_info.get('has_cuda') or gpu_info.get('has_mps') else 'No'}
+- **GPU**: {'Yes (' + ('CUDA' if gpu_info.get('has_cuda') else 'MPS' if gpu_info.get('has_mps') else 'DirectML' if gpu_info.get('has_directml') else 'Unknown') + ')' if gpu_info.get('has_cuda') or gpu_info.get('has_mps') or gpu_info.get('has_directml') else 'No'}
 
 ## Recommended Installation Command
 
