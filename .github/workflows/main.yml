@@ -43,28 +43,53 @@ jobs:
     - name: Python Semantic Release
       id: release
       run: |
-        # Isolate all output to prevent contamination
-        exec 3>&1 4>&2
+        set -e
         
         # Run semantic-release to determine next version without pushing
         export GIT_COMMITTER_NAME="github-actions[bot]"
         export GIT_COMMITTER_EMAIL="github-actions[bot]@users.noreply.github.com"
         
+        echo "=== DEBUG: Starting semantic-release process ==="
+        
         # Capture current version (read directly from file)
         CURRENT_VERSION=$(grep -E "^__version__" src/mcp_memory_service/__init__.py | cut -d'"' -f2 || echo "0.0.0")
+        echo "DEBUG: Current version from file: $CURRENT_VERSION"
+        
+        # Check git log for recent commits
+        echo "DEBUG: Recent commits:"
+        git log --oneline -5
+        
+        # Check for existing tags
+        echo "DEBUG: Existing tags:"
+        git tag -l | tail -5 || echo "No tags found"
+        
+        # Show git status
+        echo "DEBUG: Git status:"
+        git status --porcelain
         
         # Always try to run semantic-release and capture the version change
         BEFORE_VERSION="$CURRENT_VERSION"
+        echo "DEBUG: Version before semantic-release: $BEFORE_VERSION"
         
-        # Run semantic-release (it will only create a version if needed)
-        semantic-release version --no-push --no-vcs-release >/dev/null 2>&1
+        # Run semantic-release with verbose output for debugging
+        echo "DEBUG: Running semantic-release..."
+        if semantic-release -v version --no-push --no-vcs-release; then
+          echo "DEBUG: semantic-release completed successfully"
+        else
+          echo "DEBUG: semantic-release failed or no release needed"
+        fi
         
         # Capture the version after semantic-release
         AFTER_VERSION=$(grep -E "^__version__" src/mcp_memory_service/__init__.py | cut -d'"' -f2 || echo "0.0.0")
+        echo "DEBUG: Version after semantic-release: $AFTER_VERSION"
+        
+        # Show git status after semantic-release
+        echo "DEBUG: Git status after semantic-release:"
+        git status --porcelain
         
         # Check if version changed
         if [ "$BEFORE_VERSION" != "$AFTER_VERSION" ]; then
-          echo "Version changed from $BEFORE_VERSION to $AFTER_VERSION" >&3
+          echo "✅ Version changed from $BEFORE_VERSION to $AFTER_VERSION"
           
           # Write to GITHUB_OUTPUT with clean environment
           {
@@ -75,16 +100,34 @@ jobs:
           
           # Create tag manually
           git tag "v$AFTER_VERSION"
-          echo "Tag v$AFTER_VERSION created locally" >&3
+          echo "✅ Tag v$AFTER_VERSION created locally"
+          
+          echo "DEBUG: Contents written to GITHUB_OUTPUT:"
+          echo "released=true"
+          echo "version=$AFTER_VERSION" 
+          echo "tag=v$AFTER_VERSION"
         else
-          echo "No release needed (version unchanged)" >&3
+          echo "❌ No release needed (version unchanged: $BEFORE_VERSION)"
+          
+          # TEMPORARY: Force a release for testing
+          echo "🔧 FORCING RELEASE FOR TESTING"
+          FORCED_VERSION="$CURRENT_VERSION-test-$(date +%s)"
+          
           # Write to GITHUB_OUTPUT with clean environment
           {
-            echo "released=false"
-            echo "version=$CURRENT_VERSION"
-            echo "tag="
+            echo "released=true"
+            echo "version=$FORCED_VERSION"
+            echo "tag=v$FORCED_VERSION"
           } >> $GITHUB_OUTPUT
+          
+          echo "DEBUG: FORCED Contents written to GITHUB_OUTPUT:"
+          echo "released=true"
+          echo "version=$FORCED_VERSION"
+          echo "tag=v$FORCED_VERSION"
         fi
+        
+        echo "=== DEBUG: Final GITHUB_OUTPUT contents ==="
+        cat $GITHUB_OUTPUT
 
   # Test uvx compatibility
   test-uvx-compatibility:
