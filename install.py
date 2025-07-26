@@ -70,7 +70,8 @@ def detect_system():
             result = subprocess.run(
                 ['brew', 'list', 'pytorch', '--version'],
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=10  # 10-second timeout to prevent hanging
             )
             if result.returncode == 0:
                 has_homebrew_pytorch = True
@@ -78,6 +79,9 @@ def detect_system():
                 version_line = result.stdout.strip()
                 homebrew_pytorch_version = version_line.split()[1] if len(version_line.split()) > 1 else "Unknown"
                 print_info(f"Detected Homebrew PyTorch installation: {homebrew_pytorch_version}")
+        except subprocess.TimeoutExpired:
+            print_info("Homebrew PyTorch detection timed out - skipping")
+            has_homebrew_pytorch = False
         except (subprocess.SubprocessError, FileNotFoundError):
             pass
     
@@ -851,7 +855,7 @@ def configure_paths(args):
         base_dir = home_dir / '.local' / 'share' / 'mcp-memory'
     
     # Create directories based on storage backend
-    storage_backend = os.environ.get('MCP_MEMORY_STORAGE_BACKEND', 'chromadb')
+    storage_backend = args.storage_backend or os.environ.get('MCP_MEMORY_STORAGE_BACKEND', 'chromadb')
     
     if storage_backend == 'sqlite_vec':
         # For sqlite-vec, we need a database file path
