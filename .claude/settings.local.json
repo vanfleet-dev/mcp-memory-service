@@ -58,7 +58,9 @@
       "Bash(find:*)",
       "Bash(mkdir:*)",
       "mcp__memory__store_memory",
-      "Bash(git merge-base:*)"
+      "Bash(git merge-base:*)",
+      "Bash(git fetch:*)",
+      "Bash(git rebase:*)"
     ],
     "deny": []
   }
