@@ -45,7 +45,7 @@ jobs:
       uses: python-semantic-release/python-semantic-release@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        root_options: "-v"
+        root_options: "-v version --no-push"
       env:
         GIT_COMMITTER_NAME: github-actions[bot]
         GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
@@ -110,6 +110,7 @@ jobs:
         file: ./tools/docker/Dockerfile
         platforms: linux/amd64
         push: false
+        load: true
         tags: mcp-memory-service:test
         cache-from: type=gha
         cache-to: type=gha,mode=max

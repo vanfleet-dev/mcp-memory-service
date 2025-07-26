@@ -54,8 +54,6 @@ dist_path = "dist/"
 upload_to_pypi = false
 upload_to_release = true
 commit_message = "chore(release): bump version to {version}"
-commit_version_number = false
-push_to_remote = false
 
 [tool.semantic_release.commit_parser_options]
 allowed_tags = [
