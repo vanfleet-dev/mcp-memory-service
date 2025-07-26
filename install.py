@@ -794,9 +794,12 @@ def install_package(args):
                 # Set environment variables for ONNX
                 print_info("Configuring to use ONNX runtime for inference without PyTorch...")
                 env['MCP_MEMORY_USE_ONNX'] = '1'
+                os.environ['MCP_MEMORY_USE_ONNX'] = '1'  # Also set in the main process
                 if chosen_backend != "sqlite_vec":
                     print_info("Switching to SQLite-vec backend for better compatibility")
                     env['MCP_MEMORY_STORAGE_BACKEND'] = 'sqlite_vec'
+                    os.environ['MCP_MEMORY_STORAGE_BACKEND'] = 'sqlite_vec'  # Also set in the main process
+                    chosen_backend = 'sqlite_vec'  # Update the chosen_backend for consistency
                 
                 print_success("MCP Memory Service installed successfully (SQLite-vec + ONNX)")
                 
@@ -1217,6 +1220,12 @@ def recommend_backend_intelligent(system_info, gpu_info, memory_gb, args):
         compatibility = detect_storage_backend_compatibility(system_info, gpu_info)
         if compatibility["chromadb"]["recommendation"] == "problematic":
             print_info("[WARNING] macOS Intel compatibility issues detected - using SQLite-vec")
+            # Set environment variables for consistent backend selection
+            os.environ['MCP_MEMORY_STORAGE_BACKEND'] = 'sqlite_vec'
+            # For Intel Macs, also enable ONNX runtime for better compatibility
+            if system_info.get("has_homebrew_pytorch") or sys.version_info >= (3, 13):
+                print_info("[CONFIG] Enabling ONNX runtime for better compatibility")
+                os.environ['MCP_MEMORY_USE_ONNX'] = '1'
             return "sqlite_vec"
     
     # Hardware with GPU acceleration - ChromaDB can utilize this
@@ -1674,7 +1683,15 @@ def main():
     print_header("Installation Complete")
     
     # Get final storage backend info
-    final_backend = os.environ.get('MCP_MEMORY_STORAGE_BACKEND', 'chromadb')
+    # Use chosen_backend as the definitive source of truth, but still respect environment variable
+    # For macOS Intel with Homebrew PyTorch, force SQLite-vec regardless of environment variable
+    if system_info["is_macos"] and system_info["is_x86"] and system_info.get("has_homebrew_pytorch"):
+        final_backend = 'sqlite_vec'
+        # Ensure environment variable is set for future use
+        os.environ['MCP_MEMORY_STORAGE_BACKEND'] = 'sqlite_vec'
+    else:
+        final_backend = os.environ.get('MCP_MEMORY_STORAGE_BACKEND', 'chromadb')
+    
     use_onnx = os.environ.get('MCP_MEMORY_USE_ONNX', '').lower() in ('1', 'true', 'yes')
     
     print_info("You can now run the MCP Memory Service using the 'memory' command")
