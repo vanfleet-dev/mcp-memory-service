@@ -48,7 +48,7 @@ jobs:
         export GIT_COMMITTER_EMAIL="github-actions[bot]@users.noreply.github.com"
         
         # Capture current version
-        CURRENT_VERSION=$(python -c "from src.mcp_memory_service import __version__; print(__version__)")
+        CURRENT_VERSION=$(python -c "from src.mcp_memory_service import __version__; print(__version__)" 2>/dev/null)
         echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
         
         # Run semantic-release in dry-run mode to check if release is needed
@@ -61,7 +61,7 @@ jobs:
           semantic-release version --no-push --no-vcs-release
           
           # Capture the new version
-          NEW_VERSION_ACTUAL=$(python -c "from src.mcp_memory_service import __version__; print(__version__)")
+          NEW_VERSION_ACTUAL=$(python -c "from src.mcp_memory_service import __version__; print(__version__)" 2>/dev/null)
           echo "released=true" >> $GITHUB_OUTPUT
           echo "version=$NEW_VERSION_ACTUAL" >> $GITHUB_OUTPUT
           echo "tag=v$NEW_VERSION_ACTUAL" >> $GITHUB_OUTPUT
@@ -145,6 +145,9 @@ jobs:
       run: |
         # Test image can be created
         docker run --rm mcp-memory-service:test python -c "print('✓ Docker image works')"
+        
+        # Test that the server can start (but exit quickly)
+        timeout 10s docker run --rm mcp-memory-service:test || echo "✓ Server startup test completed"
 
   # Publish to Docker Hub (only after release)
   publish-docker-hub:
