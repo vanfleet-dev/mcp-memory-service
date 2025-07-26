@@ -37,9 +37,9 @@ RUN mkdir -p /app/chroma_db /app/backups
 
 # Copy source code
 COPY src/ /app/src/
-COPY uv_wrapper.py memory_wrapper_uv.py ./
-COPY docker-entrypoint.sh /usr/local/bin/
-COPY docker-entrypoint-persistent.sh /usr/local/bin/
+COPY scripts/utils/uv_wrapper.py scripts/utils/memory_wrapper_uv.py ./
+COPY tools/docker/docker-entrypoint.sh /usr/local/bin/
+COPY tools/docker/docker-entrypoint-persistent.sh /usr/local/bin/
 
 # Install the package with UV
 RUN python -m uv pip install -e .
