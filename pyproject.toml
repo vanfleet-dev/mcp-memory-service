@@ -16,7 +16,8 @@ dependencies = [
     "chromadb==0.5.23",
     "tokenizers==0.20.3",
     "mcp>=1.0.0,<2.0.0",
-    "sqlite-vec>=0.1.0"
+    "sqlite-vec>=0.1.0",
+    "build>=0.10.0"
 ]
 
 [project.optional-dependencies]
