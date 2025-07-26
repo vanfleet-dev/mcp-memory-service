@@ -29,23 +29,55 @@ export MCP_MEMORY_STORAGE_BACKEND=sqlite_vec
 - mcp (1.11.0)
 ```
 
-## 🚀 Claude Code Integration
+## Claude Code Integration
 
-### 1. Start the MCP Memory Service
+### 1. Install Claude Code CLI
 
+If not already installed:
 ```bash
-# In your project directory
+# Install Claude Code CLI
+curl -fsSL https://claude.ai/install.sh | sh
+```
+
+### 2. Configure MCP Memory Service with Claude Code
+
+#### Option A: Automatic Configuration (Recommended)
+```bash
+# Run installer with Claude Code auto-configuration
+python install.py --configure-claude-code
+```
+
+This automatically:
+- Detects Claude Code installation
+- Creates personalized .mcp.json from template
+- Replaces placeholder paths with your system paths
+- Adds optimized environment variables
+- Adds .mcp.json to .gitignore (protects personal info)
+- Verifies the configuration works
+
+#### Option B: Manual Configuration
+```bash
+# Navigate to project directory
 cd /home/hkr/repositories/mcp-memory-service
 
-# Activate virtual environment
-source venv/bin/activate
+# Add memory service with optimized settings
+claude mcp add memory-service --scope project \
+  -e MCP_MEMORY_CHROMA_PATH=$HOME/.mcp_memory_chroma \
+  -e LOG_LEVEL=INFO \
+  -e MCP_TIMEOUT=30000 \
+  -- python scripts/run_memory_server.py
 
-# Set backend to sqlite-vec
-export MCP_MEMORY_STORAGE_BACKEND=sqlite_vec
-
-# Start the server (when ready)
-python -m src.mcp_memory_service.server
+# Verify configuration
+claude mcp list
 ```
+
+### 3. Secure Configuration Management
+
+The system uses a template-based approach to protect personal information:
+
+- **Template**: .mcp.json.template (shared, no personal data)
+- **Generated**: .mcp.json (personalized, automatically added to .gitignore)
+- **Placeholders**: {{USER_HOME}} replaced with your actual home directory
 
 ### 2. Database Location
 

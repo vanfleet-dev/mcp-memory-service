@@ -1451,6 +1451,78 @@ Include this ID when requesting support for faster assistance.
     print_info("This guide contains hardware-specific recommendations for your system")
     print_info("Keep this file for future reference and troubleshooting")
 
+def configure_claude_code_integration(system_info):
+    """Configure Claude Code MCP integration with optimized settings."""
+    print_step("6", "Configuring Claude Code Integration")
+    
+    # Check if Claude Code is installed
+    try:
+        result = subprocess.run(['claude', '--version'], capture_output=True, text=True, timeout=5)
+        if result.returncode != 0:
+            print_warning("Claude Code CLI not found. Please install it first:")
+            print_info("curl -fsSL https://claude.ai/install.sh | sh")
+            return False
+    except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired):
+        print_warning("Claude Code CLI not found. Please install it first:")
+        print_info("curl -fsSL https://claude.ai/install.sh | sh")
+        return False
+    
+    print_success("Claude Code CLI detected")
+    
+    # Load template and create personalized .mcp.json
+    template_path = Path('.mcp.json.template')
+    if not template_path.exists():
+        print_error("Template file .mcp.json.template not found")
+        return False
+    
+    try:
+        import json
+        with open(template_path, 'r') as f:
+            template_content = f.read()
+        
+        # Replace placeholders with actual values
+        user_home = str(Path.home())
+        personalized_content = template_content.replace('{{USER_HOME}}', user_home)
+        
+        # Create .mcp.json
+        mcp_config_path = Path('.mcp.json')
+        with open(mcp_config_path, 'w') as f:
+            f.write(personalized_content)
+        
+        print_success(f"Created personalized .mcp.json configuration")
+        print_info(f"Configuration file: {mcp_config_path.absolute()}")
+        
+        # Add to .gitignore if it exists
+        gitignore_path = Path('.gitignore')
+        if gitignore_path.exists():
+            with open(gitignore_path, 'r') as f:
+                gitignore_content = f.read()
+            
+            if '.mcp.json' not in gitignore_content:
+                with open(gitignore_path, 'a') as f:
+                    f.write('\n# MCP configuration (contains personal paths)\n.mcp.json\n')
+                print_success("Added .mcp.json to .gitignore")
+        
+        # Verify Claude Code can see the configuration
+        try:
+            result = subprocess.run(['claude', 'mcp', 'list'], 
+                                  capture_output=True, text=True, timeout=10, cwd='.')
+            if 'memory-service' in result.stdout:
+                print_success("Claude Code MCP integration configured successfully!")
+                print_info("You can now use memory functions in Claude Code")
+            else:
+                print_warning("Configuration created but memory-service not detected")
+                print_info("You may need to restart Claude Code or check the configuration")
+        except (subprocess.SubprocessError, subprocess.TimeoutExpired):
+            print_warning("Could not verify Claude Code configuration")
+            print_info("Configuration file created - restart Claude Code to use memory functions")
+        
+        return True
+        
+    except Exception as e:
+        print_error(f"Failed to configure Claude Code integration: {e}")
+        return False
+
 def main():
     """Main installation function."""
     parser = argparse.ArgumentParser(description="Install MCP Memory Service")
@@ -1477,6 +1549,8 @@ def main():
                         help='Enable HTTP/SSE API functionality')
     parser.add_argument('--migrate-from-chromadb', action='store_true',
                         help='Migrate existing ChromaDB installation to selected backend')
+    parser.add_argument('--configure-claude-code', action='store_true',
+                        help='Automatically configure Claude Code MCP integration with optimized settings')
     parser.add_argument('--help-detailed', action='store_true',
                         help='Show detailed hardware-specific installation recommendations')
     parser.add_argument('--generate-docs', action='store_true',
@@ -1679,6 +1753,12 @@ def main():
             print_error(f"Migration failed: {e}")
             print_info("You can run migration manually later with:")
             print_info("python scripts/migrate_chroma_to_sqlite.py")
+    
+    # Step 6: Configure Claude Code integration if requested
+    if args.configure_claude_code:
+        if not configure_claude_code_integration(system_info):
+            print_warning("Claude Code integration configuration failed")
+            print_info("You can configure it manually later using the documentation")
     
     print_header("Installation Complete")
     
