@@ -317,8 +317,13 @@ def check_dependencies():
     
     return True
 
-def install_pytorch_platform_specific(system_info, gpu_info):
+def install_pytorch_platform_specific(system_info, gpu_info, args=None):
     """Install PyTorch with platform-specific configurations."""
+    # Check if PyTorch installation should be skipped
+    if args and args.skip_pytorch:
+        print_info("Skipping PyTorch installation as requested")
+        return True
+        
     if system_info["is_windows"]:
         return install_pytorch_windows(gpu_info)
     elif system_info["is_macos"] and system_info["is_x86"]:
@@ -457,14 +462,16 @@ def install_pytorch_windows(gpu_info):
     
     # Install PyTorch with the appropriate index URL
     try:
-        # Use a stable version that's known to have Windows wheels
-        torch_version = "2.1.0"  # This version has Windows wheels available
+        # Use compatible versions that are available in the CPU index
+        torch_version = "2.5.1"
+        torchvision_version = "0.20.1"  # Compatible with torch 2.5.1
+        torchaudio_version = "2.5.1"
         
         cmd = [
             sys.executable, '-m', 'pip', 'install',
             f"torch=={torch_version}",
-            f"torchvision=={torch_version}",
-            f"torchaudio=={torch_version}",
+            f"torchvision=={torchvision_version}",
+            f"torchaudio=={torchaudio_version}",
             f"--index-url={index_url}"
         ]
         
@@ -474,9 +481,14 @@ def install_pytorch_windows(gpu_info):
         # Check if DirectML is needed
         if gpu_info["has_directml"]:
             print_info("Installing torch-directml for DirectML support")
-            subprocess.check_call([
-                sys.executable, '-m', 'pip', 'install', 'torch-directml>=0.2.0'
-            ])
+            try:
+                # Try the latest dev version since stable versions aren't available
+                subprocess.check_call([
+                    sys.executable, '-m', 'pip', 'install', 'torch-directml==0.2.5.dev240914'
+                ])
+            except subprocess.SubprocessError:
+                print_warning("Failed to install torch-directml - DirectML support will be limited")
+                print_info("You can install manually later with: pip install torch-directml==0.2.5.dev240914")
             
         print_success("PyTorch installed successfully for Windows")
         return True
@@ -716,9 +728,11 @@ def install_package(args):
     # Set environment variable for chosen backend
     if chosen_backend == "sqlite_vec":
         env['MCP_MEMORY_STORAGE_BACKEND'] = 'sqlite_vec'
+        os.environ['MCP_MEMORY_STORAGE_BACKEND'] = 'sqlite_vec'
         print_info("Configured to use SQLite-vec storage backend")
     else:
         env['MCP_MEMORY_STORAGE_BACKEND'] = 'chromadb'
+        os.environ['MCP_MEMORY_STORAGE_BACKEND'] = 'chromadb'
         print_info("Configured to use ChromaDB storage backend")
 
     # Set environment variables based on detected GPU
@@ -748,7 +762,7 @@ def install_package(args):
         pytorch_installed = True
     else:
         # Handle platform-specific PyTorch installation
-        pytorch_installed = install_pytorch_platform_specific(system_info, gpu_info)
+        pytorch_installed = install_pytorch_platform_specific(system_info, gpu_info, args)
         if not pytorch_installed:
             print_warning("Platform-specific PyTorch installation failed, but will continue with package installation")
 
@@ -1054,7 +1068,8 @@ def verify_installation():
         else:
             try:
                 import torch_directml
-                print_success(f"DirectML is available: {torch_directml.__version__}")
+                version = getattr(torch_directml, '__version__', 'Unknown version')
+                print_success(f"DirectML is available: {version}")
             except ImportError:
                 print_info("Using CPU-only PyTorch")
         
@@ -1539,6 +1554,8 @@ def main():
                         help='Skip PyTorch installation and use ONNX runtime with SQLite-vec backend instead')
     parser.add_argument('--use-homebrew-pytorch', action='store_true',
                         help='Use existing Homebrew PyTorch installation instead of pip version')
+    parser.add_argument('--force-pytorch', action='store_true',
+                        help='Force PyTorch installation even when using SQLite-vec (overrides auto-skip)')
     
     # New intelligent installer options
     parser.add_argument('--legacy-hardware', action='store_true',
@@ -1705,6 +1722,17 @@ def main():
         except subprocess.SubprocessError as e:
             print_error(f"Failed to install fallback dependencies: {e}")
     
+    # Apply intelligent PyTorch skipping for sqlite_vec (default behavior)
+    if (args.storage_backend == "sqlite_vec" and 
+        not args.skip_pytorch and 
+        not args.force_pytorch):
+        print_step("1d", "Optimizing for SQLite-vec setup")
+        args.skip_pytorch = True
+        print_success("Auto-skipping PyTorch installation for SQLite-vec backend")
+        print_info("• Using ONNX runtime for embeddings (faster, fewer dependencies)")
+        print_info("• SQLite-vec works perfectly without PyTorch")
+        print_info("• Add --force-pytorch if you specifically need PyTorch")
+    
     # Step 2: Check dependencies
     if not check_dependencies():
         sys.exit(1)
@@ -1778,11 +1806,11 @@ def main():
     print_info(f"Storage Backend: {final_backend.upper()}")
     
     if final_backend == 'sqlite_vec':
-        print_info("[OK] Using SQLite-vec - lightweight, fast, minimal dependencies")
+        print_success("Using SQLite-vec - lightweight, fast, minimal dependencies")
         print_info("   • No complex dependencies or build issues")
         print_info("   • Excellent performance for typical use cases")
     else:
-        print_info("[OK] Using ChromaDB - full-featured vector database")
+        print_success("Using ChromaDB - full-featured vector database")
         print_info("   • Advanced features and extensive ecosystem")
     
     if use_onnx:
