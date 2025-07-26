@@ -53,30 +53,31 @@ jobs:
         # Capture current version (read directly from file)
         CURRENT_VERSION=$(grep -E "^__version__" src/mcp_memory_service/__init__.py | cut -d'"' -f2 || echo "0.0.0")
         
-        # Run semantic-release in dry-run mode with all output redirected
-        if semantic-release version --dry-run --print >/dev/null 2>&1 && semantic-release version --dry-run --print 2>/dev/null | grep -q "^[0-9]"; then
-          # A new version would be created, capture it cleanly
-          NEW_VERSION=$(semantic-release version --dry-run --print 2>/dev/null | head -1)
-          echo "New version would be: $NEW_VERSION" >&3
-          
-          # Actually create the version locally (suppress all output)
-          semantic-release version --no-push --no-vcs-release >/dev/null 2>&1
-          
-          # Capture the new version directly from file
-          NEW_VERSION_ACTUAL=$(grep -E "^__version__" src/mcp_memory_service/__init__.py | cut -d'"' -f2 || echo "0.0.0")
+        # Always try to run semantic-release and capture the version change
+        BEFORE_VERSION="$CURRENT_VERSION"
+        
+        # Run semantic-release (it will only create a version if needed)
+        semantic-release version --no-push --no-vcs-release >/dev/null 2>&1
+        
+        # Capture the version after semantic-release
+        AFTER_VERSION=$(grep -E "^__version__" src/mcp_memory_service/__init__.py | cut -d'"' -f2 || echo "0.0.0")
+        
+        # Check if version changed
+        if [ "$BEFORE_VERSION" != "$AFTER_VERSION" ]; then
+          echo "Version changed from $BEFORE_VERSION to $AFTER_VERSION" >&3
           
           # Write to GITHUB_OUTPUT with clean environment
           {
             echo "released=true"
-            echo "version=$NEW_VERSION_ACTUAL" 
-            echo "tag=v$NEW_VERSION_ACTUAL"
+            echo "version=$AFTER_VERSION" 
+            echo "tag=v$AFTER_VERSION"
           } >> $GITHUB_OUTPUT
           
           # Create tag manually
-          git tag "v$NEW_VERSION_ACTUAL"
-          echo "Tag v$NEW_VERSION_ACTUAL created locally" >&3
+          git tag "v$AFTER_VERSION"
+          echo "Tag v$AFTER_VERSION created locally" >&3
         else
-          echo "No release needed" >&3
+          echo "No release needed (version unchanged)" >&3
           # Write to GITHUB_OUTPUT with clean environment
           {
             echo "released=false"
