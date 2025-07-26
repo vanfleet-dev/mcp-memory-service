@@ -2,12 +2,11 @@ name: Docker Publish
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*.*.*'
-  workflow_run:
-    workflows: ["Release"]
-    types:
-      - completed
+  pull_request:
     branches:
       - main
 
@@ -18,7 +17,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     permissions:
       contents: read
       packages: write

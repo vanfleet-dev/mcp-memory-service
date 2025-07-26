@@ -2,12 +2,11 @@ name: Publish and Test
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*.*.*'
-  workflow_run:
-    workflows: ["Release"]
-    types:
-      - completed
+  pull_request:
     branches:
       - main
 
@@ -15,7 +14,6 @@ jobs:
   test-uvx-compatibility:
     runs-on: ubuntu-latest
     name: Test uvx compatibility
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     
     steps:
     - name: Checkout repository
@@ -59,7 +57,6 @@ jobs:
   test-docker-build:
     runs-on: ubuntu-latest
     name: Test Docker build
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     
     steps:
     - name: Checkout repository
@@ -91,7 +88,7 @@ jobs:
     needs: [test-uvx-compatibility, test-docker-build]
     runs-on: ubuntu-latest
     name: Publish Docker image
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
+    if: github.event_name != 'pull_request'
     
     steps:
     - name: Checkout repository
@@ -135,7 +132,7 @@ jobs:
     needs: [publish-docker]
     runs-on: ubuntu-latest
     name: Update documentation
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
+    if: github.event_name != 'pull_request'
     
     steps:
     - name: Checkout repository
