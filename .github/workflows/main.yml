@@ -109,21 +109,17 @@ jobs:
         else
           echo "❌ No release needed (version unchanged: $BEFORE_VERSION)"
           
-          # TEMPORARY: Force a release for testing
-          echo "🔧 FORCING RELEASE FOR TESTING"
-          FORCED_VERSION="$CURRENT_VERSION-test-$(date +%s)"
-          
           # Write to GITHUB_OUTPUT with clean environment
           {
-            echo "released=true"
-            echo "version=$FORCED_VERSION"
-            echo "tag=v$FORCED_VERSION"
+            echo "released=false"
+            echo "version=$CURRENT_VERSION"
+            echo "tag="
           } >> $GITHUB_OUTPUT
           
-          echo "DEBUG: FORCED Contents written to GITHUB_OUTPUT:"
-          echo "released=true"
-          echo "version=$FORCED_VERSION"
-          echo "tag=v$FORCED_VERSION"
+          echo "DEBUG: Contents written to GITHUB_OUTPUT:"
+          echo "released=false"
+          echo "version=$CURRENT_VERSION"
+          echo "tag="
         fi
         
         echo "=== DEBUG: Final GITHUB_OUTPUT contents ==="
