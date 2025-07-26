@@ -1246,10 +1246,10 @@ def show_detailed_help():
         print_success("Legacy Hardware Path (2013-2017 Intel Mac)")
         print_info("  Recommended: python install.py --legacy-hardware")
         print_info("  This will:")
-        print_info("    • Use SQLite-vec backend (lightweight)")
-        print_info("    • Configure ONNX runtime for CPU inference")
-        print_info("    • Use Homebrew PyTorch if available")
-        print_info("    • Optimize for limited resources")
+        print_info("    • Use SQLite-vec backend (avoids ChromaDB compatibility issues)")
+        print_info("    • Configure ONNX runtime for CPU-only inference")
+        print_info("    • Use Homebrew PyTorch for better compatibility")
+        print_info("    • Optimize resource usage for older hardware")
     elif system_info["is_macos"] and system_info["is_arm"]:
         print_success("Apple Silicon Mac - Modern Hardware Path")
         print_info("  Recommended: python install.py")
@@ -1340,10 +1340,11 @@ Based on your {platform.system()} system with {memory_gb:.1f}GB RAM:
     
     if is_legacy_hardware(system_info):
         guide_content += """
-- [OK] **Legacy Hardware Optimization**: Your Intel Mac benefits from SQLite-vec backend
-- [OK] **Homebrew PyTorch**: Better compatibility with older systems
-- [OK] **ONNX Runtime**: CPU-optimized inference for better performance
-- [OK] **Memory Efficient**: Minimal resource usage
+- [OK] **Hardware Compatibility**: SQLite-vec avoids ChromaDB installation issues on older Intel Macs
+- [OK] **Homebrew PyTorch**: Better compatibility with older systems and reduced dependencies
+- [OK] **ONNX Runtime**: CPU-optimized inference for systems without GPU acceleration
+- [OK] **Memory Efficient**: Optimized resource usage for systems with limited RAM
+- [OK] **Full Feature Set**: Complete semantic search, tagging, and time-based recall capabilities
 """
     elif recommended_backend == "sqlite_vec":
         guide_content += """
@@ -1354,9 +1355,10 @@ Based on your {platform.system()} system with {memory_gb:.1f}GB RAM:
 """
     else:
         guide_content += """
-- [OK] **ChromaDB Backend**: Full-featured with advanced indexing for your capable hardware
-- [OK] **Hardware Acceleration**: Takes advantage of your GPU/modern CPU
-- [OK] **Scalable Performance**: Optimized for large datasets and complex queries
+- [OK] **ChromaDB Backend**: Production-grade with advanced HNSW indexing and rich ecosystem
+- [OK] **Hardware Acceleration**: Takes advantage of GPU/MPS acceleration when available
+- [OK] **Scalable Performance**: Optimized for large datasets (10K+ memories) and complex metadata queries
+- [OK] **Full Feature Set**: Complete semantic search, tagging, and time-based recall capabilities
 """
     
     guide_content += f"""
