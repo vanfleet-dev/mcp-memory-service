@@ -535,12 +535,12 @@ def detect_storage_backend_compatibility(system_info, gpu_info):
     print_info("Storage Backend Compatibility Analysis:")
     
     for backend, info in compatibility.items():
-        status = "✅" if info["supported"] else "❌"
+        status = "[OK]" if info["supported"] else "[X]"
         rec_text = {
-            "recommended": "🌟 RECOMMENDED",
-            "default": "📦 Standard",
-            "problematic": "⚠️  May have issues",
-            "lightweight": "🪶 Lightweight"
+            "recommended": "[*] RECOMMENDED",
+            "default": "[+] Standard",
+            "problematic": "[!] May have issues",
+            "lightweight": "[-] Lightweight"
         }.get(info["recommendation"], "")
         
         print_info(f"  {status} {backend.upper()}: {rec_text}")
@@ -1195,29 +1195,29 @@ def recommend_backend_intelligent(system_info, gpu_info, memory_gb, args):
     
     # Legacy hardware mode
     if args.legacy_hardware or is_legacy_hardware(system_info):
-        print_info("🔍 Legacy hardware detected - optimizing for compatibility")
+        print_info("[DETECT] Legacy hardware detected - optimizing for compatibility")
         return "sqlite_vec"
     
     # Server mode
     if args.server_mode:
-        print_info("🖥️  Server mode - selecting lightweight backend")
+        print_info("[SERVER] Server mode - selecting lightweight backend")
         return "sqlite_vec"
     
     # Low memory systems
     if memory_gb > 0 and memory_gb < 4:
-        print_info(f"💾 Limited memory detected ({memory_gb:.1f}GB) - using efficient backend")
+        print_info(f"[MEMORY] Limited memory detected ({memory_gb:.1f}GB) - using efficient backend")
         return "sqlite_vec"
     
     # macOS Intel with known ChromaDB issues
     if system_info["is_macos"] and system_info["is_x86"]:
         compatibility = detect_storage_backend_compatibility(system_info, gpu_info)
         if compatibility["chromadb"]["recommendation"] == "problematic":
-            print_info("⚠️  macOS Intel compatibility issues detected - using SQLite-vec")
+            print_info("[WARNING] macOS Intel compatibility issues detected - using SQLite-vec")
             return "sqlite_vec"
     
     # Modern hardware with GPU
     if gpu_info.get("has_cuda") or gpu_info.get("has_mps") or (memory_gb >= 8):
-        print_info("🚀 Modern hardware detected - using full-featured backend")
+        print_info("[MODERN] Modern hardware detected - using full-featured backend")
         return "chromadb"
     
     # Default recommendation
@@ -1340,22 +1340,22 @@ Based on your {platform.system()} system with {memory_gb:.1f}GB RAM:
     
     if is_legacy_hardware(system_info):
         guide_content += """
-- ✅ **Legacy Hardware Optimization**: Your Intel Mac benefits from SQLite-vec backend
-- ✅ **Homebrew PyTorch**: Better compatibility with older systems
-- ✅ **ONNX Runtime**: CPU-optimized inference for better performance
-- ✅ **Memory Efficient**: Minimal resource usage
+- [OK] **Legacy Hardware Optimization**: Your Intel Mac benefits from SQLite-vec backend
+- [OK] **Homebrew PyTorch**: Better compatibility with older systems
+- [OK] **ONNX Runtime**: CPU-optimized inference for better performance
+- [OK] **Memory Efficient**: Minimal resource usage
 """
     elif recommended_backend == "sqlite_vec":
         guide_content += """
-- ✅ **SQLite-vec Backend**: Lightweight and fast for your system
-- ✅ **Low Memory Usage**: Optimized for systems with limited RAM
-- ✅ **Quick Startup**: Database ready in seconds
+- [OK] **SQLite-vec Backend**: Lightweight and fast for your system
+- [OK] **Low Memory Usage**: Optimized for systems with limited RAM
+- [OK] **Quick Startup**: Database ready in seconds
 """
     else:
         guide_content += """
-- ✅ **ChromaDB Backend**: Full-featured for your capable hardware
-- ✅ **Hardware Acceleration**: Takes advantage of your GPU/modern CPU
-- ✅ **Advanced Features**: Complete vector search capabilities
+- [OK] **ChromaDB Backend**: Full-featured for your capable hardware
+- [OK] **Hardware Acceleration**: Takes advantage of your GPU/modern CPU
+- [OK] **Advanced Features**: Complete vector search capabilities
 """
     
     guide_content += f"""
@@ -1636,15 +1636,15 @@ def main():
     print_info(f"Storage Backend: {final_backend.upper()}")
     
     if final_backend == 'sqlite_vec':
-        print_info("✅ Using SQLite-vec - lightweight, fast, minimal dependencies")
+        print_info("[OK] Using SQLite-vec - lightweight, fast, minimal dependencies")
         print_info("   • No complex dependencies or build issues")
         print_info("   • Excellent performance for typical use cases")
     else:
-        print_info("✅ Using ChromaDB - full-featured vector database")
+        print_info("[OK] Using ChromaDB - full-featured vector database")
         print_info("   • Advanced features and extensive ecosystem")
     
     if use_onnx:
-        print_info("✅ Using ONNX Runtime for inference")
+        print_info("[OK] Using ONNX Runtime for inference")
         print_info("   • Compatible with Homebrew PyTorch")
         print_info("   • Reduced dependencies for better compatibility")
     
