@@ -219,10 +219,6 @@ class SqliteVecMemoryStorage(MemoryStorage):
             tags_str = ",".join(memory.tags) if memory.tags else ""
             metadata_str = json.dumps(memory.metadata) if memory.metadata else "{}"
             
-            # Ensure timestamps are set
-            if not memory.created_at:
-                memory.touch()
-            
             # Insert into memories table (metadata)
             cursor = self.conn.execute('''
                 INSERT INTO memories (
