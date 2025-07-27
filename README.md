@@ -30,6 +30,8 @@ An MCP server providing semantic memory and persistent storage capabilities for 
 - **Cross-platform compatibility** (Apple Silicon, Intel, Windows, Linux)
 - **Hardware-aware optimizations** for different environments
 - **Graceful fallbacks** for limited hardware resources
+- **🆕 Multi-client coordination** for Claude Desktop + Claude Code concurrent access
+- **🆕 Intelligent coordination modes** with automatic WAL/HTTP detection
 
 ### Recent Enhancements
 
@@ -522,19 +524,33 @@ python scripts/test_installation.py
 
 ### Can I run the MCP Memory Service in both Claude Desktop and Claude Code simultaneously?
 
-**Yes!** The MCP Memory Service is designed to support concurrent access from multiple clients. Both Claude Desktop and Claude Code can safely use the same memory service instance simultaneously, and they will share the same memory store.
+**Yes!** The MCP Memory Service now features **advanced multi-client coordination** that enables seamless concurrent access from multiple clients. Both Claude Desktop and Claude Code can safely use the same memory service simultaneously with automatic coordination.
+
+**🚀 Quick Setup:**
+```bash
+python setup_multi_client_complete.py
+```
 
 **Key benefits:**
-- Shared memory across both applications
-- No file conflicts or locking issues
-- Seamless experience when switching between clients
+- ✅ **Automatic Coordination**: Intelligent detection of optimal access mode
+- ✅ **Zero Configuration**: Works out-of-the-box with SQLite-vec backend
+- ✅ **Shared Memory**: All clients access the same memory database
+- ✅ **No Lock Conflicts**: WAL mode prevents database locking issues
+- ✅ **Graceful Fallbacks**: System automatically handles edge cases
 
-**Technical details:**
-- ChromaDB uses SQLite which handles concurrent database access safely
-- No application-level file locking that would prevent multiple instances
-- Each client creates its own connection but accesses the same shared database
+**Multi-Client Features:**
+- **Phase 1: WAL Mode** - Direct SQLite access with Write-Ahead Logging (default)
+- **Phase 2: HTTP Coordination** - Advanced server-based coordination (optional)
+- **Automatic Retry Logic** - Handles transient lock conflicts gracefully
+- **Performance Optimized** - Tuned for concurrent access patterns
 
-**Configuration tip:** Ensure both clients use the same database paths by setting identical `MCP_MEMORY_CHROMA_PATH` and `MCP_MEMORY_BACKUPS_PATH` environment variables.
+**Technical Implementation:**
+- **SQLite WAL Mode**: Multiple readers + single writer coordination
+- **HTTP Auto-Detection**: Intelligent server coordination when beneficial
+- **Connection Retry**: Exponential backoff for robust access
+- **Shared Database**: Single source of truth across all clients
+
+**Setup Guide:** See [Multi-Client Setup Guide](docs/multi-client-setup-guide.md) for complete instructions.
 
 ## Troubleshooting
 
