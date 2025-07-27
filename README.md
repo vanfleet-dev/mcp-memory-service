@@ -364,6 +364,7 @@ For detailed instructions on how to interact with the memory service in Claude D
 
 - [Invocation Guide](docs/guides/invocation_guide.md) - Learn the specific keywords and phrases that trigger memory operations in Claude
 - [Installation Guide](docs/guides/installation.md) - Detailed setup instructions
+- **[Demo Session Walkthrough](docs/DEMO_SESSION_WALKTHROUGH.md)** - Real-world development session showcasing advanced features
 
 The memory service is invoked through natural language commands in your conversations with Claude. For example:
 - To store: "Please remember that my project deadline is May 15th."
