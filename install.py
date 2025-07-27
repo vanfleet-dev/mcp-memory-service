@@ -669,6 +669,61 @@ def install_storage_backend(backend, system_info):
     
     return False
 
+def initialize_sqlite_vec_database(storage_path):
+    """Initialize SQLite-vec database during installation."""
+    try:
+        print_info("Initializing SQLite-vec database...")
+        
+        # Add src to path for imports
+        src_path = str(Path(__file__).parent / "src")
+        if src_path not in sys.path:
+            sys.path.insert(0, src_path)
+        
+        # Import required modules
+        from mcp_memory_service.storage.sqlite_vec import SqliteVecMemoryStorage
+        from mcp_memory_service.models.memory import Memory
+        from mcp_memory_service.utils.hashing import generate_content_hash
+        import asyncio
+        
+        async def init_db():
+            # Create storage instance
+            storage = SqliteVecMemoryStorage(str(storage_path))
+            
+            # Initialize the database
+            await storage.initialize()
+            
+            # Create a test memory to verify the database works
+            test_content = "Database initialization successful"
+            test_memory = Memory(
+                content=test_content,
+                content_hash=generate_content_hash(test_content),
+                tags=["init", "system"],
+                memory_type="system"
+            )
+            
+            # Store test memory
+            success, message = await storage.store(test_memory)
+            return success, message
+        
+        # Run initialization
+        success, message = asyncio.run(init_db())
+        
+        if success:
+            print_success(f"SQLite-vec database initialized: {storage_path}")
+            return True
+        else:
+            print_warning(f"Database initialization partially failed: {message}")
+            return True  # Database exists even if test failed
+            
+    except ImportError as e:
+        print_warning(f"Could not initialize database (dependencies missing): {e}")
+        print_info("Database will be initialized on first use")
+        return True  # Not a critical failure
+    except Exception as e:
+        print_warning(f"Database initialization failed: {e}")
+        print_info("Database will be initialized on first use")
+        return True  # Not a critical failure
+
 def install_package(args):
     """Install the package with the appropriate dependencies, supporting pip or uv."""
     print_step("3", "Installing MCP Memory Service")
@@ -891,6 +946,11 @@ def configure_paths(args):
             with open(test_file, 'w') as f:
                 f.write('test')
             os.remove(test_file)
+            
+            # Initialize the SQLite-vec database
+            if not initialize_sqlite_vec_database(storage_path):
+                print_warning("SQLite-vec database initialization failed, but continuing...")
+                
         except Exception as e:
             print_error(f"Failed to configure SQLite-vec paths: {e}")
             return False
@@ -925,72 +985,69 @@ def configure_paths(args):
     except Exception as e:
         print_error(f"Failed to test backups directory: {e}")
         return False
-        
-        # Configure Claude Desktop if available
-        claude_config_paths = [
+    
+    # Configure Claude Desktop if available
+    claude_config_paths = [
             home_dir / 'Library' / 'Application Support' / 'Claude' / 'claude_desktop_config.json',
             home_dir / '.config' / 'Claude' / 'claude_desktop_config.json',
             Path('claude_config') / 'claude_desktop_config.json'
         ]
-        
-        for config_path in claude_config_paths:
-            if config_path.exists():
-                print_info(f"Found Claude Desktop config at {config_path}")
-                try:
-                    import json
-                    with open(config_path, 'r') as f:
-                        config = json.load(f)
-                    
-                    # Update or add MCP Memory configuration
-                    if 'mcpServers' not in config:
-                        config['mcpServers'] = {}
-                    
-                    # Create environment configuration based on storage backend
-                    env_config = {
-                        "MCP_MEMORY_BACKUPS_PATH": str(backups_path),
-                        "MCP_MEMORY_STORAGE_BACKEND": storage_backend
+    
+    for config_path in claude_config_paths:
+        if config_path.exists():
+            print_info(f"Found Claude Desktop config at {config_path}")
+            try:
+                import json
+                with open(config_path, 'r') as f:
+                    config = json.load(f)
+                
+                # Update or add MCP Memory configuration
+                if 'mcpServers' not in config:
+                    config['mcpServers'] = {}
+                
+                # Create environment configuration based on storage backend
+                env_config = {
+                    "MCP_MEMORY_BACKUPS_PATH": str(backups_path),
+                    "MCP_MEMORY_STORAGE_BACKEND": storage_backend
+                }
+                
+                if storage_backend == 'sqlite_vec':
+                    env_config["MCP_MEMORY_SQLITE_PATH"] = str(storage_path)
+                else:
+                    env_config["MCP_MEMORY_CHROMA_PATH"] = str(storage_path)
+                
+                # Create or update the memory server configuration
+                if system_info["is_windows"]:
+                    # Use the memory_wrapper.py script for Windows
+                    script_path = os.path.abspath("memory_wrapper.py")
+                    config['mcpServers']['memory'] = {
+                        "command": "python",
+                        "args": [script_path],
+                        "env": env_config
                     }
-                    
-                    if storage_backend == 'sqlite_vec':
-                        env_config["MCP_MEMORY_SQLITE_PATH"] = str(storage_path)
-                    else:
-                        env_config["MCP_MEMORY_CHROMA_PATH"] = str(storage_path)
-                    
-                    # Create or update the memory server configuration
-                    if system_info["is_windows"]:
-                        # Use the memory_wrapper.py script for Windows
-                        script_path = os.path.abspath("memory_wrapper.py")
-                        config['mcpServers']['memory'] = {
-                            "command": "python",
-                            "args": [script_path],
-                            "env": env_config
-                        }
-                        print_info("Configured Claude Desktop to use memory_wrapper.py for Windows")
-                    else:
-                        # Use the standard configuration for other platforms
-                        config['mcpServers']['memory'] = {
-                            "command": "uv",
-                            "args": [
-                                "--directory",
-                                os.path.abspath("."),
-                                "run",
-                                "memory"
-                            ],
-                            "env": env_config
-                        }
-                    
-                    with open(config_path, 'w') as f:
-                        json.dump(config, f, indent=2)
-                    
-                    print_success("Updated Claude Desktop configuration")
-                except Exception as e:
-                    print_warning(f"Failed to update Claude Desktop configuration: {e}")
-                break
-        
-        return True
-    except Exception as e:
-        print_error(f"Failed to configure paths: {e}")
-        return False
+                    print_info("Configured Claude Desktop to use memory_wrapper.py for Windows")
+                else:
+                    # Use the standard configuration for other platforms
+                    config['mcpServers']['memory'] = {
+                        "command": "uv",
+                        "args": [
+                            "--directory",
+                            os.path.abspath("."),
+                            "run",
+                            "memory"
+                        ],
+                        "env": env_config
+                    }
+                
+                with open(config_path, 'w') as f:
+                    json.dump(config, f, indent=2)
+                
+                print_success("Updated Claude Desktop configuration")
+            except Exception as e:
+                print_warning(f"Failed to update Claude Desktop configuration: {e}")
+            break
+    
+    return True
 
 def verify_installation():
     """Verify the installation."""
