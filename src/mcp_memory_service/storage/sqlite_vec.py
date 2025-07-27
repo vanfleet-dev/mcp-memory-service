@@ -9,9 +9,10 @@ import logging
 import traceback
 import time
 import os
-from typing import List, Dict, Any, Tuple, Optional, Set
+from typing import List, Dict, Any, Tuple, Optional, Set, Callable
 from datetime import datetime
 import asyncio
+import random
 
 # Import sqlite-vec with fallback
 try:
@@ -78,6 +79,53 @@ class SqliteVecMemoryStorage(MemoryStorage):
         
         logger.info(f"Initialized SQLite-vec storage at: {self.db_path}")
     
+    async def _execute_with_retry(self, operation: Callable, max_retries: int = 3, initial_delay: float = 0.1):
+        """
+        Execute a database operation with exponential backoff retry logic.
+        
+        Args:
+            operation: The database operation to execute
+            max_retries: Maximum number of retry attempts
+            initial_delay: Initial delay in seconds before first retry
+            
+        Returns:
+            The result of the operation
+            
+        Raises:
+            The last exception if all retries fail
+        """
+        last_exception = None
+        delay = initial_delay
+        
+        for attempt in range(max_retries + 1):
+            try:
+                return operation()
+            except sqlite3.OperationalError as e:
+                last_exception = e
+                error_msg = str(e).lower()
+                
+                # Check if error is related to database locking
+                if "locked" in error_msg or "busy" in error_msg:
+                    if attempt < max_retries:
+                        # Add jitter to prevent thundering herd
+                        jittered_delay = delay * (1 + random.uniform(-0.1, 0.1))
+                        logger.warning(f"Database locked, retrying in {jittered_delay:.2f}s (attempt {attempt + 1}/{max_retries})")
+                        await asyncio.sleep(jittered_delay)
+                        # Exponential backoff
+                        delay *= 2
+                        continue
+                    else:
+                        logger.error(f"Database locked after {max_retries} retries")
+                else:
+                    # Non-retryable error
+                    raise
+            except Exception as e:
+                # Non-SQLite errors are not retried
+                raise
+        
+        # If we get here, all retries failed
+        raise last_exception
+    
     async def initialize(self):
         """Initialize the SQLite database with vec0 extension."""
         try:
@@ -91,6 +139,37 @@ class SqliteVecMemoryStorage(MemoryStorage):
             # Load sqlite-vec extension
             sqlite_vec.load(self.conn)
             self.conn.enable_load_extension(False)
+            
+            # Apply default pragmas for concurrent access
+            default_pragmas = {
+                "journal_mode": "WAL",  # Enable WAL mode for concurrent access
+                "busy_timeout": "5000",  # 5 second timeout for locked database
+                "synchronous": "NORMAL",  # Balanced performance/safety
+                "cache_size": "10000",  # Increase cache size
+                "temp_store": "MEMORY"  # Use memory for temp tables
+            }
+            
+            # Check for custom pragmas from environment variable
+            custom_pragmas = os.environ.get("MCP_MEMORY_SQLITE_PRAGMAS", "")
+            if custom_pragmas:
+                # Parse custom pragmas (format: "pragma1=value1,pragma2=value2")
+                for pragma_pair in custom_pragmas.split(","):
+                    pragma_pair = pragma_pair.strip()
+                    if "=" in pragma_pair:
+                        pragma_name, pragma_value = pragma_pair.split("=", 1)
+                        default_pragmas[pragma_name.strip()] = pragma_value.strip()
+                        logger.info(f"Custom pragma from env: {pragma_name}={pragma_value}")
+            
+            # Apply all pragmas
+            applied_pragmas = []
+            for pragma_name, pragma_value in default_pragmas.items():
+                try:
+                    self.conn.execute(f"PRAGMA {pragma_name}={pragma_value}")
+                    applied_pragmas.append(f"{pragma_name}={pragma_value}")
+                except sqlite3.Error as e:
+                    logger.warning(f"Failed to set pragma {pragma_name}={pragma_value}: {e}")
+            
+            logger.info(f"SQLite pragmas applied: {', '.join(applied_pragmas)}")
             
             # Create regular table for memory data
             self.conn.execute('''
@@ -219,37 +298,42 @@ class SqliteVecMemoryStorage(MemoryStorage):
             tags_str = ",".join(memory.tags) if memory.tags else ""
             metadata_str = json.dumps(memory.metadata) if memory.metadata else "{}"
             
-            # Insert into memories table (metadata)
-            cursor = self.conn.execute('''
-                INSERT INTO memories (
-                    content_hash, content, tags, memory_type,
-                    metadata, created_at, updated_at, created_at_iso, updated_at_iso
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                memory.content_hash,
-                memory.content,
-                tags_str,
-                memory.memory_type,
-                metadata_str,
-                memory.created_at,
-                memory.updated_at,
-                memory.created_at_iso,
-                memory.updated_at_iso
-            ))
+            # Insert into memories table (metadata) with retry logic
+            def insert_memory():
+                cursor = self.conn.execute('''
+                    INSERT INTO memories (
+                        content_hash, content, tags, memory_type,
+                        metadata, created_at, updated_at, created_at_iso, updated_at_iso
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    memory.content_hash,
+                    memory.content,
+                    tags_str,
+                    memory.memory_type,
+                    metadata_str,
+                    memory.created_at,
+                    memory.updated_at,
+                    memory.created_at_iso,
+                    memory.updated_at_iso
+                ))
+                return cursor.lastrowid
             
-            # Get the rowid to use as reference for the embedding
-            memory_rowid = cursor.lastrowid
+            memory_rowid = await self._execute_with_retry(insert_memory)
             
-            # Insert into embeddings table
-            self.conn.execute('''
-                INSERT INTO memory_embeddings (rowid, content_embedding)
-                VALUES (?, ?)
-            ''', (
-                memory_rowid,
-                serialize_float32(embedding)
-            ))
+            # Insert into embeddings table with retry logic
+            def insert_embedding():
+                self.conn.execute('''
+                    INSERT INTO memory_embeddings (rowid, content_embedding)
+                    VALUES (?, ?)
+                ''', (
+                    memory_rowid,
+                    serialize_float32(embedding)
+                ))
             
-            self.conn.commit()
+            await self._execute_with_retry(insert_embedding)
+            
+            # Commit with retry logic
+            await self._execute_with_retry(self.conn.commit)
             
             logger.info(f"Successfully stored memory: {memory.content_hash}")
             return True, "Memory stored successfully"
@@ -274,21 +358,24 @@ class SqliteVecMemoryStorage(MemoryStorage):
             # Generate query embedding
             query_embedding = self._generate_embedding(query)
             
-            # Perform vector similarity search using JOIN
-            cursor = self.conn.execute('''
-                SELECT m.content_hash, m.content, m.tags, m.memory_type, m.metadata,
-                       m.created_at, m.updated_at, m.created_at_iso, m.updated_at_iso, 
-                       e.distance
-                FROM memories m
-                JOIN (
-                    SELECT rowid, distance 
-                    FROM memory_embeddings 
-                    WHERE content_embedding MATCH ?
-                    ORDER BY distance
-                    LIMIT ?
-                ) e ON m.id = e.rowid
-                ORDER BY e.distance
-            ''', (serialize_float32(query_embedding), n_results))
+            # Perform vector similarity search using JOIN with retry logic
+            def search_memories():
+                return self.conn.execute('''
+                    SELECT m.content_hash, m.content, m.tags, m.memory_type, m.metadata,
+                           m.created_at, m.updated_at, m.created_at_iso, m.updated_at_iso, 
+                           e.distance
+                    FROM memories m
+                    JOIN (
+                        SELECT rowid, distance 
+                        FROM memory_embeddings 
+                        WHERE content_embedding MATCH ?
+                        ORDER BY distance
+                        LIMIT ?
+                    ) e ON m.id = e.rowid
+                    ORDER BY e.distance
+                ''', (serialize_float32(query_embedding), n_results))
+            
+            cursor = await self._execute_with_retry(search_memories)
             
             results = []
             for row in cursor.fetchall():

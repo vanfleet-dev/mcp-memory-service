@@ -201,6 +201,53 @@ storage = SqliteVecMemoryStorage(
 )
 ```
 
+### Multi-Client Access Configuration
+
+SQLite-vec now supports concurrent access from multiple MCP clients (e.g., Claude Desktop + Claude Code) using Write-Ahead Logging (WAL) mode.
+
+#### Default Multi-Client Settings
+
+The backend automatically enables WAL mode with these default settings:
+- **WAL Mode**: Enables multiple readers + single writer
+- **Busy Timeout**: 5 seconds (prevents immediate lock errors)
+- **Synchronous**: NORMAL (balanced performance/safety)
+
+#### Custom SQLite Pragmas
+
+You can customize SQLite behavior using environment variables:
+
+```bash
+# Custom pragma configuration
+export MCP_MEMORY_SQLITE_PRAGMAS="busy_timeout=10000,cache_size=20000,mmap_size=268435456"
+
+# Example configurations:
+# High concurrency setup
+export MCP_MEMORY_SQLITE_PRAGMAS="busy_timeout=30000,wal_autocheckpoint=1000"
+
+# Performance optimized
+export MCP_MEMORY_SQLITE_PRAGMAS="synchronous=OFF,temp_store=MEMORY,cache_size=50000"
+
+# Conservative/safe mode
+export MCP_MEMORY_SQLITE_PRAGMAS="synchronous=FULL,busy_timeout=60000"
+```
+
+#### Multi-Client Claude Desktop Configuration
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/mcp-memory-service", "run", "memory"],
+      "env": {
+        "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+        "MCP_MEMORY_SQLITE_PRAGMAS": "busy_timeout=10000"
+      }
+    }
+  }
+}
+```
+
 ### Database Optimization
 
 ```bash
@@ -266,12 +313,38 @@ uv add sqlite-vec
 ```
 sqlite3.OperationalError: database is locked
 ```
-**Solution**: Ensure only one MCP instance is running
+**Solutions**: 
+
+**For Single Client Issues:**
 ```bash
 # Kill existing processes
 pkill -f "mcp-memory-service"
 # Restart Claude Desktop
 ```
+
+**For Multi-Client Setup (Claude Desktop + Claude Code):**
+```bash
+# WAL mode should handle this automatically, but if issues persist:
+
+# 1. Increase busy timeout
+export MCP_MEMORY_SQLITE_PRAGMAS="busy_timeout=30000"
+
+# 2. Check for stale lock files
+ls -la /path/to/your/database-wal
+ls -la /path/to/your/database-shm
+
+# 3. If stale locks exist (no active processes), remove them
+rm /path/to/your/database-wal
+rm /path/to/your/database-shm
+
+# 4. Restart all MCP clients
+```
+
+**Prevention Tips:**
+- Always use WAL mode (enabled by default)
+- Configure appropriate busy timeouts for your use case
+- Ensure proper shutdown of MCP clients
+- Use connection retry logic (built-in)
 
 #### 3. Permission Errors
 ```
@@ -336,7 +409,8 @@ asyncio.run(health_check())
 | Query Performance | Excellent | Very Good | ChromaDB |
 | Portability | Poor | Excellent | SQLite-vec |
 | Backup/Restore | Complex | Simple | SQLite-vec |
-| Concurrent Access | Good | Limited | ChromaDB |
+| Concurrent Access | Good | Good (WAL) | Tie |
+| Multi-Client Support | Good | Good (WAL) | Tie |
 | Ecosystem | Rich | Growing | ChromaDB |
 | Reliability | Good | Excellent | SQLite-vec |
 
@@ -346,7 +420,8 @@ asyncio.run(health_check())
 
 ✅ **Use SQLite-vec when:**
 - Memory collections < 100,000 entries
-- Single-user or light concurrent usage
+- Single-user or light concurrent usage (2-5 clients)
+- Multi-client access needed (Claude Desktop + Claude Code)
 - Portability and backup simplicity are important
 - Limited system resources
 - Simple deployment requirements
