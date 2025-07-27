@@ -12,6 +12,9 @@ import argparse
 import shutil
 from pathlib import Path
 
+# Global variable to store the uv executable path
+UV_EXECUTABLE_PATH = None
+
 def print_header(text):
     """Print a formatted header."""
     print("\n" + "=" * 80)
@@ -724,6 +727,72 @@ def initialize_sqlite_vec_database(storage_path):
         print_info("Database will be initialized on first use")
         return True  # Not a critical failure
 
+def install_uv():
+    """Install uv package manager if not already installed."""
+    uv_path = shutil.which("uv")
+    if uv_path:
+        print_info(f"uv is already installed at: {uv_path}")
+        return uv_path
+    
+    print_info("Installing uv package manager...")
+    
+    try:
+        # Determine the installation directory
+        if platform.system() == 'Windows':
+            # On Windows, install to user's AppData/Local
+            install_dir = os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Programs', 'uv')
+        else:
+            # On Unix-like systems, install to ~/.local/bin
+            install_dir = os.path.expanduser("~/.local/bin")
+        
+        # Create installation directory if it doesn't exist
+        os.makedirs(install_dir, exist_ok=True)
+        
+        # Download and install uv
+        if platform.system() == 'Windows':
+            # Windows installation
+            install_script = "powershell -c \"irm https://astral.sh/uv/install.ps1 | iex\""
+            subprocess.check_call(install_script, shell=True)
+        else:
+            # Unix-like installation
+            install_script = "curl -LsSf https://astral.sh/uv/install.sh | sh"
+            subprocess.check_call(install_script, shell=True)
+        
+        # Check if uv was installed successfully
+        uv_path = shutil.which("uv")
+        if not uv_path:
+            # Try common installation paths
+            if platform.system() == 'Windows':
+                possible_paths = [
+                    os.path.join(install_dir, 'uv.exe'),
+                    os.path.join(os.environ.get('USERPROFILE', ''), '.cargo', 'bin', 'uv.exe')
+                ]
+            else:
+                possible_paths = [
+                    os.path.join(install_dir, 'uv'),
+                    os.path.expanduser("~/.cargo/bin/uv")
+                ]
+            
+            for path in possible_paths:
+                if os.path.exists(path):
+                    uv_path = path
+                    break
+        
+        if uv_path:
+            print_success(f"uv installed successfully at: {uv_path}")
+            return uv_path
+        else:
+            print_error("uv installation completed but executable not found in PATH")
+            print_info("You may need to add the installation directory to your PATH")
+            return None
+            
+    except subprocess.CalledProcessError as e:
+        print_error(f"Failed to install uv: {e}")
+        return None
+    except Exception as e:
+        print_error(f"Unexpected error installing uv: {e}")
+        return None
+
 def install_package(args):
     """Install the package with the appropriate dependencies, supporting pip or uv."""
     print_step("3", "Installing MCP Memory Service")
@@ -747,18 +816,30 @@ def install_package(args):
     except subprocess.SubprocessError:
         pip_available = False
 
-    # Detect if uv is available
-    uv_path = shutil.which("uv")
-    uv_available = uv_path is not None
+    # Try to install uv if pip is not available
+    if not pip_available:
+        print_info("pip not found, attempting to install uv package manager...")
+        uv_path = install_uv()
+    else:
+        # Check if uv is already available
+        uv_path = shutil.which("uv")
+        if uv_path:
+            print_info(f"uv package manager found at: {uv_path}")
+        else:
+            print_info("uv package manager not found (will use pip for installation)")
+    
+    # Store the uv path globally for config generation
+    global UV_EXECUTABLE_PATH
+    UV_EXECUTABLE_PATH = uv_path
 
     # Decide installer command prefix
     if pip_available:
         installer_cmd = [sys.executable, '-m', 'pip']
-    elif uv_available:
-        installer_cmd = ['uv', 'pip']
-        print_warning("pip not found, but uv detected. Using 'uv pip' for installation.")
+    elif uv_path:
+        installer_cmd = [uv_path, 'pip']
+        print_info(f"Using uv for installation: {uv_path}")
     else:
-        print_error("Neither pip nor uv detected. Cannot install packages.")
+        print_error("Neither pip nor uv could be found or installed. Cannot install packages.")
         return False
 
     # Get system and GPU info
@@ -1029,7 +1110,7 @@ def configure_paths(args):
                 else:
                     # Use the standard configuration for other platforms
                     config['mcpServers']['memory'] = {
-                        "command": "uv",
+                        "command": UV_EXECUTABLE_PATH or "uv",
                         "args": [
                             "--directory",
                             os.path.abspath("."),
@@ -1762,7 +1843,7 @@ def configure_claude_desktop_multi_client(config_path, system_info):
         repo_path = str(Path.cwd()).replace('\\', '\\\\')  # Escape backslashes for JSON
         
         config['mcpServers']['memory'] = {
-            "command": "uv",
+            "command": UV_EXECUTABLE_PATH or "uv",
             "args": ["--directory", repo_path, "run", "memory"],
             "env": {
                 "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
@@ -1818,7 +1899,7 @@ def configure_continue_multi_client(config_path):
         repo_path = str(Path.cwd())
         
         config['mcpServers']['memory'] = {
-            "command": "uv",
+            "command": UV_EXECUTABLE_PATH or "uv",
             "args": ["--directory", repo_path, "run", "memory"],
             "env": {
                 "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
@@ -1854,7 +1935,7 @@ def configure_generic_mcp_multi_client(config_path):
         repo_path = str(Path.cwd())
         
         config['mcpServers']['memory'] = {
-            "command": "uv",
+            "command": UV_EXECUTABLE_PATH or "uv",
             "args": ["--directory", repo_path, "run", "memory"],
             "env": {
                 "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
@@ -2009,11 +2090,12 @@ def provide_generic_configuration():
     repo_path = str(Path.cwd())
     
     # Windows-style path
+    uv_cmd = UV_EXECUTABLE_PATH or "uv"
     if platform.system() == 'Windows':
-        print_info(f"  Command: uv --directory \"{repo_path}\" run memory")
+        print_info(f"  Command: {uv_cmd} --directory \"{repo_path}\" run memory")
         print_info(f"  Alternative: python -m mcp_memory_service.server")
     else:
-        print_info(f"  Command: uv --directory {repo_path} run memory")
+        print_info(f"  Command: {uv_cmd} --directory {repo_path} run memory")
         print_info(f"  Alternative: python -m mcp_memory_service.server")
     
     print_info("")
@@ -2036,7 +2118,7 @@ def provide_generic_configuration():
     print_info("  {")
     print_info("    \"mcpServers\": {")
     print_info("      \"memory\": {")
-    print_info(f"        \"command\": \"uv\",")
+    print_info(f"        \"command\": \"{UV_EXECUTABLE_PATH or 'uv'}\",")
     print_info(f"        \"args\": [\"--directory\", \"{repo_path}\", \"run\", \"memory\"],")
     print_info("        \"env\": {")
     print_info("          \"MCP_MEMORY_STORAGE_BACKEND\": \"sqlite_vec\",")
