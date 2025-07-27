@@ -17,6 +17,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
+      attestations: write
 
     steps:
     - name: Checkout repository
@@ -66,3 +67,4 @@ jobs:
         subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
         subject-digest: ${{ steps.build-and-push.outputs.digest }}
         push-to-registry: true
+      continue-on-error: true  # Don't fail the workflow if attestation fails
