@@ -1,8 +1,20 @@
 # MCP Memory Service Examples
 
-This directory contains example configurations and scripts for deploying MCP Memory Service in various scenarios.
+This directory contains example configurations, scripts, and setup utilities for deploying MCP Memory Service in various scenarios.
 
-## Files
+## Directory Structure
+
+### `/config/` - Configuration Examples
+- Example Claude Desktop configurations
+- Template configuration files for different deployment scenarios
+- MCP server configuration samples
+
+### `/setup/` - Setup Scripts and Utilities  
+- Multi-client setup scripts
+- Automated configuration tools
+- Installation helpers
+
+## Core Files
 
 ### `http-mcp-bridge.js`
 A Node.js script that bridges MCP JSON-RPC protocol to HTTP REST API calls. This allows MCP clients like Claude Desktop to connect to a remote HTTP server instead of running a local instance.
@@ -47,4 +59,4 @@ curl -H "Authorization: Bearer your-secure-key" \
 
 ## Advanced Usage
 
-See the complete [Multi-Client Deployment Guide](../docs/MULTI_CLIENT_DEPLOYMENT.md) for detailed configuration options, security setup, and troubleshooting.
+See the complete [Multi-Client Deployment Guide](../docs/deployment/multi-client-server.md) for detailed configuration options, security setup, and troubleshooting.

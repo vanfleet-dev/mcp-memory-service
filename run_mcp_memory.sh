@@ -1,1 +1,0 @@
-scripts/legacy_intel_mac/run_mcp_memory.sh

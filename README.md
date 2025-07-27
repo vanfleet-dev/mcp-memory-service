@@ -70,7 +70,7 @@ python install.py
 ### 🎯 Hardware-Specific Installation
 
 **For Intel Macs:**
-For detailed setup instructions specific to Intel Macs, see our [Intel Mac Setup Guide](docs/INTEL_MAC_SETUP.md). Intel Mac users should also check out our [Legacy Intel Mac Scripts](scripts/legacy_intel_mac/README.md) for specialized startup scripts.
+For detailed setup instructions specific to Intel Macs, see our [Intel Mac Setup Guide](docs/platforms/macos-intel.md). Intel Mac users should also check out our [Legacy Intel Mac Scripts](scripts/legacy_intel_mac/README.md) for specialized startup scripts.
 
 **For Legacy Hardware (2013-2017 Intel Macs):**
 ```bash
@@ -234,7 +234,7 @@ npx -y @smithery/cli install @doobidoo/mcp-memory-service --client claude
 
 ### Detailed Installation Guide
 
-For comprehensive installation instructions and troubleshooting, see the [Installation Guide](docs/guides/installation.md).
+For comprehensive installation instructions and troubleshooting, see the [Installation Guide](docs/installation/master-guide.md).
 
 ## Claude MCP Configuration
 
@@ -604,7 +604,7 @@ python install.py
 
 **🔧 Manual Setup:**
 ```bash
-python setup_multi_client_complete.py
+python examples/setup/setup_multi_client_complete.py
 ```
 
 **🌐 Universal Compatibility:**
@@ -635,13 +635,13 @@ python setup_multi_client_complete.py
 
 **Setup Guides:**
 - **🚀 Quick Start:** Integrated into `python install.py` with automatic detection
-- **📖 Universal Setup:** [Universal Multi-Client Setup Guide](docs/guides/universal-multi-client-setup.md)
-- **🔧 Manual Setup:** [Multi-Client Setup Guide](docs/multi-client-setup-guide.md) 
-- **⚙️ Legacy Setup:** `python setup_multi_client_complete.py`
+- **📖 Universal Setup:** [Universal Multi-Client Setup Guide](docs/integration/multi-client.md)
+- **🔧 Manual Setup:** [Multi-Client Setup Guide](docs/integration/multi-client.md) 
+- **⚙️ Legacy Setup:** `python examples/setup/setup_multi_client_complete.py`
 
 ## Troubleshooting
 
-See the [Installation Guide](docs/guides/installation.md#troubleshooting-common-installation-issues) for detailed troubleshooting steps.
+See the [Installation Guide](docs/installation/master-guide.md) and [Troubleshooting Guide](docs/troubleshooting/general.md) for detailed troubleshooting steps.
 
 ### Quick Troubleshooting Tips
 
