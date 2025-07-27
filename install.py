@@ -940,7 +940,8 @@ def install_package(args):
                 # Create a list of dependencies to install
                 dependencies = [
                     "mcp>=1.0.0,<2.0.0",
-                    "onnxruntime>=1.14.1"  # ONNX runtime is required
+                    "onnxruntime>=1.14.1",  # ONNX runtime is required
+                    "aiohttp>=3.8.0"  # Required for MCP server functionality
                 ]
                 
                 # Add backend-specific dependencies
@@ -993,7 +994,7 @@ def install_package(args):
             print_warning("Installation on macOS Intel is challenging")
             print_info("Try manually installing with:")
             print_info("1. pip install --no-deps .")
-            print_info("2. pip install sqlite-vec>=0.1.0 mcp>=1.0.0,<2.0.0 onnxruntime>=1.14.1")
+            print_info("2. pip install sqlite-vec>=0.1.0 mcp>=1.0.0,<2.0.0 onnxruntime>=1.14.1 aiohttp>=3.8.0")
             print_info("3. export MCP_MEMORY_USE_ONNX=1")
             print_info("4. export MCP_MEMORY_STORAGE_BACKEND=sqlite_vec")
             
