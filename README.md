@@ -305,6 +305,59 @@ The wrapper script will:
 2. Install PyTorch with the correct index URL if needed
 3. Run the memory server with the appropriate configuration
 
+## 🌐 Multi-Client Deployment
+
+**NEW**: Deploy MCP Memory Service for multiple clients sharing the same memory database!
+
+### 🚀 Centralized Server Deployment (Recommended)
+
+Perfect for distributed teams, multiple devices, or cloud deployment:
+
+```bash
+# Install and start HTTP/SSE server
+python install.py --server-mode --enable-http-api
+export MCP_HTTP_HOST=0.0.0.0  # Allow external connections
+export MCP_API_KEY="your-secure-key"  # Optional authentication
+python scripts/run_http_server.py
+```
+
+**✅ Benefits:**
+- 🔄 **Real-time sync** across all clients via Server-Sent Events (SSE)
+- 🌍 **Cross-platform** - works from any device with HTTP access
+- 🔒 **Secure** with optional API key authentication
+- 📈 **Scalable** - handles many concurrent clients
+- ☁️ **Cloud-ready** - deploy on AWS, DigitalOcean, Docker, etc.
+
+**Access via:**
+- **API Docs**: `http://your-server:8000/api/docs`
+- **Web Dashboard**: `http://your-server:8000/`
+- **REST API**: All MCP operations available via HTTP
+
+### ⚠️ Why NOT Cloud Storage (Dropbox/OneDrive/Google Drive)
+
+**Direct SQLite on cloud storage DOES NOT WORK** for multi-client access:
+
+❌ **File locking conflicts** - Cloud sync breaks SQLite's locking mechanism  
+❌ **Data corruption** - Incomplete syncs can corrupt the database  
+❌ **Sync conflicts** - Multiple clients create "conflicted copy" files  
+❌ **Performance issues** - Full database re-upload on every change  
+
+**✅ Solution**: Use centralized HTTP server deployment instead!
+
+### 📖 Complete Documentation
+
+For detailed deployment guides, configuration options, and troubleshooting:
+
+📚 **[Multi-Client Deployment Guide](docs/MULTI_CLIENT_DEPLOYMENT.md)**
+
+Covers:
+- **Centralized HTTP/SSE Server** setup and configuration
+- **Shared File Access** for local networks (limited scenarios)
+- **Cloud Platform Deployment** (AWS, DigitalOcean, Docker)
+- **Security & Authentication** setup
+- **Performance Tuning** for high-load environments
+- **Troubleshooting** common multi-client issues
+
 ## Usage Guide
 
 For detailed instructions on how to interact with the memory service in Claude Desktop:
