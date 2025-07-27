@@ -189,8 +189,6 @@ jobs:
         push: false
         load: true
         tags: mcp-memory-service:test
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
 
     - name: Test Docker image
       run: |
