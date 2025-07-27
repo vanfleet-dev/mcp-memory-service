@@ -204,12 +204,44 @@ class MemoryServer:
             logger.info(f"Attempting eager {STORAGE_BACKEND} storage initialization...")
             
             if STORAGE_BACKEND == 'sqlite_vec':
-                # Import sqlite-vec storage module (supports dynamic class replacement)
-                from . import storage
-                import importlib
-                storage_module = importlib.import_module('mcp_memory_service.storage.sqlite_vec')
-                SqliteVecMemoryStorage = storage_module.SqliteVecMemoryStorage
-                self.storage = SqliteVecMemoryStorage(SQLITE_VEC_PATH)
+                # Check for multi-client coordination mode
+                from .utils.port_detection import ServerCoordinator
+                coordinator = ServerCoordinator()
+                coordination_mode = await coordinator.detect_mode()
+                
+                logger.info(f"Eager init - detected coordination mode: {coordination_mode}")
+                
+                if coordination_mode == "http_client":
+                    # Use HTTP client to connect to existing server
+                    from .storage.http_client import HTTPClientStorage
+                    self.storage = HTTPClientStorage()
+                    logger.info(f"Eager init - using HTTP client storage")
+                elif coordination_mode == "http_server":
+                    # Try to auto-start HTTP server for coordination
+                    from .utils.http_server_manager import auto_start_http_server_if_needed
+                    server_started = await auto_start_http_server_if_needed()
+                    
+                    if server_started:
+                        # Wait a moment for the server to be ready, then use HTTP client
+                        await asyncio.sleep(2)
+                        from .storage.http_client import HTTPClientStorage
+                        self.storage = HTTPClientStorage()
+                        logger.info(f"Eager init - started HTTP server and using HTTP client storage")
+                    else:
+                        # Fall back to direct SQLite-vec storage
+                        from . import storage
+                        import importlib
+                        storage_module = importlib.import_module('mcp_memory_service.storage.sqlite_vec')
+                        SqliteVecMemoryStorage = storage_module.SqliteVecMemoryStorage
+                        self.storage = SqliteVecMemoryStorage(SQLITE_VEC_PATH)
+                        logger.info(f"Eager init - HTTP server auto-start failed, using direct storage")
+                else:
+                    # Import sqlite-vec storage module (supports dynamic class replacement)
+                    from . import storage
+                    import importlib
+                    storage_module = importlib.import_module('mcp_memory_service.storage.sqlite_vec')
+                    SqliteVecMemoryStorage = storage_module.SqliteVecMemoryStorage
+                    self.storage = SqliteVecMemoryStorage(SQLITE_VEC_PATH)
             else:
                 # Initialize ChromaDB with preload_model=True for caching
                 from .storage.chroma import ChromaMemoryStorage
@@ -232,12 +264,43 @@ class MemoryServer:
                 logger.info(f"Initializing {STORAGE_BACKEND} storage backend...")
                 
                 if STORAGE_BACKEND == 'sqlite_vec':
-                    # Import sqlite-vec storage (supports dynamic class replacement)
-                    import importlib
-                    storage_module = importlib.import_module('mcp_memory_service.storage.sqlite_vec')
-                    SqliteVecMemoryStorage = storage_module.SqliteVecMemoryStorage
-                    self.storage = SqliteVecMemoryStorage(SQLITE_VEC_PATH)
-                    logger.info(f"Created SQLite-vec storage at: {SQLITE_VEC_PATH}")
+                    # Check for multi-client coordination mode
+                    from .utils.port_detection import ServerCoordinator
+                    coordinator = ServerCoordinator()
+                    coordination_mode = await coordinator.detect_mode()
+                    
+                    logger.info(f"Detected coordination mode: {coordination_mode}")
+                    
+                    if coordination_mode == "http_client":
+                        # Use HTTP client to connect to existing server
+                        from .storage.http_client import HTTPClientStorage
+                        self.storage = HTTPClientStorage()
+                        logger.info(f"Using HTTP client storage to connect to existing server")
+                    elif coordination_mode == "http_server":
+                        # Try to auto-start HTTP server for coordination
+                        from .utils.http_server_manager import auto_start_http_server_if_needed
+                        server_started = await auto_start_http_server_if_needed()
+                        
+                        if server_started:
+                            # Wait a moment for the server to be ready, then use HTTP client
+                            await asyncio.sleep(2)
+                            from .storage.http_client import HTTPClientStorage
+                            self.storage = HTTPClientStorage()
+                            logger.info(f"Started HTTP server and using HTTP client storage")
+                        else:
+                            # Fall back to direct SQLite-vec storage
+                            import importlib
+                            storage_module = importlib.import_module('mcp_memory_service.storage.sqlite_vec')
+                            SqliteVecMemoryStorage = storage_module.SqliteVecMemoryStorage
+                            self.storage = SqliteVecMemoryStorage(SQLITE_VEC_PATH)
+                            logger.info(f"HTTP server auto-start failed, using direct SQLite-vec storage at: {SQLITE_VEC_PATH}")
+                    else:
+                        # Use direct SQLite-vec storage (with WAL mode for concurrent access)
+                        import importlib
+                        storage_module = importlib.import_module('mcp_memory_service.storage.sqlite_vec')
+                        SqliteVecMemoryStorage = storage_module.SqliteVecMemoryStorage
+                        self.storage = SqliteVecMemoryStorage(SQLITE_VEC_PATH)
+                        logger.info(f"Created SQLite-vec storage at: {SQLITE_VEC_PATH}")
                 else:
                     # Default to ChromaDB
                     from .storage.chroma import ChromaMemoryStorage

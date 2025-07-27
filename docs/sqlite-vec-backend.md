@@ -203,14 +203,32 @@ storage = SqliteVecMemoryStorage(
 
 ### Multi-Client Access Configuration
 
-SQLite-vec now supports concurrent access from multiple MCP clients (e.g., Claude Desktop + Claude Code) using Write-Ahead Logging (WAL) mode.
+SQLite-vec supports advanced multi-client access through **two complementary approaches**:
 
-#### Default Multi-Client Settings
+1. **Phase 1: WAL Mode** - Direct SQLite access with Write-Ahead Logging
+2. **Phase 2: HTTP Coordination** - Automatic HTTP server coordination for seamless multi-client access
+
+#### Phase 1: WAL Mode (Default)
 
 The backend automatically enables WAL mode with these default settings:
 - **WAL Mode**: Enables multiple readers + single writer
-- **Busy Timeout**: 5 seconds (prevents immediate lock errors)
+- **Busy Timeout**: 5 seconds (prevents immediate lock errors)  
 - **Synchronous**: NORMAL (balanced performance/safety)
+
+#### Phase 2: HTTP Server Auto-Detection (Advanced)
+
+The system automatically detects the optimal coordination mode:
+
+**Auto-Detection Modes:**
+- **`http_client`**: Existing HTTP server detected → Connect as client
+- **`http_server`**: No server found, port available → Start HTTP server
+- **`direct`**: Port in use by other service → Fall back to WAL mode
+
+**Coordination Flow:**
+1. Check if MCP Memory Service HTTP server is running
+2. If found → Use HTTP client to connect to existing server
+3. If not found and port available → Auto-start HTTP server (optional)
+4. If port busy → Fall back to direct SQLite with WAL mode
 
 #### Custom SQLite Pragmas
 
@@ -231,8 +249,82 @@ export MCP_MEMORY_SQLITE_PRAGMAS="synchronous=OFF,temp_store=MEMORY,cache_size=5
 export MCP_MEMORY_SQLITE_PRAGMAS="synchronous=FULL,busy_timeout=60000"
 ```
 
+#### HTTP Coordination Configuration
+
+Enable automatic HTTP server coordination for optimal multi-client access:
+
+```bash
+# Enable HTTP server auto-start
+export MCP_MEMORY_HTTP_AUTO_START=true
+
+# Configure HTTP server settings (optional)
+export MCP_HTTP_PORT=8000
+export MCP_HTTP_HOST=localhost
+
+# Combine with SQLite-vec backend
+export MCP_MEMORY_STORAGE_BACKEND=sqlite_vec
+```
+
+**Coordination Modes Explained:**
+
+1. **Automatic Mode (Recommended)**
+   ```bash
+   # No configuration needed - auto-detects best mode
+   export MCP_MEMORY_STORAGE_BACKEND=sqlite_vec
+   ```
+
+2. **Forced HTTP Client Mode**
+   ```bash
+   # Always connect to existing server (fails if none running)
+   export MCP_MEMORY_STORAGE_BACKEND=sqlite_vec
+   export MCP_MEMORY_HTTP_AUTO_START=false
+   # Requires running: python scripts/run_http_server.py
+   ```
+
+3. **Direct WAL Mode Only**
+   ```bash
+   # Disable HTTP coordination entirely
+   export MCP_MEMORY_STORAGE_BACKEND=sqlite_vec
+   export MCP_MEMORY_HTTP_AUTO_START=false
+   export MCP_HTTP_ENABLED=false
+   ```
+
 #### Multi-Client Claude Desktop Configuration
 
+**Option 1: Automatic Coordination (Recommended)**
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/mcp-memory-service", "run", "memory"],
+      "env": {
+        "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+        "MCP_MEMORY_HTTP_AUTO_START": "true"
+      }
+    }
+  }
+}
+```
+
+**Option 2: Manual HTTP Server + Client Mode**
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "uv", 
+      "args": ["--directory", "/path/to/mcp-memory-service", "run", "memory"],
+      "env": {
+        "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+        "MCP_MEMORY_HTTP_AUTO_START": "false"
+      }
+    }
+  }
+}
+```
+*Note: Requires manually running `python scripts/run_http_server.py` first*
+
+**Option 3: WAL Mode Only (Simple)**
 ```json
 {
   "mcpServers": {
@@ -346,6 +438,51 @@ rm /path/to/your/database-shm
 - Ensure proper shutdown of MCP clients
 - Use connection retry logic (built-in)
 
+#### 5. HTTP Coordination Issues
+```
+Failed to initialize HTTP client storage: Connection refused
+```
+**Solutions:**
+
+**Auto-Detection Problems:**
+```bash
+# Check if HTTP server auto-start is working
+export LOG_LEVEL=DEBUG
+export MCP_MEMORY_HTTP_AUTO_START=true
+
+# Check coordination mode detection
+python -c "
+import asyncio
+from src.mcp_memory_service.utils.port_detection import detect_server_coordination_mode
+print(asyncio.run(detect_server_coordination_mode()))
+"
+```
+
+**Manual HTTP Server Setup:**
+```bash
+# Start HTTP server manually in separate terminal
+python scripts/run_http_server.py
+
+# Then start MCP clients (they'll auto-detect the running server)
+```
+
+**Port Conflicts:**
+```bash
+# Check what's using the port
+netstat -an | grep :8000  # Linux/macOS
+netstat -an | findstr :8000  # Windows
+
+# Use different port
+export MCP_HTTP_PORT=8001
+```
+
+**Fallback to WAL Mode:**
+```bash
+# Force WAL mode if HTTP coordination fails
+export MCP_MEMORY_HTTP_AUTO_START=false
+export MCP_HTTP_ENABLED=false
+```
+
 #### 3. Permission Errors
 ```
 PermissionError: [Errno 13] Permission denied
@@ -409,8 +546,8 @@ asyncio.run(health_check())
 | Query Performance | Excellent | Very Good | ChromaDB |
 | Portability | Poor | Excellent | SQLite-vec |
 | Backup/Restore | Complex | Simple | SQLite-vec |
-| Concurrent Access | Good | Good (WAL) | Tie |
-| Multi-Client Support | Good | Good (WAL) | Tie |
+| Concurrent Access | Good | Excellent (HTTP + WAL) | SQLite-vec |
+| Multi-Client Support | Good | Excellent (HTTP + WAL) | SQLite-vec |
 | Ecosystem | Rich | Growing | ChromaDB |
 | Reliability | Good | Excellent | SQLite-vec |
 
@@ -420,11 +557,12 @@ asyncio.run(health_check())
 
 ✅ **Use SQLite-vec when:**
 - Memory collections < 100,000 entries
-- Single-user or light concurrent usage (2-5 clients)
-- Multi-client access needed (Claude Desktop + Claude Code)
+- Multi-client access needed (Claude Desktop + Claude Code + others)
+- Seamless setup and coordination required (auto-detection)
 - Portability and backup simplicity are important
 - Limited system resources
 - Simple deployment requirements
+- Want both HTTP and direct access capabilities
 
 ### When to Use ChromaDB
 
@@ -434,6 +572,37 @@ asyncio.run(health_check())
 - Maximum query performance is critical
 - Rich ecosystem features needed
 - Distributed setups
+
+### Multi-Client Coordination Tips
+
+1. **Automatic Mode (Recommended)**
+   ```bash
+   # Let the system choose the best coordination method
+   export MCP_MEMORY_STORAGE_BACKEND=sqlite_vec
+   export MCP_MEMORY_HTTP_AUTO_START=true
+   ```
+
+2. **Monitoring Coordination Mode**
+   ```bash
+   # Check which mode is being used
+   export LOG_LEVEL=INFO
+   # Look for "Detected coordination mode: ..." in logs
+   ```
+
+3. **HTTP Server Management**
+   ```bash
+   # Manual server control
+   python scripts/run_http_server.py  # Start manually
+   
+   # Check server health
+   curl http://localhost:8000/health
+   ```
+
+4. **Fallback Strategy**
+   ```bash
+   # If HTTP coordination fails, system falls back to WAL mode
+   # No manual intervention needed - fully automatic
+   ```
 
 ### Performance Tips
 
