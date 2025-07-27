@@ -61,6 +61,10 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Run the intelligent installer
 python install.py
+
+# ✨ NEW: Multi-client setup is now integrated!
+# You'll be prompted to configure universal MCP client access
+# for Claude Desktop, VS Code, Continue, and other MCP applications
 ```
 
 ### 🎯 Hardware-Specific Installation
@@ -86,6 +90,15 @@ python install.py --enable-http-api
 **For Migration from ChromaDB:**
 ```bash
 python install.py --migrate-from-chromadb
+```
+
+**For Multi-Client Setup:**
+```bash
+# Automatic multi-client setup during installation
+python install.py --setup-multi-client
+
+# Skip the interactive multi-client prompt
+python install.py --skip-multi-client-prompt
 ```
 
 ### 🧠 What the Installer Does
@@ -522,21 +535,37 @@ python scripts/test_installation.py
 
 ## FAQ
 
-### Can I run the MCP Memory Service in both Claude Desktop and Claude Code simultaneously?
+### Can I run the MCP Memory Service across multiple applications simultaneously?
 
-**Yes!** The MCP Memory Service now features **advanced multi-client coordination** that enables seamless concurrent access from multiple clients. Both Claude Desktop and Claude Code can safely use the same memory service simultaneously with automatic coordination.
+**Yes!** The MCP Memory Service now features **universal multi-client coordination** that enables seamless concurrent access from any MCP-compatible applications. Share memories between Claude Desktop, Claude Code, VS Code, Continue, Cursor, and other MCP clients with automatic coordination.
 
-**🚀 Quick Setup:**
+**🚀 Integrated Setup (Recommended):**
+```bash
+# During installation, you'll be prompted:
+python install.py
+
+# Would you like to configure multi-client access? (y/N): y
+# ✅ Automatically detects and configures all your MCP clients!
+```
+
+**🔧 Manual Setup:**
 ```bash
 python setup_multi_client_complete.py
 ```
 
-**Key benefits:**
+**🌐 Universal Compatibility:**
+- ✅ **Claude Desktop + Claude Code**: Original use case with automatic config
+- ✅ **VS Code with MCP Extension**: Seamless integration instructions
+- ✅ **Continue IDE**: Automatic configuration file updates
+- ✅ **Cursor IDE**: MCP extension support with guidance
+- ✅ **Any MCP Client**: Generic configuration for future applications
+
+**Key Benefits:**
 - ✅ **Automatic Coordination**: Intelligent detection of optimal access mode
-- ✅ **Zero Configuration**: Works out-of-the-box with SQLite-vec backend
+- ✅ **Universal Setup**: Works with any MCP-compatible application
 - ✅ **Shared Memory**: All clients access the same memory database
 - ✅ **No Lock Conflicts**: WAL mode prevents database locking issues
-- ✅ **Graceful Fallbacks**: System automatically handles edge cases
+- ✅ **IDE-Agnostic**: Switch between development tools while maintaining context
 
 **Multi-Client Features:**
 - **Phase 1: WAL Mode** - Direct SQLite access with Write-Ahead Logging (default)
@@ -550,7 +579,11 @@ python setup_multi_client_complete.py
 - **Connection Retry**: Exponential backoff for robust access
 - **Shared Database**: Single source of truth across all clients
 
-**Setup Guide:** See [Multi-Client Setup Guide](docs/multi-client-setup-guide.md) for complete instructions.
+**Setup Guides:**
+- **🚀 Quick Start:** Integrated into `python install.py` with automatic detection
+- **📖 Universal Setup:** [Universal Multi-Client Setup Guide](docs/guides/universal-multi-client-setup.md)
+- **🔧 Manual Setup:** [Multi-Client Setup Guide](docs/multi-client-setup-guide.md) 
+- **⚙️ Legacy Setup:** `python setup_multi_client_complete.py`
 
 ## Troubleshooting
 
@@ -570,6 +603,8 @@ See the [Installation Guide](docs/guides/installation.md#troubleshooting-common-
 
 ### Installation & Setup
 - **[Master Installation Guide](docs/guides/INSTALLATION_MASTER.md)** - Complete installation guide with hardware-specific paths
+- **[Installation Command Line Reference](docs/guides/installation-command-line-reference.md)** ⭐ **NEW** - Comprehensive CLI options including multi-client setup
+- **[Universal Multi-Client Setup](docs/guides/universal-multi-client-setup.md)** ⭐ **NEW** - Integrated setup for any MCP application
 - **[Storage Backend Comparison](docs/guides/STORAGE_BACKENDS.md)** - Detailed comparison and selection guide
 - **[Migration Guide](MIGRATION_GUIDE.md)** - ChromaDB to SQLite-vec migration instructions
 
@@ -585,6 +620,7 @@ See the [Installation Guide](docs/guides/installation.md#troubleshooting-common-
 - **[Integrations](docs/integrations.md)** - Third-party tools and extensions
 
 ### Advanced Topics
+- **[Multi-Client Architecture](docs/development/multi-client-architecture.md)** ⭐ **NEW** - Technical implementation details
 - **[Homebrew PyTorch Integration](docs/integration/homebrew/HOMEBREW_PYTORCH_README.md)** - Using system PyTorch
 - **[Docker Deployment](docs/guides/docker.md)** - Container-based deployment
 - **[Performance Optimization](docs/implementation/performance.md)** - Tuning for different hardware

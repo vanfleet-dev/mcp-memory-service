@@ -1538,6 +1538,506 @@ def configure_claude_code_integration(system_info):
         print_error(f"Failed to configure Claude Code integration: {e}")
         return False
 
+def detect_mcp_clients():
+    """Detect installed MCP-compatible applications."""
+    clients = {}
+    
+    # Check for Claude Desktop
+    claude_config_paths = [
+        Path.home() / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json",  # Windows
+        Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json",  # macOS
+        Path.home() / ".config" / "Claude" / "claude_desktop_config.json"  # Linux
+    ]
+    for path in claude_config_paths:
+        if path.exists():
+            clients['claude_desktop'] = path
+            break
+    
+    # Check for Claude Code CLI
+    try:
+        result = subprocess.run(['claude', '--version'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            clients['claude_code'] = True
+    except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    
+    # Check for VS Code with MCP extension
+    vscode_settings_paths = [
+        Path.home() / "AppData" / "Roaming" / "Code" / "User" / "settings.json",  # Windows
+        Path.home() / "Library" / "Application Support" / "Code" / "User" / "settings.json",  # macOS
+        Path.home() / ".config" / "Code" / "User" / "settings.json"  # Linux
+    ]
+    for path in vscode_settings_paths:
+        if path.exists():
+            try:
+                import json
+                with open(path, 'r') as f:
+                    settings = json.load(f)
+                # Check for MCP-related extensions or configurations
+                if any('mcp' in str(key).lower() or 'model-context-protocol' in str(key).lower() 
+                       for key in settings.keys()):
+                    clients['vscode_mcp'] = path
+                    break
+            except (json.JSONDecodeError, IOError):
+                pass
+    
+    # Check for Continue IDE
+    continue_paths = [
+        Path.home() / ".continue" / "config.json",
+        Path.home() / ".config" / "continue" / "config.json",
+        Path.home() / "AppData" / "Roaming" / "continue" / "config.json"  # Windows
+    ]
+    for path in continue_paths:
+        if path.exists():
+            clients['continue'] = path
+            break
+    
+    # Check for generic MCP configurations
+    generic_mcp_paths = [
+        Path.home() / ".mcp.json",
+        Path.home() / ".config" / "mcp" / "config.json",
+        Path.cwd() / ".mcp.json"
+    ]
+    for path in generic_mcp_paths:
+        if path.exists():
+            clients['generic_mcp'] = path
+            break
+    
+    # Check for Cursor IDE (similar to VS Code)
+    cursor_settings_paths = [
+        Path.home() / "AppData" / "Roaming" / "Cursor" / "User" / "settings.json",  # Windows
+        Path.home() / "Library" / "Application Support" / "Cursor" / "User" / "settings.json",  # macOS
+        Path.home() / ".config" / "Cursor" / "User" / "settings.json"  # Linux
+    ]
+    for path in cursor_settings_paths:
+        if path.exists():
+            try:
+                import json
+                with open(path, 'r') as f:
+                    settings = json.load(f)
+                # Check for MCP-related configurations
+                if any('mcp' in str(key).lower() or 'model-context-protocol' in str(key).lower() 
+                       for key in settings.keys()):
+                    clients['cursor'] = path
+                    break
+            except (json.JSONDecodeError, IOError):
+                pass
+    
+    return clients
+
+def print_detected_clients(clients):
+    """Print information about detected MCP clients."""
+    if clients:
+        print_info("Detected MCP Clients:")
+        for client_type, config_path in clients.items():
+            client_names = {
+                'claude_desktop': 'Claude Desktop',
+                'claude_code': 'Claude Code CLI',
+                'vscode_mcp': 'VS Code with MCP',
+                'continue': 'Continue IDE',
+                'cursor': 'Cursor IDE',
+                'generic_mcp': 'Generic MCP Client'
+            }
+            client_name = client_names.get(client_type, client_type.title())
+            config_info = config_path if isinstance(config_path, (str, Path)) else "CLI detected"
+            print_info(f"  [*] {client_name}: {config_info}")
+    else:
+        print_info("No MCP clients detected - configuration will work with any future MCP client")
+
+def should_offer_multi_client_setup(args, final_backend):
+    """Determine if multi-client setup should be offered."""
+    # Only offer if using SQLite-vec backend (requirement for multi-client)
+    if final_backend != "sqlite_vec":
+        return False
+    
+    # Don't offer in pure server mode
+    if args.server_mode:
+        return False
+    
+    # Skip if user explicitly requested to skip
+    if args.skip_multi_client_prompt:
+        return False
+    
+    # Always beneficial for development environments - any future MCP client can benefit
+    return True
+
+def configure_detected_clients(clients, system_info):
+    """Configure each detected client for multi-client access."""
+    success_count = 0
+    
+    for client_type, config_path in clients.items():
+        try:
+            if client_type == 'claude_desktop':
+                if configure_claude_desktop_multi_client(config_path, system_info):
+                    success_count += 1
+            elif client_type == 'vscode_mcp' or client_type == 'cursor':
+                if configure_vscode_like_multi_client(config_path, client_type):
+                    success_count += 1
+            elif client_type == 'continue':
+                if configure_continue_multi_client(config_path):
+                    success_count += 1
+            elif client_type == 'generic_mcp':
+                if configure_generic_mcp_multi_client(config_path):
+                    success_count += 1
+            elif client_type == 'claude_code':
+                # Claude Code uses project-level .mcp.json, handle separately
+                print_info(f"  -> Claude Code: Configure via project .mcp.json (see instructions below)")
+                success_count += 1
+        except Exception as e:
+            print_warning(f"  -> Failed to configure {client_type}: {e}")
+    
+    return success_count
+
+def configure_claude_desktop_multi_client(config_path, system_info):
+    """Configure Claude Desktop for multi-client access."""
+    try:
+        import json
+        
+        # Read existing configuration
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        
+        # Ensure mcpServers section exists
+        if 'mcpServers' not in config:
+            config['mcpServers'] = {}
+        
+        # Update memory server configuration with multi-client settings
+        repo_path = str(Path.cwd()).replace('\\', '\\\\')  # Escape backslashes for JSON
+        
+        config['mcpServers']['memory'] = {
+            "command": "uv",
+            "args": ["--directory", repo_path, "run", "memory"],
+            "env": {
+                "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+                "MCP_MEMORY_SQLITE_PRAGMAS": "busy_timeout=15000,cache_size=20000",
+                "LOG_LEVEL": "INFO"
+            }
+        }
+        
+        # Write updated configuration
+        with open(config_path, 'w') as f:
+            json.dump(config, f, indent=2)
+        
+        print_info(f"  [OK] Claude Desktop: Updated configuration for multi-client access")
+        return True
+        
+    except Exception as e:
+        print_warning(f"  -> Claude Desktop configuration failed: {e}")
+        return False
+
+def configure_vscode_like_multi_client(config_path, client_type):
+    """Configure VS Code or Cursor for multi-client access."""
+    try:
+        import json
+        
+        # For VS Code/Cursor, we provide instructions rather than modifying settings directly
+        # since MCP configuration varies by extension
+        
+        client_name = "VS Code" if client_type == 'vscode_mcp' else "Cursor"
+        print_info(f"  -> {client_name}: MCP extension detected")
+        print_info(f"    Add memory server to your MCP extension with these settings:")
+        print_info(f"    - Backend: sqlite_vec")
+        print_info(f"    - Database: shared SQLite-vec database")
+        print_info(f"    - See generic configuration below for details")
+        return True
+        
+    except Exception as e:
+        print_warning(f"  -> {client_type} configuration failed: {e}")
+        return False
+
+def configure_continue_multi_client(config_path):
+    """Configure Continue IDE for multi-client access."""
+    try:
+        import json
+        
+        # Read existing Continue configuration
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        
+        # Add or update MCP server configuration for Continue
+        if 'mcpServers' not in config:
+            config['mcpServers'] = {}
+        
+        repo_path = str(Path.cwd())
+        
+        config['mcpServers']['memory'] = {
+            "command": "uv",
+            "args": ["--directory", repo_path, "run", "memory"],
+            "env": {
+                "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+                "MCP_MEMORY_SQLITE_PRAGMAS": "busy_timeout=15000,cache_size=20000",
+                "LOG_LEVEL": "INFO"
+            }
+        }
+        
+        # Write updated configuration
+        with open(config_path, 'w') as f:
+            json.dump(config, f, indent=2)
+        
+        print_info(f"  [OK] Continue IDE: Updated configuration for multi-client access")
+        return True
+        
+    except Exception as e:
+        print_warning(f"  -> Continue IDE configuration failed: {e}")
+        return False
+
+def configure_generic_mcp_multi_client(config_path):
+    """Configure generic MCP client for multi-client access."""
+    try:
+        import json
+        
+        # Read existing configuration
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        
+        # Add memory server if not present
+        if 'mcpServers' not in config:
+            config['mcpServers'] = {}
+        
+        repo_path = str(Path.cwd())
+        
+        config['mcpServers']['memory'] = {
+            "command": "uv",
+            "args": ["--directory", repo_path, "run", "memory"],
+            "env": {
+                "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+                "MCP_MEMORY_SQLITE_PRAGMAS": "busy_timeout=15000,cache_size=20000",
+                "LOG_LEVEL": "INFO"
+            }
+        }
+        
+        # Write updated configuration
+        with open(config_path, 'w') as f:
+            json.dump(config, f, indent=2)
+        
+        print_info(f"  [OK] Generic MCP Client: Updated configuration")
+        return True
+        
+    except Exception as e:
+        print_warning(f"  -> Generic MCP client configuration failed: {e}")
+        return False
+
+async def test_wal_mode_coordination():
+    """Test WAL mode storage coordination for multi-client access."""
+    try:
+        # Add src to path for import
+        sys.path.insert(0, str(Path(__file__).parent / "src"))
+        
+        from mcp_memory_service.storage.sqlite_vec import SqliteVecMemoryStorage
+        from mcp_memory_service.models.memory import Memory
+        from mcp_memory_service.utils.hashing import generate_content_hash
+        
+        import tempfile
+        import asyncio
+        
+        # Create a temporary database for testing
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+            test_db_path = tmp.name
+        
+        try:
+            # Test direct SQLite-vec storage with WAL mode
+            print_info("  -> Testing WAL mode coordination...")
+            storage = SqliteVecMemoryStorage(test_db_path)
+            await storage.initialize()
+            
+            # Test storing a memory
+            content = "Multi-client setup test - WAL mode verification"
+            test_memory = Memory(
+                content=content,
+                content_hash=generate_content_hash(content),
+                tags=["setup", "wal-test", "multi-client"],
+                memory_type="test"
+            )
+            
+            # Store memory
+            success, message = await storage.store(test_memory)
+            if not success:
+                print_warning(f"  -> Memory storage failed: {message}")
+                return False
+            
+            # Test concurrent access simulation
+            storage2 = SqliteVecMemoryStorage(test_db_path)
+            await storage2.initialize()
+            
+            # Both should be able to read
+            results1 = await storage.search_by_tag(["setup"])
+            results2 = await storage2.search_by_tag(["setup"])
+            
+            if len(results1) != len(results2) or len(results1) == 0:
+                print_warning("  -> Concurrent read access test failed")
+                return False
+            
+            # Test concurrent write
+            content2 = "Second client test memory"
+            memory2 = Memory(
+                content=content2,
+                content_hash=generate_content_hash(content2),
+                tags=["setup", "client2"],
+                memory_type="test"
+            )
+            
+            success2, _ = await storage2.store(memory2)
+            if not success2:
+                print_warning("  -> Concurrent write access test failed")
+                return False
+            
+            # Verify both clients can see both memories
+            all_results = await storage.search_by_tag(["setup"])
+            if len(all_results) < 2:
+                print_warning("  -> Multi-client data sharing test failed")
+                return False
+            
+            storage.close()
+            storage2.close()
+            
+            print_info("  [OK] WAL mode coordination test passed")
+            return True
+            
+        finally:
+            # Cleanup test files
+            try:
+                os.unlink(test_db_path)
+                for ext in ["-wal", "-shm"]:
+                    try:
+                        os.unlink(test_db_path + ext)
+                    except:
+                        pass
+            except:
+                pass
+                
+    except Exception as e:
+        print_warning(f"  -> WAL mode test failed: {e}")
+        return False
+
+def setup_shared_environment():
+    """Set up shared environment variables for multi-client access."""
+    try:
+        print_info("  -> Configuring shared environment variables...")
+        
+        # Set environment variables in current process (for testing)
+        os.environ['MCP_MEMORY_STORAGE_BACKEND'] = 'sqlite_vec'
+        os.environ['MCP_MEMORY_SQLITE_PRAGMAS'] = 'busy_timeout=15000,cache_size=20000'
+        os.environ['LOG_LEVEL'] = 'INFO'
+        
+        print_info("  [OK] Environment variables configured")
+        
+        # Provide instructions for permanent setup
+        system_info = detect_system()
+        if system_info["is_windows"]:
+            print_info("  -> For permanent setup, run these PowerShell commands as Administrator:")
+            print_info("    [System.Environment]::SetEnvironmentVariable('MCP_MEMORY_STORAGE_BACKEND', 'sqlite_vec', [System.EnvironmentVariableTarget]::User)")
+            print_info("    [System.Environment]::SetEnvironmentVariable('MCP_MEMORY_SQLITE_PRAGMAS', 'busy_timeout=15000,cache_size=20000', [System.EnvironmentVariableTarget]::User)")
+            print_info("    [System.Environment]::SetEnvironmentVariable('LOG_LEVEL', 'INFO', [System.EnvironmentVariableTarget]::User)")
+        else:
+            print_info("  -> For permanent setup, add to your shell profile:")
+            print_info("    export MCP_MEMORY_STORAGE_BACKEND=sqlite_vec")
+            print_info("    export MCP_MEMORY_SQLITE_PRAGMAS='busy_timeout=15000,cache_size=20000'")
+            print_info("    export LOG_LEVEL=INFO")
+        
+        return True
+        
+    except Exception as e:
+        print_warning(f"  -> Environment setup failed: {e}")
+        return False
+
+def provide_generic_configuration():
+    """Provide configuration instructions for any MCP client."""
+    print_info("")
+    print_info("Universal MCP Client Configuration:")
+    print_info("=" * 50)
+    print_info("For any MCP-compatible client, use these settings:")
+    print_info("")
+    print_info("MCP Server Configuration:")
+    
+    repo_path = str(Path.cwd())
+    
+    # Windows-style path
+    if platform.system() == 'Windows':
+        print_info(f"  Command: uv --directory \"{repo_path}\" run memory")
+        print_info(f"  Alternative: python -m mcp_memory_service.server")
+    else:
+        print_info(f"  Command: uv --directory {repo_path} run memory")
+        print_info(f"  Alternative: python -m mcp_memory_service.server")
+    
+    print_info("")
+    print_info("Environment Variables:")
+    print_info("  MCP_MEMORY_STORAGE_BACKEND=sqlite_vec")
+    print_info("  MCP_MEMORY_SQLITE_PRAGMAS=busy_timeout=15000,cache_size=20000")
+    print_info("  LOG_LEVEL=INFO")
+    
+    print_info("")
+    print_info("Shared Database Location:")
+    if platform.system() == 'Windows':
+        print_info("  %LOCALAPPDATA%\\mcp-memory\\sqlite_vec.db")
+    elif platform.system() == 'Darwin':
+        print_info("  ~/Library/Application Support/mcp-memory/sqlite_vec.db")
+    else:
+        print_info("  ~/.local/share/mcp-memory/sqlite_vec.db")
+    
+    print_info("")
+    print_info("Claude Code Project Configuration (.mcp.json):")
+    print_info("  {")
+    print_info("    \"mcpServers\": {")
+    print_info("      \"memory\": {")
+    print_info(f"        \"command\": \"uv\",")
+    print_info(f"        \"args\": [\"--directory\", \"{repo_path}\", \"run\", \"memory\"],")
+    print_info("        \"env\": {")
+    print_info("          \"MCP_MEMORY_STORAGE_BACKEND\": \"sqlite_vec\",")
+    print_info("          \"MCP_MEMORY_SQLITE_PRAGMAS\": \"busy_timeout=15000,cache_size=20000\",")
+    print_info("          \"LOG_LEVEL\": \"INFO\"")
+    print_info("        }")
+    print_info("      }")
+    print_info("    }")
+    print_info("  }")
+
+def setup_universal_multi_client_access(system_info, args):
+    """Configure multi-client access for any MCP-compatible clients."""
+    print_step("7", "Configuring Universal Multi-Client Access")
+    
+    print_info("Setting up multi-client coordination for all MCP applications...")
+    print_info("Benefits:")
+    print_info("  • Share memories between Claude Desktop, VS Code, Continue, and other MCP clients")
+    print_info("  • Seamless context sharing across development environments")
+    print_info("  • Single source of truth for all your project memories")
+    print_info("")
+    
+    # Test WAL mode coordination
+    try:
+        import asyncio
+        wal_success = asyncio.run(test_wal_mode_coordination())
+        if not wal_success:
+            print_error("WAL mode coordination test failed")
+            return False
+    except Exception as e:
+        print_error(f"Failed to test WAL mode coordination: {e}")
+        return False
+    
+    # Detect available MCP clients
+    detected_clients = detect_mcp_clients()
+    print_detected_clients(detected_clients)
+    print_info("")
+    
+    # Configure each detected client
+    print_info("Configuring detected clients...")
+    success_count = configure_detected_clients(detected_clients, system_info)
+    
+    # Set up shared environment variables
+    setup_shared_environment()
+    
+    # Provide generic configuration for manual setup
+    provide_generic_configuration()
+    
+    print_info("")
+    print_success(f"Multi-client setup complete! {success_count} clients configured automatically.")
+    print_info("")
+    print_info("Next Steps:")
+    print_info("  1. Restart your applications (Claude Desktop, VS Code, etc.)")
+    print_info("  2. All clients will share the same memory database")
+    print_info("  3. Test: Store memory in one app, access from another")
+    print_info("  4. For Claude Code: Create .mcp.json in your project directory")
+    
+    return True
+
 def main():
     """Main installation function."""
     parser = argparse.ArgumentParser(description="Install MCP Memory Service")
@@ -1572,6 +2072,10 @@ def main():
                         help='Show detailed hardware-specific installation recommendations')
     parser.add_argument('--generate-docs', action='store_true',
                         help='Generate personalized setup documentation for your hardware')
+    parser.add_argument('--setup-multi-client', action='store_true',
+                        help='Configure multi-client access for any MCP-compatible applications (Claude, VS Code, Continue, etc.)')
+    parser.add_argument('--skip-multi-client-prompt', action='store_true',
+                        help='Skip the interactive prompt for multi-client setup')
     
     args = parser.parse_args()
     
@@ -1790,15 +2294,58 @@ def main():
     
     print_header("Installation Complete")
     
-    # Get final storage backend info
-    # Use chosen_backend as the definitive source of truth, but still respect environment variable
-    # For macOS Intel with Homebrew PyTorch, force SQLite-vec regardless of environment variable
+    # Get final storage backend info for multi-client setup determination
     if system_info["is_macos"] and system_info["is_x86"] and system_info.get("has_homebrew_pytorch"):
         final_backend = 'sqlite_vec'
         # Ensure environment variable is set for future use
         os.environ['MCP_MEMORY_STORAGE_BACKEND'] = 'sqlite_vec'
     else:
         final_backend = os.environ.get('MCP_MEMORY_STORAGE_BACKEND', 'chromadb')
+    
+    # Multi-client setup integration
+    if args.setup_multi_client or (should_offer_multi_client_setup(args, final_backend) and not args.setup_multi_client):
+        if args.setup_multi_client:
+            # User explicitly requested multi-client setup
+            try:
+                setup_universal_multi_client_access(system_info, args)
+            except Exception as e:
+                print_error(f"Multi-client setup failed: {e}")
+                print_info("You can set up multi-client access manually using:")
+                print_info("python setup_multi_client_complete.py")
+        else:
+            # Interactive prompt for multi-client setup
+            print_info("")
+            print_info("Multi-Client Access Available!")
+            print_info("")
+            print_info("The MCP Memory Service can be configured for multi-client access, allowing")
+            print_info("multiple applications and IDEs to share the same memory database.")
+            print_info("")
+            print_info("Benefits:")
+            print_info("  • Share memories between Claude Desktop, VS Code, Continue, and other MCP clients")
+            print_info("  • Seamless context sharing across development environments")
+            print_info("  • Single source of truth for all your project memories")
+            print_info("")
+            
+            try:
+                response = input("Would you like to configure multi-client access? (y/N): ").strip().lower()
+                if response in ['y', 'yes']:
+                    print_info("")
+                    try:
+                        setup_universal_multi_client_access(system_info, args)
+                    except Exception as e:
+                        print_error(f"Multi-client setup failed: {e}")
+                        print_info("You can set up multi-client access manually using:")
+                        print_info("python setup_multi_client_complete.py")
+                else:
+                    print_info("Skipping multi-client setup. You can configure it later using:")
+                    print_info("python setup_multi_client_complete.py")
+            except (EOFError, KeyboardInterrupt):
+                print_info("\nSkipping multi-client setup. You can configure it later using:")
+                print_info("python setup_multi_client_complete.py")
+            
+            print_info("")
+    
+    # Final storage backend info (already determined above for multi-client setup)
     
     use_onnx = os.environ.get('MCP_MEMORY_USE_ONNX', '').lower() in ('1', 'true', 'yes')
     

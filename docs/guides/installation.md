@@ -35,6 +35,10 @@ This guide provides detailed instructions for installing the MCP Memory Service 
    ```bash
    python install.py
    ```
+   
+   🌟 **NEW: Multi-Client Setup** - The installer will automatically detect MCP applications (Claude Desktop, VS Code, Continue, etc.) and offer to configure shared memory access. When prompted, choose 'y' for universal multi-client setup.
+   
+   For command line options, see the [Installation Command Line Reference](installation-command-line-reference.md).
 
 4. **Verify the installation**:
    ```bash

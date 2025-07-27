@@ -62,7 +62,13 @@
       "Bash(git fetch:*)",
       "Bash(git rebase:*)",
       "Bash(claude mcp:*)",
-      "mcp__memory__check_embedding_model"
+      "mcp__memory__check_embedding_model",
+      "Bash(powershell:*)",
+      "Bash(setx:*)",
+      "Bash(set MCP_MEMORY_STORAGE_BACKEND=sqlite_vec)",
+      "Bash(set MCP_MEMORY_HTTP_AUTO_START=true)",
+      "Bash(set MCP_HTTP_PORT=8000)",
+      "Bash(cmd /c:*)"
     ],
     "deny": []
   },

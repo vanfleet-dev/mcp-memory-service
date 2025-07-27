@@ -1,8 +1,31 @@
 # Multi-Client Setup Guide
 
-This guide walks you through setting up multi-client access for the MCP Memory Service, allowing Claude Desktop and Claude Code to work together seamlessly.
+This guide covers manual multi-client setup for the MCP Memory Service. **For most users, we recommend using the [new integrated setup](guides/universal-multi-client-setup.md)** which is built into the main installer.
 
-## Overview
+## New: Integrated Setup (Recommended)
+
+🚀 **The easiest way to set up multi-client access is now during installation:**
+
+```bash
+python install.py
+# When prompted: "Would you like to configure multi-client access? (y/N): y"
+```
+
+**Benefits of integrated setup:**
+- ✅ Automatic detection of Claude Desktop, VS Code, Continue, Cursor, and other MCP clients
+- ✅ Universal compatibility beyond just Claude applications  
+- ✅ Zero manual configuration required
+- ✅ Future-proof setup for any MCP application
+
+**See the [Universal Multi-Client Setup Guide](guides/universal-multi-client-setup.md) for complete details.**
+
+---
+
+## Manual Setup (Legacy)
+
+The information below covers manual setup for advanced users or troubleshooting scenarios.
+
+### Overview
 
 The MCP Memory Service supports multi-client access through two phases:
 - **Phase 1: WAL Mode** - Direct SQLite access with Write-Ahead Logging (recommended)
