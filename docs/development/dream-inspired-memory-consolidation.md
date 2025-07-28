@@ -4,6 +4,8 @@
 
 This document describes an innovative approach to memory consolidation inspired by human cognitive processes during sleep. Originally conceptualized on June 7, 2025, and contributed to [Issue #11](https://github.com/doobidoo/mcp-memory-service/issues/11) on July 28, 2025, this system enhances the proposed multi-layered consolidation architecture with biologically-inspired mechanisms.
 
+> **📚 Implementation Guide**: For a complete guide on implementing this system autonomously without external AI, see the [Autonomous Memory Consolidation Guide](./autonomous-memory-consolidation.md).
+
 ## Background
 
 Traditional memory systems face challenges with:
@@ -193,6 +195,17 @@ async def semantic_compression(memory_cluster):
     return consolidated
 ```
 
+## Autonomous Implementation
+
+**🚀 This entire system can run autonomously without external AI!** The key insight is that the MCP Memory Service already generates embeddings when memories are stored. These embeddings enable:
+
+- Mathematical similarity calculations (cosine similarity)
+- Clustering algorithms (DBSCAN, hierarchical clustering)
+- Statistical summarization (TF-IDF, centroid method)
+- Rule-based decision making
+
+For detailed implementation without AI dependencies, see the [Autonomous Memory Consolidation Guide](./autonomous-memory-consolidation.md).
+
 ## Integration with Time-Based Layers
 
 The dream-inspired mechanisms enhance each consolidation layer:
@@ -327,6 +340,12 @@ dream_consolidation:
 3. **Memory Replay**: Periodically resurface old memories for potential new connections
 4. **Adaptive Decay Rates**: Learn optimal retention periods from user behavior
 5. **Emotional Tagging**: Consider emotional context in consolidation decisions
+
+## Related Resources
+
+- 📋 [Issue #11: Multi-Layered Memory Consolidation System](https://github.com/doobidoo/mcp-memory-service/issues/11)
+- 🤖 [Autonomous Memory Consolidation Guide](./autonomous-memory-consolidation.md) - Complete implementation without external AI
+- 📚 [MCP Memory Service Documentation](https://github.com/doobidoo/mcp-memory-service)
 
 ## Conclusion
 
