@@ -22,8 +22,6 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy essential files
-COPY requirements.txt .
-COPY setup.py .
 COPY pyproject.toml .
 COPY uv.lock .
 COPY README.md .
