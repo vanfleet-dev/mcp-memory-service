@@ -47,7 +47,10 @@ from .config import (
     SERVER_NAME,
     SERVER_VERSION,
     STORAGE_BACKEND,
-    SQLITE_VEC_PATH
+    SQLITE_VEC_PATH,
+    CONSOLIDATION_ENABLED,
+    CONSOLIDATION_CONFIG,
+    CONSOLIDATION_SCHEDULE
 )
 # Storage imports will be done conditionally in the server class
 from .models.memory import Memory
@@ -58,6 +61,12 @@ from .utils.system_detection import (
     AcceleratorType
 )
 from .utils.time_parser import extract_time_expression, parse_time_expression
+
+# Consolidation system imports (conditional)
+if CONSOLIDATION_ENABLED:
+    from .consolidation.base import ConsolidationConfig
+    from .consolidation.consolidator import DreamInspiredConsolidator
+    from .consolidation.scheduler import ConsolidationScheduler
 
 # Configure logging to go to stderr with performance optimizations
 log_level = os.getenv('LOG_LEVEL', 'WARNING').upper()  # Default to WARNING for performance
@@ -155,6 +164,20 @@ class MemoryServer:
         
         # Initialize query time tracking
         self.query_times = deque(maxlen=50)  # Keep last 50 query times for averaging
+        
+        # Initialize consolidation system (if enabled)
+        self.consolidator = None
+        self.consolidation_scheduler = None
+        if CONSOLIDATION_ENABLED:
+            try:
+                config = ConsolidationConfig(**CONSOLIDATION_CONFIG)
+                self.consolidator = None  # Will be initialized after storage
+                self.consolidation_scheduler = None  # Will be initialized after consolidator
+                logger.info("Consolidation system will be initialized after storage")
+            except Exception as e:
+                logger.error(f"Failed to initialize consolidation config: {e}")
+                self.consolidator = None
+                self.consolidation_scheduler = None
         
         try:
             # Initialize paths
@@ -265,6 +288,10 @@ class MemoryServer:
             await self.storage.initialize()
             self._storage_initialized = True
             logger.info(f"Eager {STORAGE_BACKEND} storage initialization successful")
+            
+            # Initialize consolidation system after storage is ready
+            await self._initialize_consolidation()
+            
             return True
         except Exception as e:
             logger.error(f"Eager storage initialization failed: {str(e)}")
@@ -334,6 +361,9 @@ class MemoryServer:
                 
                 self._storage_initialized = True
                 logger.info(f"Storage backend ({STORAGE_BACKEND}) initialization successful")
+                
+                # Initialize consolidation system after storage is ready
+                await self._initialize_consolidation()
                 
             except Exception as e:
                 logger.error(f"Failed to initialize {STORAGE_BACKEND} storage: {str(e)}")
@@ -420,6 +450,43 @@ class MemoryServer:
         except Exception as e:
             logger.error(f"Database validation error: {str(e)}")
             return False
+
+    async def _initialize_consolidation(self):
+        """Initialize the consolidation system after storage is ready."""
+        if not CONSOLIDATION_ENABLED or not self._storage_initialized:
+            return
+        
+        try:
+            if self.consolidator is None:
+                # Create consolidation config
+                config = ConsolidationConfig(**CONSOLIDATION_CONFIG)
+                
+                # Initialize the consolidator with storage
+                self.consolidator = DreamInspiredConsolidator(self.storage, config)
+                logger.info("Dream-inspired consolidator initialized")
+                
+                # Initialize the scheduler if not disabled
+                if any(schedule != 'disabled' for schedule in CONSOLIDATION_SCHEDULE.values()):
+                    self.consolidation_scheduler = ConsolidationScheduler(
+                        self.consolidator, 
+                        CONSOLIDATION_SCHEDULE, 
+                        enabled=True
+                    )
+                    
+                    # Start the scheduler
+                    if await self.consolidation_scheduler.start():
+                        logger.info("Consolidation scheduler started successfully")
+                    else:
+                        logger.warning("Failed to start consolidation scheduler")
+                        self.consolidation_scheduler = None
+                else:
+                    logger.info("Consolidation scheduler disabled (all schedules set to 'disabled')")
+                
+        except Exception as e:
+            logger.error(f"Failed to initialize consolidation system: {e}")
+            logger.error(traceback.format_exc())
+            self.consolidator = None
+            self.consolidation_scheduler = None
 
     def handle_method_not_found(self, method: str) -> None:
         """Custom handler for unsupported methods.
@@ -1019,6 +1086,134 @@ class MemoryServer:
                         }
                     )
                 ]
+                
+                # Add consolidation tools if enabled
+                if CONSOLIDATION_ENABLED and self.consolidator:
+                    consolidation_tools = [
+                        types.Tool(
+                            name="consolidate_memories",
+                            description="""Run memory consolidation for a specific time horizon.
+                            
+                            Performs dream-inspired memory consolidation including:
+                            - Exponential decay scoring
+                            - Creative association discovery  
+                            - Semantic clustering and compression
+                            - Controlled forgetting with archival
+                            
+                            Example:
+                            {
+                                "time_horizon": "weekly"
+                            }""",
+                            inputSchema={
+                                "type": "object",
+                                "properties": {
+                                    "time_horizon": {
+                                        "type": "string",
+                                        "enum": ["daily", "weekly", "monthly", "quarterly", "yearly"],
+                                        "description": "Time horizon for consolidation operations."
+                                    }
+                                },
+                                "required": ["time_horizon"]
+                            }
+                        ),
+                        types.Tool(
+                            name="consolidation_status",
+                            description="Get status and health information about the consolidation system.",
+                            inputSchema={"type": "object", "properties": {}}
+                        ),
+                        types.Tool(
+                            name="consolidation_recommendations",
+                            description="""Get recommendations for consolidation based on current memory state.
+                            
+                            Example:
+                            {
+                                "time_horizon": "monthly"
+                            }""",
+                            inputSchema={
+                                "type": "object",
+                                "properties": {
+                                    "time_horizon": {
+                                        "type": "string",
+                                        "enum": ["daily", "weekly", "monthly", "quarterly", "yearly"],
+                                        "description": "Time horizon to analyze for consolidation recommendations."
+                                    }
+                                },
+                                "required": ["time_horizon"]
+                            }
+                        ),
+                        types.Tool(
+                            name="scheduler_status",
+                            description="Get consolidation scheduler status and job information.",
+                            inputSchema={"type": "object", "properties": {}}
+                        ),
+                        types.Tool(
+                            name="trigger_consolidation",
+                            description="""Manually trigger a consolidation job.
+                            
+                            Example:
+                            {
+                                "time_horizon": "weekly",
+                                "immediate": true
+                            }""",
+                            inputSchema={
+                                "type": "object",
+                                "properties": {
+                                    "time_horizon": {
+                                        "type": "string",
+                                        "enum": ["daily", "weekly", "monthly", "quarterly", "yearly"],
+                                        "description": "Time horizon for the consolidation job."
+                                    },
+                                    "immediate": {
+                                        "type": "boolean",
+                                        "default": True,
+                                        "description": "Whether to run immediately or schedule for later."
+                                    }
+                                },
+                                "required": ["time_horizon"]
+                            }
+                        ),
+                        types.Tool(
+                            name="pause_consolidation",
+                            description="""Pause consolidation jobs.
+                            
+                            Example:
+                            {
+                                "time_horizon": "weekly"
+                            }""",
+                            inputSchema={
+                                "type": "object",
+                                "properties": {
+                                    "time_horizon": {
+                                        "type": "string",
+                                        "enum": ["daily", "weekly", "monthly", "quarterly", "yearly"],
+                                        "description": "Specific time horizon to pause, or omit to pause all jobs."
+                                    }
+                                }
+                            }
+                        ),
+                        types.Tool(
+                            name="resume_consolidation",
+                            description="""Resume consolidation jobs.
+                            
+                            Example:
+                            {
+                                "time_horizon": "weekly"
+                            }""",
+                            inputSchema={
+                                "type": "object",
+                                "properties": {
+                                    "time_horizon": {
+                                        "type": "string",
+                                        "enum": ["daily", "weekly", "monthly", "quarterly", "yearly"],
+                                        "description": "Specific time horizon to resume, or omit to resume all jobs."
+                                    }
+                                }
+                            }
+                        )
+                    ]
+                    tools.extend(consolidation_tools)
+                    logger.info(f"Added {len(consolidation_tools)} consolidation tools")
+                
                 logger.info(f"Returning {len(tools)} tools")
                 return tools
             except Exception as e:
@@ -1112,6 +1307,35 @@ class MemoryServer:
                     logger.info("Calling handle_update_memory_metadata")
                     print("Calling handle_update_memory_metadata", file=sys.stderr, flush=True)
                     return await self.handle_update_memory_metadata(arguments)
+                # Consolidation tool handlers
+                elif name == "consolidate_memories":
+                    logger.info("Calling handle_consolidate_memories")
+                    print("Calling handle_consolidate_memories", file=sys.stderr, flush=True)
+                    return await self.handle_consolidate_memories(arguments)
+                elif name == "consolidation_status":
+                    logger.info("Calling handle_consolidation_status")
+                    print("Calling handle_consolidation_status", file=sys.stderr, flush=True)
+                    return await self.handle_consolidation_status(arguments)
+                elif name == "consolidation_recommendations":
+                    logger.info("Calling handle_consolidation_recommendations")
+                    print("Calling handle_consolidation_recommendations", file=sys.stderr, flush=True)
+                    return await self.handle_consolidation_recommendations(arguments)
+                elif name == "scheduler_status":
+                    logger.info("Calling handle_scheduler_status")
+                    print("Calling handle_scheduler_status", file=sys.stderr, flush=True)
+                    return await self.handle_scheduler_status(arguments)
+                elif name == "trigger_consolidation":
+                    logger.info("Calling handle_trigger_consolidation")
+                    print("Calling handle_trigger_consolidation", file=sys.stderr, flush=True)
+                    return await self.handle_trigger_consolidation(arguments)
+                elif name == "pause_consolidation":
+                    logger.info("Calling handle_pause_consolidation")
+                    print("Calling handle_pause_consolidation", file=sys.stderr, flush=True)
+                    return await self.handle_pause_consolidation(arguments)
+                elif name == "resume_consolidation":
+                    logger.info("Calling handle_resume_consolidation")
+                    print("Calling handle_resume_consolidation", file=sys.stderr, flush=True)
+                    return await self.handle_resume_consolidation(arguments)
                 else:
                     logger.warning(f"Unknown tool requested: {name}")
                     print(f"Unknown tool requested: {name}", file=sys.stderr, flush=True)
@@ -1762,6 +1986,281 @@ class MemoryServer:
                 
         except Exception as e:
             error_msg = f"Error updating memory metadata: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            return [types.TextContent(type="text", text=error_msg)]
+
+    # Consolidation tool handlers
+    async def handle_consolidate_memories(self, arguments: dict) -> List[types.TextContent]:
+        """Handle memory consolidation requests."""
+        if not CONSOLIDATION_ENABLED or not self.consolidator:
+            return [types.TextContent(type="text", text="Error: Consolidation system not available")]
+        
+        try:
+            time_horizon = arguments.get("time_horizon")
+            if not time_horizon:
+                return [types.TextContent(type="text", text="Error: time_horizon is required")]
+            
+            if time_horizon not in ["daily", "weekly", "monthly", "quarterly", "yearly"]:
+                return [types.TextContent(type="text", text="Error: Invalid time_horizon. Must be one of: daily, weekly, monthly, quarterly, yearly")]
+            
+            logger.info(f"Starting {time_horizon} consolidation")
+            
+            # Run consolidation
+            report = await self.consolidator.consolidate(time_horizon)
+            
+            # Format response
+            result = f"""Consolidation completed successfully!
+
+Time Horizon: {report.time_horizon}
+Duration: {(report.end_time - report.start_time).total_seconds():.2f} seconds
+Memories Processed: {report.memories_processed}
+Associations Discovered: {report.associations_discovered}
+Clusters Created: {report.clusters_created}
+Memories Compressed: {report.memories_compressed}
+Memories Archived: {report.memories_archived}"""
+
+            if report.errors:
+                result += f"\n\nWarnings/Errors:\n" + "\n".join(f"- {error}" for error in report.errors)
+            
+            return [types.TextContent(type="text", text=result)]
+            
+        except Exception as e:
+            error_msg = f"Error during consolidation: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            return [types.TextContent(type="text", text=error_msg)]
+
+    async def handle_consolidation_status(self, arguments: dict) -> List[types.TextContent]:
+        """Handle consolidation status requests."""
+        if not CONSOLIDATION_ENABLED or not self.consolidator:
+            return [types.TextContent(type="text", text="Consolidation system: DISABLED")]
+        
+        try:
+            # Get health check from consolidator
+            health = await self.consolidator.health_check()
+            
+            # Format status report
+            status_lines = [
+                f"Consolidation System Status: {health['status'].upper()}",
+                f"Last Updated: {health['timestamp']}",
+                "",
+                "Component Health:"
+            ]
+            
+            for component, component_health in health['components'].items():
+                status = component_health['status']
+                status_lines.append(f"  {component}: {status.upper()}")
+                if status == 'unhealthy' and 'error' in component_health:
+                    status_lines.append(f"    Error: {component_health['error']}")
+            
+            status_lines.extend([
+                "",
+                "Statistics:",
+                f"  Total consolidation runs: {health['statistics']['total_runs']}",
+                f"  Successful runs: {health['statistics']['successful_runs']}",
+                f"  Total memories processed: {health['statistics']['total_memories_processed']}",
+                f"  Total associations created: {health['statistics']['total_associations_created']}",
+                f"  Total clusters created: {health['statistics']['total_clusters_created']}",
+                f"  Total memories compressed: {health['statistics']['total_memories_compressed']}",
+                f"  Total memories archived: {health['statistics']['total_memories_archived']}"
+            ])
+            
+            if health['last_consolidation_times']:
+                status_lines.extend([
+                    "",
+                    "Last Consolidation Times:"
+                ])
+                for horizon, timestamp in health['last_consolidation_times'].items():
+                    status_lines.append(f"  {horizon}: {timestamp}")
+            
+            return [types.TextContent(type="text", text="\n".join(status_lines))]
+            
+        except Exception as e:
+            error_msg = f"Error getting consolidation status: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            return [types.TextContent(type="text", text=error_msg)]
+
+    async def handle_consolidation_recommendations(self, arguments: dict) -> List[types.TextContent]:
+        """Handle consolidation recommendation requests."""
+        if not CONSOLIDATION_ENABLED or not self.consolidator:
+            return [types.TextContent(type="text", text="Error: Consolidation system not available")]
+        
+        try:
+            time_horizon = arguments.get("time_horizon")
+            if not time_horizon:
+                return [types.TextContent(type="text", text="Error: time_horizon is required")]
+            
+            if time_horizon not in ["daily", "weekly", "monthly", "quarterly", "yearly"]:
+                return [types.TextContent(type="text", text="Error: Invalid time_horizon")]
+            
+            # Get recommendations
+            recommendations = await self.consolidator.get_consolidation_recommendations(time_horizon)
+            
+            # Format response
+            lines = [
+                f"Consolidation Recommendations for {time_horizon} horizon:",
+                "",
+                f"Recommendation: {recommendations['recommendation'].upper()}",
+                f"Memory Count: {recommendations['memory_count']}",
+            ]
+            
+            if 'reasons' in recommendations:
+                lines.extend([
+                    "",
+                    "Reasons:"
+                ])
+                for reason in recommendations['reasons']:
+                    lines.append(f"  • {reason}")
+            
+            if 'memory_types' in recommendations:
+                lines.extend([
+                    "",
+                    "Memory Types:"
+                ])
+                for mem_type, count in recommendations['memory_types'].items():
+                    lines.append(f"  {mem_type}: {count}")
+            
+            if 'total_size_bytes' in recommendations:
+                size_mb = recommendations['total_size_bytes'] / (1024 * 1024)
+                lines.append(f"\nTotal Size: {size_mb:.2f} MB")
+            
+            if 'old_memory_percentage' in recommendations:
+                lines.append(f"Old Memory Percentage: {recommendations['old_memory_percentage']:.1f}%")
+            
+            if 'estimated_duration_seconds' in recommendations:
+                lines.append(f"Estimated Duration: {recommendations['estimated_duration_seconds']:.1f} seconds")
+            
+            return [types.TextContent(type="text", text="\n".join(lines))]
+            
+        except Exception as e:
+            error_msg = f"Error getting consolidation recommendations: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            return [types.TextContent(type="text", text=error_msg)]
+
+    async def handle_scheduler_status(self, arguments: dict) -> List[types.TextContent]:
+        """Handle scheduler status requests."""
+        if not CONSOLIDATION_ENABLED or not self.consolidation_scheduler:
+            return [types.TextContent(type="text", text="Consolidation scheduler: DISABLED")]
+        
+        try:
+            # Get scheduler status
+            status = await self.consolidation_scheduler.get_scheduler_status()
+            
+            if not status['enabled']:
+                return [types.TextContent(type="text", text=f"Scheduler: DISABLED\nReason: {status.get('reason', 'Unknown')}")]
+            
+            # Format status report
+            lines = [
+                f"Consolidation Scheduler Status: {'RUNNING' if status['running'] else 'STOPPED'}",
+                "",
+                "Scheduled Jobs:"
+            ]
+            
+            for job in status['jobs']:
+                next_run = job['next_run_time'] or 'Not scheduled'
+                lines.append(f"  {job['name']}: {next_run}")
+            
+            lines.extend([
+                "",
+                "Execution Statistics:",
+                f"  Total jobs executed: {status['execution_stats']['total_jobs']}",
+                f"  Successful jobs: {status['execution_stats']['successful_jobs']}",
+                f"  Failed jobs: {status['execution_stats']['failed_jobs']}"
+            ])
+            
+            if status['last_execution_times']:
+                lines.extend([
+                    "",
+                    "Last Execution Times:"
+                ])
+                for horizon, timestamp in status['last_execution_times'].items():
+                    lines.append(f"  {horizon}: {timestamp}")
+            
+            if status['recent_jobs']:
+                lines.extend([
+                    "",
+                    "Recent Jobs:"
+                ])
+                for job in status['recent_jobs'][-5:]:  # Show last 5 jobs
+                    duration = (job['end_time'] - job['start_time']).total_seconds()
+                    lines.append(f"  {job['time_horizon']} ({job['status']}): {duration:.2f}s")
+            
+            return [types.TextContent(type="text", text="\n".join(lines))]
+            
+        except Exception as e:
+            error_msg = f"Error getting scheduler status: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            return [types.TextContent(type="text", text=error_msg)]
+
+    async def handle_trigger_consolidation(self, arguments: dict) -> List[types.TextContent]:
+        """Handle manual consolidation trigger requests."""
+        if not CONSOLIDATION_ENABLED or not self.consolidation_scheduler:
+            return [types.TextContent(type="text", text="Error: Consolidation scheduler not available")]
+        
+        try:
+            time_horizon = arguments.get("time_horizon")
+            immediate = arguments.get("immediate", True)
+            
+            if not time_horizon:
+                return [types.TextContent(type="text", text="Error: time_horizon is required")]
+            
+            if time_horizon not in ["daily", "weekly", "monthly", "quarterly", "yearly"]:
+                return [types.TextContent(type="text", text="Error: Invalid time_horizon")]
+            
+            # Trigger consolidation
+            success = await self.consolidation_scheduler.trigger_consolidation(time_horizon, immediate)
+            
+            if success:
+                action = "triggered immediately" if immediate else "scheduled for later"
+                return [types.TextContent(type="text", text=f"Successfully {action} {time_horizon} consolidation")]
+            else:
+                return [types.TextContent(type="text", text=f"Failed to trigger {time_horizon} consolidation")]
+            
+        except Exception as e:
+            error_msg = f"Error triggering consolidation: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            return [types.TextContent(type="text", text=error_msg)]
+
+    async def handle_pause_consolidation(self, arguments: dict) -> List[types.TextContent]:
+        """Handle consolidation pause requests."""
+        if not CONSOLIDATION_ENABLED or not self.consolidation_scheduler:
+            return [types.TextContent(type="text", text="Error: Consolidation scheduler not available")]
+        
+        try:
+            time_horizon = arguments.get("time_horizon")
+            
+            # Pause consolidation
+            success = await self.consolidation_scheduler.pause_consolidation(time_horizon)
+            
+            if success:
+                target = time_horizon or "all"
+                return [types.TextContent(type="text", text=f"Successfully paused {target} consolidation jobs")]
+            else:
+                return [types.TextContent(type="text", text="Failed to pause consolidation jobs")]
+            
+        except Exception as e:
+            error_msg = f"Error pausing consolidation: {str(e)}"
+            logger.error(f"{error_msg}\n{traceback.format_exc()}")
+            return [types.TextContent(type="text", text=error_msg)]
+
+    async def handle_resume_consolidation(self, arguments: dict) -> List[types.TextContent]:
+        """Handle consolidation resume requests."""
+        if not CONSOLIDATION_ENABLED or not self.consolidation_scheduler:
+            return [types.TextContent(type="text", text="Error: Consolidation scheduler not available")]
+        
+        try:
+            time_horizon = arguments.get("time_horizon")
+            
+            # Resume consolidation
+            success = await self.consolidation_scheduler.resume_consolidation(time_horizon)
+            
+            if success:
+                target = time_horizon or "all"
+                return [types.TextContent(type="text", text=f"Successfully resumed {target} consolidation jobs")]
+            else:
+                return [types.TextContent(type="text", text="Failed to resume consolidation jobs")]
+            
+        except Exception as e:
+            error_msg = f"Error resuming consolidation: {str(e)}"
             logger.error(f"{error_msg}\n{traceback.format_exc()}")
             return [types.TextContent(type="text", text=error_msg)]
 

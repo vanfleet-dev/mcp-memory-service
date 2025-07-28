@@ -228,3 +228,73 @@ else:
 
 # Embedding model configuration
 EMBEDDING_MODEL_NAME = os.getenv('MCP_EMBEDDING_MODEL', 'all-MiniLM-L6-v2')
+
+# Dream-inspired consolidation configuration
+CONSOLIDATION_ENABLED = os.getenv('MCP_CONSOLIDATION_ENABLED', 'false').lower() == 'true'
+
+# Consolidation archive location
+consolidation_archive_path = None
+for env_var in ['MCP_CONSOLIDATION_ARCHIVE_PATH', 'MCP_MEMORY_ARCHIVE_PATH']:
+    if path := os.getenv(env_var):
+        consolidation_archive_path = path
+        logger.info(f"Using {env_var}={path} for consolidation archive path")
+        break
+
+if not consolidation_archive_path:
+    consolidation_archive_path = os.path.join(BASE_DIR, 'consolidation_archive')
+    logger.info(f"No consolidation archive path environment variable found, using default: {consolidation_archive_path}")
+
+try:
+    CONSOLIDATION_ARCHIVE_PATH = validate_and_create_path(consolidation_archive_path)
+    logger.info(f"Using consolidation archive path: {CONSOLIDATION_ARCHIVE_PATH}")
+except Exception as e:
+    logger.error(f"Error creating consolidation archive path: {e}")
+    CONSOLIDATION_ARCHIVE_PATH = None
+
+# Consolidation settings with environment variable overrides
+CONSOLIDATION_CONFIG = {
+    # Decay settings
+    'decay_enabled': os.getenv('MCP_DECAY_ENABLED', 'true').lower() == 'true',
+    'retention_periods': {
+        'critical': int(os.getenv('MCP_RETENTION_CRITICAL', '365')),
+        'reference': int(os.getenv('MCP_RETENTION_REFERENCE', '180')),
+        'standard': int(os.getenv('MCP_RETENTION_STANDARD', '30')),
+        'temporary': int(os.getenv('MCP_RETENTION_TEMPORARY', '7'))
+    },
+    
+    # Association settings
+    'associations_enabled': os.getenv('MCP_ASSOCIATIONS_ENABLED', 'true').lower() == 'true',
+    'min_similarity': float(os.getenv('MCP_ASSOCIATION_MIN_SIMILARITY', '0.3')),
+    'max_similarity': float(os.getenv('MCP_ASSOCIATION_MAX_SIMILARITY', '0.7')),
+    'max_pairs_per_run': int(os.getenv('MCP_ASSOCIATION_MAX_PAIRS', '100')),
+    
+    # Clustering settings
+    'clustering_enabled': os.getenv('MCP_CLUSTERING_ENABLED', 'true').lower() == 'true',
+    'min_cluster_size': int(os.getenv('MCP_CLUSTERING_MIN_SIZE', '5')),
+    'clustering_algorithm': os.getenv('MCP_CLUSTERING_ALGORITHM', 'dbscan'),  # 'dbscan', 'hierarchical', 'simple'
+    
+    # Compression settings
+    'compression_enabled': os.getenv('MCP_COMPRESSION_ENABLED', 'true').lower() == 'true',
+    'max_summary_length': int(os.getenv('MCP_COMPRESSION_MAX_LENGTH', '500')),
+    'preserve_originals': os.getenv('MCP_COMPRESSION_PRESERVE_ORIGINALS', 'true').lower() == 'true',
+    
+    # Forgetting settings
+    'forgetting_enabled': os.getenv('MCP_FORGETTING_ENABLED', 'true').lower() == 'true',
+    'relevance_threshold': float(os.getenv('MCP_FORGETTING_RELEVANCE_THRESHOLD', '0.1')),
+    'access_threshold_days': int(os.getenv('MCP_FORGETTING_ACCESS_THRESHOLD', '90')),
+    'archive_location': CONSOLIDATION_ARCHIVE_PATH
+}
+
+# Consolidation scheduling settings (for APScheduler integration)
+CONSOLIDATION_SCHEDULE = {
+    'daily': os.getenv('MCP_SCHEDULE_DAILY', '02:00'),      # 2 AM daily
+    'weekly': os.getenv('MCP_SCHEDULE_WEEKLY', 'SUN 03:00'), # 3 AM on Sundays
+    'monthly': os.getenv('MCP_SCHEDULE_MONTHLY', '01 04:00'), # 4 AM on 1st of month
+    'quarterly': os.getenv('MCP_SCHEDULE_QUARTERLY', 'disabled'), # Disabled by default
+    'yearly': os.getenv('MCP_SCHEDULE_YEARLY', 'disabled')        # Disabled by default
+}
+
+logger.info(f"Consolidation enabled: {CONSOLIDATION_ENABLED}")
+if CONSOLIDATION_ENABLED:
+    logger.info(f"Consolidation configuration: {CONSOLIDATION_CONFIG}")
+    logger.info(f"Consolidation schedule: {CONSOLIDATION_SCHEDULE}")
