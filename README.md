@@ -15,7 +15,7 @@ An intelligent MCP server providing semantic memory, persistent storage, and **a
 
 ## Features
 
-### 🧠 Dream-Inspired Memory Consolidation (NEW in v1.0!)
+### 🧠 Dream-Inspired Memory Consolidation (NEW in v2.0!)
 - **Autonomous memory management** inspired by human sleep cycle processing
 - **Multi-layered time horizons** (daily → weekly → monthly → quarterly → yearly)
 - **Creative association discovery** finding non-obvious connections between memories
