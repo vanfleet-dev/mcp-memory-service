@@ -25,6 +25,11 @@ class MemoryStorage(ABC):
     """Abstract base class for memory storage implementations."""
     
     @abstractmethod
+    async def initialize(self) -> None:
+        """Initialize the storage backend."""
+        pass
+    
+    @abstractmethod
     async def store(self, memory: Memory) -> Tuple[bool, str]:
         """Store a memory. Returns (success, message)."""
         pass

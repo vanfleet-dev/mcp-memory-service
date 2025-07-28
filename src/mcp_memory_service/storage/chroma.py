@@ -1094,6 +1094,17 @@ class ChromaMemoryStorage(MemoryStorage):
             return 0, str(e)
 
 
+    async def initialize(self) -> None:
+        """
+        Initialize the storage backend (async method for compatibility).
+        
+        Since ChromaMemoryStorage initialization happens in __init__,
+        this method just verifies that initialization was successful.
+        """
+        if not self.is_initialized():
+            raise RuntimeError("ChromaMemoryStorage initialization incomplete")
+        logger.info("ChromaMemoryStorage async initialization verified")
+    
     def is_initialized(self) -> bool:
         """Check if the storage is properly initialized."""
         return (self.collection is not None and 
