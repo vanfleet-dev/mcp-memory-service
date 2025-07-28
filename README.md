@@ -4,7 +4,7 @@
 [![smithery badge](https://smithery.ai/badge/@doobidoo/mcp-memory-service)](https://smithery.ai/server/@doobidoo/mcp-memory-service)
 [![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/0513fb92-e941-4fe0-9948-2a1dbb870dcf)
 
-An MCP server providing semantic memory and persistent storage capabilities for Claude Desktop using ChromaDB and sentence transformers. This service enables long-term memory storage with semantic search capabilities, making it ideal for maintaining context across conversations and instances.
+An intelligent MCP server providing semantic memory, persistent storage, and **autonomous memory consolidation** for Claude Desktop. This service combines ChromaDB/SQLite-vec storage with a revolutionary **dream-inspired consolidation system** that automatically organizes, compresses, and manages memories over time, creating a self-evolving knowledge base.
 
 <img width="240" alt="grafik" src="https://github.com/user-attachments/assets/eab1f341-ca54-445c-905e-273cd9e89555" />
 <a href="https://glama.ai/mcp/servers/bzvl3lz34o"><img width="380" height="200" src="https://glama.ai/mcp/servers/bzvl3lz34o/badge" alt="Memory Service MCP server" /></a>
@@ -15,23 +15,40 @@ An MCP server providing semantic memory and persistent storage capabilities for 
 
 ## Features
 
+### 🧠 Dream-Inspired Memory Consolidation (NEW in v1.0!)
+- **Autonomous memory management** inspired by human sleep cycle processing
+- **Multi-layered time horizons** (daily → weekly → monthly → quarterly → yearly)
+- **Creative association discovery** finding non-obvious connections between memories
+- **Semantic clustering** automatically organizing related memories
+- **Intelligent compression** preserving key information while reducing storage
+- **Controlled forgetting** with safe archival and recovery systems
+- **Performance optimized** for processing 10k+ memories efficiently
+- **Health monitoring** with comprehensive error handling and alerts
+
+### 🔍 Core Memory Operations
 - Semantic search using sentence transformers
 - **Natural language time-based recall** (e.g., "last week", "yesterday morning")
 - **Enhanced tag deletion system** with flexible multi-tag support
 - Tag-based memory retrieval system
+- Exact match retrieval
+- Debug mode for similarity analysis
+- Duplicate detection and cleanup
+
+### 🗄️ Storage & Performance
 - **Dual storage backends**: ChromaDB (full-featured) and SQLite-vec (lightweight, fast)
 - Automatic database backups
 - Memory optimization tools
-- Exact match retrieval
-- Debug mode for similarity analysis
 - Database health monitoring
-- Duplicate detection and cleanup
 - Customizable embedding model
 - **Cross-platform compatibility** (Apple Silicon, Intel, Windows, Linux)
 - **Hardware-aware optimizations** for different environments
 - **Graceful fallbacks** for limited hardware resources
+
+### 🔗 Integration & Coordination
 - **🆕 Multi-client coordination** for Claude Desktop + Claude Code concurrent access
 - **🆕 Intelligent coordination modes** with automatic WAL/HTTP detection
+- **7 new MCP tools** for consolidation operations
+- Environment variable-based configuration
 
 ### Recent Enhancements
 
@@ -536,6 +553,60 @@ delete_by_tag(["temporary", "outdated"])     // Delete memories with any of thes
 delete_by_tags(["personal", "shopping"])     // Explicit multi-tag deletion
 delete_by_all_tags(["work", "important"])    // Delete only memories with BOTH tags
 ```
+
+## 🧠 Dream-Inspired Memory Consolidation
+
+The memory consolidation system operates autonomously in the background, inspired by how human memory works during sleep cycles. It automatically organizes, compresses, and manages your memories across multiple time horizons.
+
+### Quick Start
+Enable consolidation with a single environment variable:
+```bash
+export MCP_CONSOLIDATION_ENABLED=true
+```
+
+### How It Works
+- **Daily consolidation** (light processing): Updates memory relevance and basic organization
+- **Weekly consolidation**: Discovers creative associations between memories
+- **Monthly consolidation**: Performs semantic clustering and intelligent compression
+- **Quarterly/Yearly consolidation**: Deep archival and long-term memory management
+
+### New MCP Tools Available
+Once enabled, you get access to powerful new consolidation tools:
+- `consolidate_memories` - Manually trigger consolidation for any time horizon
+- `get_consolidation_health` - Monitor system health and performance
+- `get_consolidation_stats` - View processing statistics and insights
+- `schedule_consolidation` - Configure autonomous scheduling
+- `get_memory_associations` - Explore discovered memory connections
+- `get_memory_clusters` - Browse semantic memory clusters
+- `get_consolidation_recommendations` - Get AI-powered memory management advice
+
+### Advanced Configuration
+Fine-tune the consolidation system through environment variables:
+```bash
+# Archive location (default: ~/.mcp_memory_archive)
+export MCP_CONSOLIDATION_ARCHIVE_PATH=/path/to/archive
+
+# Retention periods (days)
+export MCP_RETENTION_CRITICAL=365  # Critical memories
+export MCP_RETENTION_REFERENCE=180 # Reference materials  
+export MCP_RETENTION_STANDARD=30   # Standard memories
+export MCP_RETENTION_TEMPORARY=7   # Temporary memories
+
+# Association discovery settings
+export MCP_ASSOCIATION_MIN_SIMILARITY=0.3  # Sweet spot range
+export MCP_ASSOCIATION_MAX_SIMILARITY=0.7  # for creative connections
+
+# Autonomous scheduling (cron-style)
+export MCP_SCHEDULE_DAILY="02:00"        # 2 AM daily
+export MCP_SCHEDULE_WEEKLY="SUN 03:00"   # 3 AM on Sundays
+export MCP_SCHEDULE_MONTHLY="01 04:00"   # 4 AM on 1st of month
+```
+
+### Performance
+- Designed to process 10k+ memories efficiently
+- Automatic hardware optimization (CPU/GPU/MPS)
+- Safe archival system - no data is ever permanently deleted
+- Full recovery capabilities for all archived memories
 
 ## Configuration Options
 
