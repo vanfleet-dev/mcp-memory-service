@@ -44,7 +44,21 @@ An MCP server providing semantic memory and persistent storage capabilities for 
 - ✅ **Backward Compatibility**: All existing code continues to work unchanged
 - ✅ **Dashboard Integration**: Enhanced UI with multiple tag selection capabilities
 
-## Installation
+## Installation Methods
+
+[![Docker](https://img.shields.io/badge/Docker-Fastest_Setup-008fe2?style=for-the-badge&logo=docker&logoColor=white)](#docker-installation)
+[![Smithery](https://img.shields.io/badge/Smithery-Auto_Install-9f7aea?style=for-the-badge&logo=npm&logoColor=white)](#installing-via-smithery)
+[![Python](https://img.shields.io/badge/Python-Intelligent_Installer-ffd343?style=for-the-badge&logo=python&logoColor=black)](#-intelligent-installer-recommended)
+[![uvx](https://img.shields.io/badge/uvx-Isolated_Install-00d2d3?style=for-the-badge&logo=python&logoColor=white)](#uvx-installation)
+
+### 🚀 Quick Start Options
+
+| Method | Best For | Setup Time | Features |
+|--------|----------|------------|----------|
+| **Docker** | Production, Multi-platform | 2 minutes | ✅ Isolated, ✅ Multi-client ready |
+| **Smithery** | Claude Desktop users | 1 minute | ✅ Auto-config, ✅ One command |
+| **Python Installer** | Developers, Customization | 5 minutes | ✅ Hardware detection, ✅ Full control |
+| **uvx** | Temporary use, Testing | 3 minutes | ✅ No virtual env, ✅ Clean install |
 
 ### 🚀 Intelligent Installer (Recommended)
 
