@@ -33,7 +33,6 @@ import platform
 from collections import deque
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
-from .utils.utils import ensure_datetime
 
 from mcp.server.models import InitializationOptions
 import mcp.types as types
@@ -2443,7 +2442,7 @@ Memories Archived: {report.memories_archived}"""
             # Format results
             formatted_results = []
             for i, result in enumerate(results):
-                memory_dt = ensure_datetime(result.memory.timestamp)
+                memory_dt = result.memory.timestamp
                 
                 memory_info = [
                     f"Memory {i+1}:",
@@ -2726,7 +2725,7 @@ Memories Archived: {report.memories_archived}"""
             
             formatted_results = []
             for i, result in enumerate(results):
-                memory_timestamp = ensure_datetime(result.memory.timestamp)
+                memory_timestamp = result.memory.timestamp
                 memory_info = [
                     f"Memory {i+1}:",
                 ]
