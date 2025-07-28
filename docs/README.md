@@ -23,7 +23,7 @@ Welcome to the comprehensive documentation for MCP Memory Service - a Model Cont
 
 - **[Multi-Client Setup](integration/multi-client.md)** - Share memory across multiple applications
 - **[Homebrew Integration](integration/homebrew.md)** - Use system-installed PyTorch via Homebrew
-- **[Claude Desktop Integration](guides/claude-integration.md)** - Connect with Claude Desktop
+- **[Claude Desktop Integration](guides/claude_integration.md)** - Connect with Claude Desktop
 - **[IDE Compatibility](ide-compatability.md)** - VS Code, Continue, and other IDE integrations
 
 ### 🚀 Deployment
@@ -55,7 +55,7 @@ Welcome to the comprehensive documentation for MCP Memory Service - a Model Cont
 
 - **[Memory Metadata API](api/memory-metadata-api.md)** - Advanced metadata operations
 - **[Tag Standardization](api/tag-standardization.md)** - Tag schema and conventions
-- **[HTTP/SSE API](web/)** - Web API documentation for multi-client setups
+- **[HTTP/SSE API](IMPLEMENTATION_PLAN_HTTP_SSE.md)** - Web API documentation for multi-client setups
 
 ### 🛠️ Development & Technical
 

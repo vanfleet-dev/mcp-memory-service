@@ -607,5 +607,5 @@ pytest tests/integration/test_server.py -v
 - [Installation Guide](../installation/master-guide.md) - General installation instructions
 - [Multi-Client Setup](../integration/multi-client.md) - Multi-client configuration
 - [Docker Deployment](../deployment/docker.md) - Docker setup details
-- [Troubleshooting](../troubleshooting/ubuntu.md) - Ubuntu-specific troubleshooting
-- [Performance Tuning](../guides/performance.md) - Performance optimization
+- [Troubleshooting](../troubleshooting/general.md) - Ubuntu-specific troubleshooting
+- [Performance Tuning](../implementation/performance.md) - Performance optimization

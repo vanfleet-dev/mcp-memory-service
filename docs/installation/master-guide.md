@@ -149,17 +149,17 @@ python install.py --storage-backend auto_detect
 
 ## Platform-Specific Installation
 
-- **Windows**: See [windows-setup.md](../platforms/windows-setup.md)
-- **Ubuntu/Linux**: See [ubuntu-setup.md](../platforms/ubuntu-setup.md)
+- **Windows**: See [windows-setup.md](../platforms/windows.md)
+- **Ubuntu/Linux**: See [ubuntu-setup.md](../platforms/ubuntu.md)
 - **macOS Intel (Legacy)**: See [macos-intel.md](../platforms/macos-intel.md)
 
 ## Troubleshooting
 
-Common installation issues and solutions can be found in [troubleshooting.md](../troubleshooting/installation.md).
+Common installation issues and solutions can be found in [troubleshooting.md](../troubleshooting/general.md).
 
 ## Next Steps
 
 After installation:
 1. Configure your MCP client (Claude Desktop, VS Code, etc.)
 2. Test the connection with `python scripts/test-connection.py`
-3. Read the [User Guide](../guides/claude-integration.md) for usage instructions
+3. Read the [User Guide](../guides/claude_integration.md) for usage instructions

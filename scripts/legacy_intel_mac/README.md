@@ -56,10 +56,10 @@ Usage:
 These scripts assume:
 - Python 3.10 is installed
 - A virtual environment called `venv_py310` in the project root
-- Required dependencies have been installed following the [Intel Mac Setup Guide](../../docs/INTEL_MAC_SETUP.md)
+- Required dependencies have been installed following the [Intel Mac Setup Guide](../../docs/platforms/macos-intel.md)
 
 ## Related Documentation
 
 For comprehensive setup instructions, please refer to:
-- [Intel Mac Setup Guide](../../docs/INTEL_MAC_SETUP.md) - Detailed setup instructions
+- [Intel Mac Setup Guide](../../docs/platforms/macos-intel.md) - Detailed setup instructions
 - [Hardware Compatibility](../../docs/DOCUMENTATION_AUDIT.md) - Platform compatibility matrix

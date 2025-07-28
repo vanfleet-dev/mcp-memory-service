@@ -379,7 +379,7 @@ python scripts/run_http_server.py
 
 For detailed deployment guides, configuration options, and troubleshooting:
 
-📚 **[Multi-Client Deployment Guide](docs/MULTI_CLIENT_DEPLOYMENT.md)**
+📚 **[Multi-Client Deployment Guide](docs/integration/multi-client.md)**
 
 Covers:
 - **Centralized HTTP/SSE Server** setup and configuration
@@ -394,7 +394,7 @@ Covers:
 For detailed instructions on how to interact with the memory service in Claude Desktop:
 
 - [Invocation Guide](docs/guides/invocation_guide.md) - Learn the specific keywords and phrases that trigger memory operations in Claude
-- [Installation Guide](docs/guides/installation.md) - Detailed setup instructions
+- [Installation Guide](docs/installation/master-guide.md) - Detailed setup instructions
 - **[Demo Session Walkthrough](docs/tutorials/demo-session-walkthrough.md)** - Real-world development session showcasing advanced features
 
 The memory service is invoked through natural language commands in your conversations with Claude. For example:
@@ -470,9 +470,7 @@ This integration offers several benefits:
 - Provides better stability in resource-constrained environments
 
 For detailed documentation on the Homebrew PyTorch integration:
-- [HOMEBREW_INTEGRATION_LESSONS.md](HOMEBREW_INTEGRATION_LESSONS.md) - Technical journey and solution architecture
-- [TECHNICAL_PATTERNS.md](TECHNICAL_PATTERNS.md) - Code patterns and implementation details
-- [TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md) - Diagnostic commands and common solutions
+- [Homebrew Integration Guide](docs/integration/homebrew.md) - Technical journey and solution architecture
 
 #### Migration Between Backends
 
@@ -741,15 +739,15 @@ See the [Installation Guide](docs/installation/master-guide.md) and [Troubleshoo
 ## 📚 Comprehensive Documentation
 
 ### Installation & Setup
-- **[Master Installation Guide](docs/guides/INSTALLATION_MASTER.md)** - Complete installation guide with hardware-specific paths
-- **[Installation Command Line Reference](docs/guides/installation-command-line-reference.md)** ⭐ **NEW** - Comprehensive CLI options including multi-client setup
-- **[Universal Multi-Client Setup](docs/guides/universal-multi-client-setup.md)** ⭐ **NEW** - Integrated setup for any MCP application
+- **[Master Installation Guide](docs/installation/master-guide.md)** - Complete installation guide with hardware-specific paths
+- **[Storage Backend Guide](docs/guides/STORAGE_BACKENDS.md)** ⭐ **NEW** - Comprehensive CLI options including multi-client setup
+- **[Multi-Client Setup](docs/integration/multi-client.md)** ⭐ **NEW** - Integrated setup for any MCP application
 - **[Storage Backend Comparison](docs/guides/STORAGE_BACKENDS.md)** - Detailed comparison and selection guide
-- **[Migration Guide](MIGRATION_GUIDE.md)** - ChromaDB to SQLite-vec migration instructions
+- **[Migration Guide](docs/guides/migration.md)** - ChromaDB to SQLite-vec migration instructions
 
 ### Platform-Specific Guides
-- **[Intel Mac Setup Guide](docs/INTEL_MAC_SETUP.md)** - Comprehensive guide for Intel Mac users
-- **[Legacy Mac Guide](docs/platforms/macos-intel-legacy.md)** - Optimized for 2015 MacBook Pro and older Intel Macs
+- **[Intel Mac Setup Guide](docs/platforms/macos-intel.md)** - Comprehensive guide for Intel Mac users
+- **[Legacy Mac Guide](docs/platforms/macos-intel.md)** - Optimized for 2015 MacBook Pro and older Intel Macs
 - **[Windows Setup](docs/guides/windows-setup.md)** - Windows-specific installation and troubleshooting
 - **[Ubuntu Setup](docs/guides/UBUNTU_SETUP.md)** - Linux server installation guide
 
@@ -760,12 +758,12 @@ See the [Installation Guide](docs/installation/master-guide.md) and [Troubleshoo
 
 ### Advanced Topics
 - **[Multi-Client Architecture](docs/development/multi-client-architecture.md)** ⭐ **NEW** - Technical implementation details
-- **[Homebrew PyTorch Integration](docs/integration/homebrew/HOMEBREW_PYTORCH_README.md)** - Using system PyTorch
-- **[Docker Deployment](docs/guides/docker.md)** - Container-based deployment
+- **[Homebrew PyTorch Integration](docs/integration/homebrew.md)** - Using system PyTorch
+- **[Docker Deployment](docs/deployment/docker.md)** - Container-based deployment
 - **[Performance Optimization](docs/implementation/performance.md)** - Tuning for different hardware
 
 ### Troubleshooting & Support
-- **[General Troubleshooting](docs/guides/troubleshooting.md)** - Common issues and solutions
+- **[General Troubleshooting](docs/troubleshooting/general.md)** - Common issues and solutions
 - **[Hardware Compatibility](docs/DOCUMENTATION_AUDIT.md)** - Compatibility matrix and known issues
 
 ### Quick Commands
@@ -843,7 +841,7 @@ MIT License - See LICENSE file for details
 
 ## Contact
 
-[Telegram](t.me/doobeedoo)
+[Telegram](https://t.me/doobeedoo)
 
 ## Integrations
 

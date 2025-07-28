@@ -377,5 +377,5 @@ For Intel Macs with Homebrew-installed PyTorch, see the dedicated [Homebrew Inte
 
 - [Installation Guide](../installation/master-guide.md) - General installation instructions
 - [Homebrew Integration](../integration/homebrew.md) - Homebrew PyTorch setup
-- [Troubleshooting](../troubleshooting/macos.md) - macOS-specific troubleshooting
-- [Performance Tuning](../guides/performance.md) - Performance optimization guide
+- [Troubleshooting](../troubleshooting/general.md) - macOS-specific troubleshooting
+- [Performance Tuning](../implementation/performance.md) - Performance optimization guide

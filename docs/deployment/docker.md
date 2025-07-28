@@ -622,4 +622,4 @@ docker push mcp-memory-service:latest
 - [Multi-Client Setup](../integration/multi-client.md) - Multi-client configuration
 - [Ubuntu Setup](../platforms/ubuntu.md) - Ubuntu Docker deployment
 - [Windows Setup](../platforms/windows.md) - Windows Docker deployment
-- [Troubleshooting](../troubleshooting/docker.md) - Docker-specific troubleshooting
+- [Troubleshooting](../troubleshooting/general.md) - Docker-specific troubleshooting

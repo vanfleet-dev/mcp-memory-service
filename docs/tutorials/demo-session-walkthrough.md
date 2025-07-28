@@ -112,7 +112,7 @@ python scripts/run_http_server.py
 
 The session produced **900+ lines of documentation** covering:
 
-1. **[Multi-Client Deployment Guide](MULTI_CLIENT_DEPLOYMENT.md)**
+1. **[Multi-Client Deployment Guide](../integration/multi-client.md)**
    - Centralized server deployment
    - Cloud storage limitations
    - Docker and cloud platform examples

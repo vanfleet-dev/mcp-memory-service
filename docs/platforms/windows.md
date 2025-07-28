@@ -487,5 +487,5 @@ docker run -p 8000:8000 mcp-memory-service-windows
 
 - [Installation Guide](../installation/master-guide.md) - General installation instructions
 - [Multi-Client Setup](../integration/multi-client.md) - Multi-client configuration
-- [Troubleshooting](../troubleshooting/windows.md) - Windows-specific troubleshooting
+- [Troubleshooting](../troubleshooting/general.md) - Windows-specific troubleshooting
 - [Docker Deployment](../deployment/docker.md) - Docker setup on Windows

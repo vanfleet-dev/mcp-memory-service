@@ -222,7 +222,7 @@ source ~/.bashrc
 
 If you encounter issues:
 1. Check the troubleshooting section above
-2. Review the [SQLite-vec Backend Guide](docs/sqlite-vec-backend.md)
+2. Review the [SQLite-vec Backend Guide](../sqlite-vec-backend.md)
 3. Test with `simple_sqlite_vec_test.py`
 
 Your Ubuntu setup is ready for high-performance memory operations with Claude Code! 🚀

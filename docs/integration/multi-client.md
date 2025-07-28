@@ -372,5 +372,5 @@ python scripts/migrate_to_multi_client.py \
 
 - [Installation Guide](../installation/master-guide.md) - General installation instructions
 - [Deployment Guide](../deployment/docker.md) - Docker and cloud deployment
-- [Troubleshooting](../troubleshooting/multi-client.md) - Multi-client specific issues
-- [API Reference](../api/http-api.md) - HTTP/SSE API documentation
+- [Troubleshooting](../troubleshooting/general.md) - Multi-client specific issues
+- [API Reference](../IMPLEMENTATION_PLAN_HTTP_SSE.md) - HTTP/SSE API documentation
