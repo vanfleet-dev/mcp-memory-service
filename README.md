@@ -13,6 +13,32 @@ An intelligent MCP server providing semantic memory, persistent storage, and **a
 - Talk to the Repo with [TalkToGitHub](https://talktogithub.com/doobidoo/mcp-memory-service)!
 - Use Gitprobe to digg deeper: [GitProbe](https://gitprobe.com/doobidoo/mcp-memory-service)!
 
+---
+
+## 🎯 NEW: Claude Code Commands (v2.2.0)
+
+**Get started in 2 minutes with direct memory commands!**
+
+```bash
+# Install with Claude Code commands
+python install.py --install-claude-commands
+
+# Start using immediately
+claude /memory-store "Important decision about architecture"
+claude /memory-recall "what did we decide last week?"
+claude /memory-search --tags "architecture,database"
+claude /memory-health
+```
+
+✨ **5 conversational commands** following CCPlugins pattern  
+🚀 **Zero MCP server configuration** required  
+🧠 **Context-aware operations** with automatic project detection  
+🎨 **Professional interface** with comprehensive guidance  
+
+➡️ [**Quick Start Guide**](docs/guides/claude-code-quickstart.md) | [**Full Integration Guide**](docs/guides/claude-code-integration.md)
+
+---
+
 ## Features
 
 ### 🧠 Dream-Inspired Memory Consolidation (NEW in v2.0!)
