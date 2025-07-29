@@ -34,7 +34,9 @@ from ..config import (
     HTTP_HOST,
     CORS_ORIGINS,
     DATABASE_PATH,
-    EMBEDDING_MODEL_NAME
+    EMBEDDING_MODEL_NAME,
+    MDNS_ENABLED,
+    HTTPS_ENABLED
 )
 from ..storage.sqlite_vec import SqliteVecMemoryStorage
 from .dependencies import set_storage, get_storage
@@ -49,11 +51,14 @@ logger = logging.getLogger(__name__)
 # Global storage instance
 storage: Optional[SqliteVecMemoryStorage] = None
 
+# Global mDNS advertiser instance
+mdns_advertiser: Optional[Any] = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan management."""
-    global storage
+    global storage, mdns_advertiser
     
     # Startup
     logger.info("Starting MCP Memory Service HTTP interface...")
@@ -69,6 +74,31 @@ async def lifespan(app: FastAPI):
         # Start SSE manager
         await sse_manager.start()
         logger.info("SSE Manager started")
+        
+        # Start mDNS service advertisement if enabled
+        if MDNS_ENABLED:
+            try:
+                from ..discovery.mdns_service import ServiceAdvertiser
+                mdns_advertiser = ServiceAdvertiser(
+                    host=HTTP_HOST,
+                    port=HTTP_PORT,
+                    https_enabled=HTTPS_ENABLED
+                )
+                success = await mdns_advertiser.start()
+                if success:
+                    logger.info("mDNS service advertisement started")
+                else:
+                    logger.warning("Failed to start mDNS service advertisement")
+                    mdns_advertiser = None
+            except ImportError:
+                logger.warning("mDNS support not available (zeroconf not installed)")
+                mdns_advertiser = None
+            except Exception as e:
+                logger.error(f"Error starting mDNS advertisement: {e}")
+                mdns_advertiser = None
+        else:
+            logger.info("mDNS service advertisement disabled")
+            
     except Exception as e:
         logger.error(f"Failed to initialize storage: {e}")
         raise
@@ -77,6 +107,14 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Shutting down MCP Memory Service HTTP interface...")
+    
+    # Stop mDNS advertisement
+    if mdns_advertiser:
+        try:
+            await mdns_advertiser.stop()
+            logger.info("mDNS service advertisement stopped")
+        except Exception as e:
+            logger.error(f"Error stopping mDNS advertisement: {e}")
     
     # Stop SSE manager
     await sse_manager.stop()

@@ -219,6 +219,17 @@ CORS_ORIGINS = os.getenv('MCP_CORS_ORIGINS', '*').split(',')
 SSE_HEARTBEAT_INTERVAL = int(os.getenv('MCP_SSE_HEARTBEAT', '30'))
 API_KEY = os.getenv('MCP_API_KEY', None)  # Optional authentication
 
+# HTTPS Configuration
+HTTPS_ENABLED = os.getenv('MCP_HTTPS_ENABLED', 'false').lower() == 'true'
+SSL_CERT_FILE = os.getenv('MCP_SSL_CERT_FILE', None)
+SSL_KEY_FILE = os.getenv('MCP_SSL_KEY_FILE', None)
+
+# mDNS Service Discovery Configuration
+MDNS_ENABLED = os.getenv('MCP_MDNS_ENABLED', 'true').lower() == 'true'
+MDNS_SERVICE_NAME = os.getenv('MCP_MDNS_SERVICE_NAME', 'MCP Memory Service')
+MDNS_SERVICE_TYPE = os.getenv('MCP_MDNS_SERVICE_TYPE', '_mcp-memory._tcp.local.')
+MDNS_DISCOVERY_TIMEOUT = int(os.getenv('MCP_MDNS_DISCOVERY_TIMEOUT', '5'))
+
 # Database path for HTTP interface (use SQLite-vec by default)
 if STORAGE_BACKEND == 'sqlite_vec' and SQLITE_VEC_PATH:
     DATABASE_PATH = SQLITE_VEC_PATH
