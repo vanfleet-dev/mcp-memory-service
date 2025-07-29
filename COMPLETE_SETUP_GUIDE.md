@@ -11,11 +11,14 @@
 - **Automated Scheduling**: Daily/weekly/monthly runs
 
 ### 🌐 **mDNS Multi-Client HTTPS**
-- **Service Name**: `MCP Memory._mcp-memory._tcp.local.`
+- **Service Name**: `memory.local` (clean, no port needed)
+- **Service Type**: `_http._tcp.local.` (standard HTTP service)
+- **Port**: 443 (standard HTTPS)
 - **Auto-Discovery**: Zero-configuration client setup
 - **HTTPS**: Self-signed certificates (auto-generated)
 - **Multi-Interface**: Available on all network interfaces
 - **Real-time Updates**: Server-Sent Events (SSE)
+- **Security**: Non-root binding via CAP_NET_BIND_SERVICE
 
 ### 🚀 **Auto-Startup Service**
 - **Systemd Integration**: Starts on boot automatically
@@ -64,7 +67,7 @@ sudo ufw allow 8000/tcp
 MCP_CONSOLIDATION_ENABLED=true
 MCP_MDNS_ENABLED=true  
 MCP_HTTPS_ENABLED=true
-MCP_MDNS_SERVICE_NAME="MCP Memory"
+MCP_MDNS_SERVICE_NAME="memory"
 MCP_HTTP_HOST=0.0.0.0
 MCP_HTTP_PORT=8000
 MCP_MEMORY_STORAGE_BACKEND=sqlite_vec
@@ -82,16 +85,17 @@ MCP_API_KEY=mcp-0b1ccbde2197a08dcb12d41af4044be6
 ## 🌐 **Access Points**
 
 ### **Local Access**
-- **Dashboard**: https://localhost:8000
-- **API Documentation**: https://localhost:8000/api/docs  
-- **Health Check**: https://localhost:8000/api/health
-- **SSE Events**: https://localhost:8000/api/events
-- **Connection Stats**: https://localhost:8000/api/events/stats
+- **Dashboard**: https://localhost:443 or https://memory.local
+- **API Documentation**: https://memory.local/api/docs  
+- **Health Check**: https://memory.local/api/health
+- **SSE Events**: https://memory.local/api/events
+- **Connection Stats**: https://memory.local/api/events/stats
 
 ### **Network Access**
-- **HTTPS Server**: https://10.0.1.30:8000
-- **mDNS Discovery**: `MCP Memory._mcp-memory._tcp.local.`
+- **Clean mDNS**: https://memory.local (no port needed!)
+- **mDNS Discovery**: `memory._http._tcp.local.`
 - **Auto-Discovery**: Clients find service automatically
+- **Standard Port**: 443 (HTTPS default)
 
 ## 🛠️ **Service Management**
 
@@ -133,7 +137,7 @@ curl -k https://localhost:8000/api/health
 ### **3. mDNS Discovery**
 ```bash
 avahi-browse -t _mcp-memory._tcp
-# Should show: MCP Memory on multiple interfaces
+# Should show: memory on multiple interfaces
 ```
 
 ### **4. HTTPS Certificate**
@@ -195,7 +199,7 @@ openssl s_client -connect localhost:8000 -servername localhost < /dev/null
       "command": "node", 
       "args": ["/path/to/examples/http-mcp-bridge.js"],
       "env": {
-        "MCP_MEMORY_HTTP_ENDPOINT": "https://10.0.1.30:8000/api",
+        "MCP_MEMORY_HTTP_ENDPOINT": "https://memory.local/api",
         "MCP_MEMORY_API_KEY": "mcp-0b1ccbde2197a08dcb12d41af4044be6"
       }
     }
@@ -220,10 +224,10 @@ ls -la venv/bin/python
 ### **Can't Connect to API**
 ```bash
 # Check if service is listening
-ss -tlnp | grep :8000
+ss -tlnp | grep :443
 
 # Test local connection
-curl -k https://localhost:8000/api/health
+curl -k https://memory.local/api/health
 
 # Check firewall
 sudo ufw status
@@ -232,13 +236,31 @@ sudo ufw status
 ### **No mDNS Discovery**
 ```bash
 # Test mDNS
-avahi-browse -t _mcp-memory._tcp
+avahi-browse -t _http._tcp | grep memory
+
+# Test resolution
+avahi-resolve-host-name memory.local
 
 # Check network interfaces
 ip addr show
 
 # Verify multicast support
 ping 224.0.0.251
+```
+
+### **Port 443 Conflicts (Pi-hole, etc.)**
+```bash
+# Check what's using port 443
+sudo netstat -tlnp | grep :443
+
+# Disable conflicting services (example: Pi-hole)
+sudo systemctl stop pihole-FTL
+sudo systemctl disable pihole-FTL
+sudo systemctl stop lighttpd
+sudo systemctl disable lighttpd
+
+# Then restart memory service
+sudo systemctl restart mcp-memory
 ```
 
 ## ✅ **Success Indicators**

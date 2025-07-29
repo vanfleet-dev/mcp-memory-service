@@ -79,7 +79,11 @@
       "Bash(export MCP_API_KEY=\"test-key-123\")",
       "Bash(sudo ufw:*)",
       "Bash(./install_service.sh:*)",
-      "Bash(sudo systemctl status:*)"
+      "Bash(sudo systemctl status:*)",
+      "Bash(git tag:*)",
+      "Bash(avahi-browse:*)",
+      "Bash(avahi-resolve-host-name:*)",
+      "Bash(systemctl status:*)"
     ],
     "deny": []
   },

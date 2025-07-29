@@ -37,7 +37,7 @@ export MCP_SCHEDULE_MONTHLY="01 04:00"
 
 # Configure mDNS multi-client server with HTTPS
 export MCP_MDNS_ENABLED=true
-export MCP_MDNS_SERVICE_NAME="MCP Memory"
+export MCP_MDNS_SERVICE_NAME="memory"
 export MCP_HTTPS_ENABLED=true
 
 # HTTP server configuration

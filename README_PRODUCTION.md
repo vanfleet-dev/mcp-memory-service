@@ -30,7 +30,7 @@ avahi-browse -t _mcp-memory._tcp
 
 ## 📋 **Service Details**
 
-- **Service Name**: `MCP Memory._mcp-memory._tcp.local.`
+- **Service Name**: `memory._mcp-memory._tcp.local.`
 - **HTTPS Address**: https://localhost:8000 
 - **API Key**: `mcp-0b1ccbde2197a08dcb12d41af4044be6`
 - **Auto-Startup**: ✅ Enabled
