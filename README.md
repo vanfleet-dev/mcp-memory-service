@@ -47,11 +47,20 @@ An intelligent MCP server providing semantic memory, persistent storage, and **a
 ### 🔗 Integration & Coordination
 - **🆕 Multi-client coordination** for Claude Desktop + Claude Code concurrent access
 - **🆕 Intelligent coordination modes** with automatic WAL/HTTP detection
+- **🆕 mDNS Service Discovery (v2.1.0)** - Zero-configuration networking with automatic service discovery
+- **🆕 HTTPS Support** with auto-generated certificates for secure connections
 - **7 new MCP tools** for consolidation operations
 - Environment variable-based configuration
 
 ### Recent Enhancements
 
+#### v2.1.0 - Zero-Configuration Networking
+- ✅ **mDNS Service Discovery**: Automatic service advertisement and discovery using `_mcp-memory._tcp.local.`
+- ✅ **HTTPS Integration**: SSL/TLS support with automatic self-signed certificate generation
+- ✅ **Enhanced HTTP-MCP Bridge**: Auto-discovery mode with health validation and fallback
+- ✅ **Zero-Config Deployment**: No manual endpoint configuration needed for local networks
+
+#### Previous Enhancements
 - ✅ **PyTorch Optional**: Now works without PyTorch for basic functionality when using SQLite-vec backend
 - ✅ **Improved SQLite-vec**: Robust error handling and validation for the lightweight backend
 - ✅ **Intelligent Health Checks**: Backend-specific health monitoring with detailed diagnostics

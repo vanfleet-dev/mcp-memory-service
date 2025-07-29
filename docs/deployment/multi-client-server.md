@@ -276,6 +276,245 @@ Instead of storing the database in cloud storage, host the MCP Memory Service se
                 └───────────┘
 ```
 
+## 🔍 Zero-Configuration Service Discovery (mDNS)
+
+### Overview
+
+Starting with version 2.1.0, MCP Memory Service supports automatic service discovery using mDNS (Multicast DNS), also known as Bonjour or Zeroconf. This eliminates the need for manual endpoint configuration on local networks.
+
+### Benefits
+
+- ✅ **Zero Configuration**: Clients automatically discover services without manual setup
+- ✅ **HTTPS Support**: Automatic discovery of both HTTP and HTTPS endpoints
+- ✅ **Health Validation**: Clients verify service health before connecting
+- ✅ **Fallback Support**: Graceful degradation to manual configuration if discovery fails
+
+### Server Setup with mDNS
+
+#### Enable mDNS Advertisement
+
+```bash
+# Enable mDNS service discovery (enabled by default)
+export MCP_MDNS_ENABLED=true
+
+# Optional: Customize service name (default: "MCP Memory Service")
+export MCP_MDNS_SERVICE_NAME="My Team Memory Service"
+
+# Optional: Enable HTTPS with auto-generated certificates
+export MCP_HTTPS_ENABLED=true
+
+# Start server with mDNS advertisement
+python scripts/run_http_server.py
+```
+
+#### mDNS Configuration Options
+
+```bash
+# Core mDNS settings
+export MCP_MDNS_ENABLED=true                           # Enable/disable mDNS (default: true)
+export MCP_MDNS_SERVICE_NAME="MCP Memory Service"      # Service display name
+export MCP_MDNS_SERVICE_TYPE="_mcp-memory._tcp.local." # Service type (RFC compliant)
+export MCP_MDNS_DISCOVERY_TIMEOUT=5                    # Discovery timeout in seconds
+
+# HTTPS settings for secure discovery
+export MCP_HTTPS_ENABLED=true                          # Enable HTTPS mode
+export MCP_SSL_CERT_FILE="/path/to/cert.pem"          # Custom certificate (optional)
+export MCP_SSL_KEY_FILE="/path/to/key.pem"            # Custom private key (optional)
+```
+
+#### Server Output with mDNS
+
+```
+Starting MCP Memory Service HTTPS server on 0.0.0.0:8000
+Dashboard: https://localhost:8000
+API Docs: https://localhost:8000/api/docs
+SSL Certificate: /tmp/mcp-memory-certs/cert.pem
+SSL Key: /tmp/mcp-memory-certs/key.pem
+NOTE: Browsers may show security warnings for self-signed certificates
+mDNS service advertisement started
+Press Ctrl+C to stop
+```
+
+### Client Auto-Discovery Setup
+
+#### Claude Desktop Configuration
+
+**Option 1: Full Auto-Discovery (Recommended)**
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "node",
+      "args": ["/path/to/mcp-memory-service/examples/http-mcp-bridge.js"],
+      "env": {
+        "MCP_MEMORY_AUTO_DISCOVER": "true",
+        "MCP_MEMORY_PREFER_HTTPS": "true",
+        "MCP_MEMORY_API_KEY": "your-secure-api-key"
+      }
+    }
+  }
+}
+```
+
+**Option 2: Auto-Discovery with Fallback**
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "node",
+      "args": ["/path/to/mcp-memory-service/examples/http-mcp-bridge.js"],
+      "env": {
+        "MCP_MEMORY_AUTO_DISCOVER": "true",
+        "MCP_MEMORY_HTTP_ENDPOINT": "https://backup-server:8000/api",
+        "MCP_MEMORY_PREFER_HTTPS": "true",
+        "MCP_MEMORY_API_KEY": "your-secure-api-key"
+      }
+    }
+  }
+}
+```
+
+#### Client Configuration Options
+
+```bash
+# Auto-discovery settings
+MCP_MEMORY_AUTO_DISCOVER=true              # Enable mDNS discovery
+MCP_MEMORY_PREFER_HTTPS=true               # Prefer HTTPS over HTTP services
+MCP_MEMORY_HTTP_ENDPOINT=""                # Manual fallback endpoint (optional)
+MCP_MEMORY_API_KEY="your-api-key"          # API key for authentication
+```
+
+#### Client Discovery Output
+
+```
+MCP HTTP Bridge starting...
+Attempting to discover MCP Memory Service via mDNS...
+Discovered service: https://192.168.1.100:8000/api
+Endpoint: https://192.168.1.100:8000/api
+API Key: [SET]
+Auto-discovery: ENABLED
+Prefer HTTPS: YES
+Service discovered automatically via mDNS
+```
+
+### Advanced mDNS Scenarios
+
+#### Multiple Services Discovery
+
+When multiple MCP Memory Services are available on the network:
+
+```bash
+# Client automatically selects the best service based on:
+# 1. HTTPS preference (if MCP_MEMORY_PREFER_HTTPS=true)
+# 2. Health check results
+# 3. Response time
+# 4. Port preference (standard ports first)
+```
+
+#### Network Troubleshooting
+
+**Check mDNS Services on Network:**
+
+```bash
+# macOS: Browse for MCP Memory Services
+dns-sd -B _mcp-memory._tcp
+
+# Linux: Use avahi-browse
+avahi-browse -t _mcp-memory._tcp
+
+# Windows: Use Bonjour Browser or equivalent
+```
+
+**Manual Service Query:**
+
+```bash
+# Query specific service details
+dns-sd -L "MCP Memory Service" _mcp-memory._tcp
+```
+
+#### Firewall Configuration
+
+Ensure mDNS traffic is allowed:
+
+```bash
+# Linux (UFW)
+sudo ufw allow 5353/udp  # mDNS port
+
+# macOS/Windows: mDNS typically allowed by default
+```
+
+### Security Considerations
+
+#### mDNS Security Best Practices
+
+1. **Local Network Only**: mDNS only works on local networks (security by isolation)
+2. **API Key Authentication**: Always use API keys even with mDNS discovery
+3. **HTTPS Enforcement**: Enable HTTPS for encrypted communication
+4. **Network Segmentation**: Use VLANs to isolate service discovery if needed
+
+#### Production Deployment
+
+```bash
+# Production server with custom certificates
+export MCP_HTTPS_ENABLED=true
+export MCP_SSL_CERT_FILE="/etc/ssl/certs/mcp-memory.crt"
+export MCP_SSL_KEY_FILE="/etc/ssl/private/mcp-memory.key"
+export MCP_MDNS_ENABLED=true
+export MCP_API_KEY="$(openssl rand -base64 32)"
+
+python scripts/run_http_server.py
+```
+
+### Troubleshooting mDNS
+
+#### Common Issues
+
+**Q: No services discovered**
+```bash
+# Check if mDNS is enabled on server
+grep "mDNS service advertisement" server.log
+
+# Verify network connectivity
+ping 224.0.0.251  # mDNS multicast address
+
+# Check firewall rules
+sudo ufw status | grep 5353
+```
+
+**Q: Discovery timeout**
+```bash
+# Increase discovery timeout
+export MCP_MDNS_DISCOVERY_TIMEOUT=10
+
+# Check network latency
+# Large networks may need longer timeouts
+```
+
+**Q: Client prefers wrong service**
+```bash
+# Force HTTPS preference
+export MCP_MEMORY_PREFER_HTTPS=true
+
+# Or disable auto-discovery and use manual endpoint
+export MCP_MEMORY_AUTO_DISCOVER=false
+export MCP_MEMORY_HTTP_ENDPOINT="https://preferred-server:8000/api"
+```
+
+#### Debug Mode
+
+Enable detailed logging for troubleshooting:
+
+```bash
+# Server debug logging
+export LOG_LEVEL=DEBUG
+python scripts/run_http_server.py
+
+# Client will show discovery details in stderr
+node examples/http-mcp-bridge.js 2>debug.log
+```
+
 ## Deployment Examples
 
 ### Docker Deployment
@@ -290,19 +529,52 @@ COPY . .
 
 RUN python install.py --server-mode --enable-http-api
 
-EXPOSE 8000
+# Expose both HTTP and HTTPS ports
+EXPOSE 8000 8443
 
 ENV MCP_HTTP_HOST=0.0.0.0
 ENV MCP_HTTP_PORT=8000
 ENV MCP_MEMORY_STORAGE_BACKEND=sqlite_vec
+ENV MCP_MDNS_ENABLED=true
+ENV MCP_HTTPS_ENABLED=false
 
 CMD ["python", "scripts/run_http_server.py"]
 ```
 
-Run with Docker:
+#### Basic HTTP with mDNS:
 ```bash
 docker build -t mcp-memory-service .
 docker run -p 8000:8000 -v ./data:/app/data mcp-memory-service
+```
+
+#### HTTPS with mDNS:
+```bash
+docker run -p 8000:8000 \
+  -v ./data:/app/data \
+  -e MCP_HTTPS_ENABLED=true \
+  -e MCP_MDNS_ENABLED=true \
+  mcp-memory-service
+```
+
+#### Production with Custom Certificates:
+```bash
+docker run -p 8000:8000 \
+  -v ./data:/app/data \
+  -v ./certs:/app/certs \
+  -e MCP_HTTPS_ENABLED=true \
+  -e MCP_SSL_CERT_FILE=/app/certs/cert.pem \
+  -e MCP_SSL_KEY_FILE=/app/certs/key.pem \
+  -e MCP_MDNS_ENABLED=true \
+  -e MCP_API_KEY="your-secure-api-key" \
+  mcp-memory-service
+```
+
+**Note**: For mDNS to work with Docker, you may need to use `--network host` mode on Linux:
+```bash
+docker run --network host \
+  -v ./data:/app/data \
+  -e MCP_MDNS_ENABLED=true \
+  mcp-memory-service
 ```
 
 ### Cloud Platform Deployment
