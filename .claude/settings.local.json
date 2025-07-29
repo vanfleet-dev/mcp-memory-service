@@ -18,17 +18,6 @@
       "WebFetch(domain:glama.ai)",
       "WebFetch(domain:alexgarcia.xyz)",
       "Bash(rg:*)",
-      "mcp__memory__check_database_health",
-      "mcp__memory__store_memory",
-      "mcp__memory__retrieve_memory",
-      "mcp__memory__search_by_tag",
-      "mcp__memory__recall_memory",
-      "mcp__memory__debug_retrieve",
-      "mcp__memory__create_backup",
-      "mcp__memory__list_backups",
-      "mcp__memory__optimize_db",
-      "mcp__memory__export_memories",
-      "mcp__memory__debug_system_info",
       "Bash(/bin/bash -c \"git status\")",
       "Bash(ls:*)",
       "Bash(bash -c 'export PATH=\"\"/usr/bin:/bin:$PATH\"\" && git status')",
@@ -57,12 +46,10 @@
       "Bash(ls:*)",
       "Bash(find:*)",
       "Bash(mkdir:*)",
-      "mcp__memory__store_memory",
       "Bash(git merge-base:*)",
       "Bash(git fetch:*)",
       "Bash(git rebase:*)",
       "Bash(claude mcp:*)",
-      "mcp__memory__check_embedding_model",
       "Bash(powershell:*)",
       "Bash(setx:*)",
       "Bash(set MCP_MEMORY_STORAGE_BACKEND=sqlite_vec)",
@@ -72,12 +59,19 @@
       "Bash(mkdir:*)",
       "Bash(mv:*)",
       "Bash(rm:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(memory:*)",
+      "Bash(cp:*)",
+      "mcp__memory-service__check_database_health",
+      "mcp__memory-service__store_memory",
+      "mcp__memory-service__retrieve_memory",
+      "Bash(MCP_MEMORY_STORAGE_BACKEND=sqlite_vec timeout 10s uv run memory --debug)",
+      "Bash(MCP_MEMORY_STORAGE_BACKEND=sqlite_vec timeout 10s python -m src.mcp_memory_service.server --debug)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(git tag:*)"
     ],
     "deny": []
   },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "memory"
-  ]
+  "enabledMcpjsonServers": []
 }

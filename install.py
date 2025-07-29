@@ -26,6 +26,19 @@ import argparse
 import shutil
 from pathlib import Path
 
+# Import Claude commands utilities
+try:
+    from scripts.claude_commands_utils import install_claude_commands, check_claude_code_cli
+except ImportError:
+    # Handle case where script is run from different directory
+    script_dir = Path(__file__).parent
+    sys.path.insert(0, str(script_dir))
+    try:
+        from scripts.claude_commands_utils import install_claude_commands, check_claude_code_cli
+    except ImportError:
+        install_claude_commands = None
+        check_claude_code_cli = None
+
 # Global variable to store the uv executable path
 UV_EXECUTABLE_PATH = None
 
@@ -2230,6 +2243,10 @@ def main():
                         help='Configure multi-client access for any MCP-compatible applications (Claude, VS Code, Continue, etc.)')
     parser.add_argument('--skip-multi-client-prompt', action='store_true',
                         help='Skip the interactive prompt for multi-client setup')
+    parser.add_argument('--install-claude-commands', action='store_true',
+                        help='Install Claude Code commands for memory operations')
+    parser.add_argument('--skip-claude-commands-prompt', action='store_true',
+                        help='Skip the interactive prompt for Claude Code commands')
     
     args = parser.parse_args()
     
@@ -2445,6 +2462,39 @@ def main():
         if not configure_claude_code_integration(system_info):
             print_warning("Claude Code integration configuration failed")
             print_info("You can configure it manually later using the documentation")
+    
+    # Step 7: Install Claude Code commands if requested or available
+    should_install_commands = args.install_claude_commands
+    
+    # If not explicitly requested, check if we should prompt the user
+    if not should_install_commands and not args.skip_claude_commands_prompt:
+        if install_claude_commands is not None and check_claude_code_cli is not None:
+            claude_available, _ = check_claude_code_cli()
+            if claude_available:
+                print_step("7", "Optional Claude Code Commands")
+                print_info("Claude Code CLI detected! You can install memory operation commands.")
+                print_info("Commands would include: /memory-store, /memory-recall, /memory-search, /memory-health")
+                
+                response = input("Install Claude Code memory commands? (y/N): ")
+                should_install_commands = response.lower().startswith('y')
+    
+    if should_install_commands:
+        if install_claude_commands is not None:
+            print_step("7", "Installing Claude Code Commands")
+            try:
+                if install_claude_commands(verbose=True):
+                    print_success("Claude Code commands installed successfully!")
+                else:
+                    print_warning("Claude Code commands installation had issues")
+                    print_info("You can install them manually later with:")
+                    print_info("python scripts/claude_commands_utils.py")
+            except Exception as e:
+                print_error(f"Failed to install Claude Code commands: {str(e)}")
+                print_info("You can install them manually later with:")
+                print_info("python scripts/claude_commands_utils.py")
+        else:
+            print_warning("Claude commands utilities not available")
+            print_info("Commands installation skipped")
     
     print_header("Installation Complete")
     

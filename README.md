@@ -45,6 +45,7 @@ An intelligent MCP server providing semantic memory, persistent storage, and **a
 - **Graceful fallbacks** for limited hardware resources
 
 ### 🔗 Integration & Coordination
+- **🆕 Claude Code Commands (v2.2.0)** - Conversational memory commands following CCPlugins pattern
 - **🆕 Multi-client coordination** for Claude Desktop + Claude Code concurrent access
 - **🆕 Intelligent coordination modes** with automatic WAL/HTTP detection
 - **🆕 mDNS Service Discovery (v2.1.0)** - Zero-configuration networking with automatic service discovery
@@ -53,6 +54,13 @@ An intelligent MCP server providing semantic memory, persistent storage, and **a
 - Environment variable-based configuration
 
 ### Recent Enhancements
+
+#### v2.2.0 - Claude Code Commands Integration
+- **5 conversational commands** for direct memory operations: `/memory-store`, `/memory-recall`, `/memory-search`, `/memory-context`, `/memory-health`
+- **Optional installation** integrated into main installer with intelligent prompting
+- **CCPlugins-compatible** markdown-based conversational command format
+- **Context-aware operations** with automatic project and session detection
+- **Cross-platform support** with comprehensive error handling and fallback systems
 
 #### v2.1.0 - Zero-Configuration Networking
 - ✅ **mDNS Service Discovery**: Automatic service advertisement and discovery using `_mcp-memory._tcp.local.`
@@ -139,6 +147,15 @@ python install.py --setup-multi-client
 
 # Skip the interactive multi-client prompt
 python install.py --skip-multi-client-prompt
+```
+
+**For Claude Code Commands:**
+```bash
+# Install with Claude Code commands (prompts if CLI detected)
+python install.py --install-claude-commands
+
+# Skip the interactive Claude Code commands prompt
+python install.py --skip-claude-commands-prompt
 ```
 
 ### 🧠 What the Installer Does
@@ -409,6 +426,25 @@ For detailed instructions on how to interact with the memory service in Claude D
 The memory service is invoked through natural language commands in your conversations with Claude. For example:
 - To store: "Please remember that my project deadline is May 15th."
 - To retrieve: "Do you remember what I told you about my project deadline?"
+
+### Claude Code Commands Usage
+With the optional Claude Code commands installed, you can also use direct command syntax:
+```bash
+# Store information with context
+claude /memory-store "Important architectural decision about database backend"
+
+# Recall memories by time
+claude /memory-recall "what did we decide about the database last week?"
+
+# Search by tags or content
+claude /memory-search --tags "architecture,database"
+
+# Capture current session context
+claude /memory-context --summary "Development planning session"
+
+# Check service health
+claude /memory-health
+```
 - To delete: "Please forget what I told you about my address."
 
 See the [Invocation Guide](docs/guides/invocation_guide.md) for a complete list of commands and detailed usage examples.

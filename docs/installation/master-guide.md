@@ -147,6 +147,13 @@ python install.py --storage-backend auto_detect
 | `--multi-client` | Enable shared memory access | `python install.py --multi-client` |
 | `--claude-only` | Configure for Claude Desktop only | `python install.py --claude-only` |
 
+### Claude Code Integration (v2.2.0)
+
+| Option | Description | Example |
+|--------|-------------|---------|
+| `--install-claude-commands` | Install conversational memory commands | `python install.py --install-claude-commands` |
+| `--skip-claude-commands-prompt` | Skip interactive commands installation prompt | `python install.py --skip-claude-commands-prompt` |
+
 ## Platform-Specific Installation
 
 - **Windows**: See [windows-setup.md](../platforms/windows.md)
