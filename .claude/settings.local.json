@@ -68,7 +68,18 @@
       "Bash(MCP_MEMORY_STORAGE_BACKEND=sqlite_vec timeout 10s uv run memory --debug)",
       "Bash(MCP_MEMORY_STORAGE_BACKEND=sqlite_vec timeout 10s python -m src.mcp_memory_service.server --debug)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(export MCP_CONSOLIDATION_ENABLED=true)",
+      "Bash(export MCP_MDNS_ENABLED=true)",
+      "Bash(export MCP_HTTPS_ENABLED=true)",
+      "Bash(export MCP_MDNS_SERVICE_NAME=\"MCP Memory Service - Consolidated\")",
+      "Bash(export MCP_HTTP_ENABLED=true)",
+      "Bash(export:*)",
+      "Bash(export MCP_HTTP_PORT=8000)",
+      "Bash(export MCP_API_KEY=\"test-key-123\")",
+      "Bash(sudo ufw:*)",
+      "Bash(./install_service.sh:*)",
+      "Bash(sudo systemctl status:*)"
     ],
     "deny": []
   },
