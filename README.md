@@ -701,6 +701,39 @@ MCP_MEMORY_MODEL_NAME: Override the default embedding model
 MCP_MEMORY_BATCH_SIZE: Override the default batch size
 ```
 
+## 🚀 Service Installation (NEW!)
+
+Install MCP Memory Service as a native system service for automatic startup:
+
+### Cross-Platform Service Installer
+
+```bash
+# Install as a service (auto-detects OS)
+python install_service.py
+
+# Start the service
+python install_service.py --start
+
+# Check service status
+python install_service.py --status
+
+# Stop the service
+python install_service.py --stop
+
+# Uninstall the service
+python install_service.py --uninstall
+```
+
+The installer provides:
+- ✅ **Automatic OS detection** (Windows, macOS, Linux)
+- ✅ **Native service integration** (systemd, LaunchAgent, Windows Service)
+- ✅ **Automatic startup** on boot/login
+- ✅ **Service management commands**
+- ✅ **Secure API key generation**
+- ✅ **Platform-specific optimizations**
+
+For detailed instructions, see the [Service Installation Guide](docs/guides/service-installation.md).
+
 ## Hardware Compatibility
 
 | Platform | Architecture | Accelerator | Status | Notes |
