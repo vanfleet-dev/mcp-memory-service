@@ -71,6 +71,7 @@ claude /memory-health
 - **Graceful fallbacks** for limited hardware resources
 
 ### 🔗 Integration & Coordination
+- **🆕 Modern Dashboard UI (v3.3.0)** - Professional web interface with live stats and interactive endpoint documentation
 - **🆕 Claude Code Commands (v2.2.0)** - Conversational memory commands following CCPlugins pattern
 - **🆕 Multi-client coordination** for Claude Desktop + Claude Code concurrent access
 - **🆕 Intelligent coordination modes** with automatic WAL/HTTP detection
@@ -80,6 +81,21 @@ claude /memory-health
 - Environment variable-based configuration
 
 ### Recent Enhancements
+
+#### v3.3.0 - Modern Dashboard UI
+- ✅ **Professional Web Interface**: Modern gradient design with card-based layout
+- ✅ **Live Statistics**: Real-time memory count, model info, server status, and response times
+- ✅ **Interactive API Documentation**: Organized endpoint cards with direct links to API docs
+- ✅ **Tech Stack Display**: Visual representation of underlying technologies
+- ✅ **Mobile Responsive**: Optimized for desktop and mobile devices
+- ✅ **Auto-Refresh**: Live stats update every 30 seconds automatically
+
+![MCP Memory Service Dashboard](docs/images/dashboard-v3.3.0.png)
+
+**Access the Dashboard:**
+- Local: `http://localhost:8000`
+- mDNS: `http://mcp-memory-service.local:8000`
+- API Docs: `http://localhost:8000/api/docs`
 
 #### v2.2.0 - Claude Code Commands Integration
 - **5 conversational commands** for direct memory operations: `/memory-store`, `/memory-recall`, `/memory-search`, `/memory-context`, `/memory-health`
