@@ -90,7 +90,8 @@ claude /memory-health
 - ✅ **Mobile Responsive**: Optimized for desktop and mobile devices
 - ✅ **Auto-Refresh**: Live stats update every 30 seconds automatically
 
-![MCP Memory Service Dashboard](docs/images/dashboard-v3.3.0.png)
+<!-- Screenshot of the modern dashboard will be added here -->
+*Dashboard screenshot coming soon - shows modern gradient design with live stats, interactive endpoint cards, and tech stack badges*
 
 **Access the Dashboard:**
 - Local: `http://localhost:8000`
