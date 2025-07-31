@@ -483,7 +483,7 @@ def create_app() -> FastAPI:
                         </div>
                     </div>
                     <div class="version-badge">
-                        <span>✅</span> v3.3.0 - Latest Release
+                        <span>✅</span> v3.3.1 - Latest Release
                     </div>
                 </header>
                 
