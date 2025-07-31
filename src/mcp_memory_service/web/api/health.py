@@ -46,6 +46,7 @@ class DetailedHealthResponse(BaseModel):
     storage: Dict[str, Any]
     system: Dict[str, Any]
     performance: Dict[str, Any]
+    statistics: Dict[str, Any] = None
 
 
 # Track startup time for uptime calculation
@@ -93,11 +94,15 @@ async def detailed_health_check(storage: SqliteVecMemoryStorage = Depends(get_st
             "status": "connected"
         }
         
-        # Try to get memory count (basic connectivity test)
+        # Try to get detailed statistics from storage
         try:
-            # This would need to be implemented in the storage class
-            # For now, just mark as accessible
-            storage_info["accessible"] = True
+            stats = storage.get_stats()
+            if "error" not in stats:
+                storage_info.update(stats)
+                storage_info["accessible"] = True
+            else:
+                storage_info["accessible"] = False
+                storage_info["stats_error"] = stats["error"]
         except Exception as e:
             storage_info["accessible"] = False
             storage_info["error"] = str(e)
@@ -115,13 +120,24 @@ async def detailed_health_check(storage: SqliteVecMemoryStorage = Depends(get_st
         "uptime_formatted": format_uptime(time.time() - _startup_time)
     }
     
+    # Extract statistics for separate field if available
+    statistics = None
+    if "total_memories" in storage_info:
+        statistics = {
+            "total_memories": storage_info.get("total_memories", 0),
+            "unique_tags": storage_info.get("unique_tags", 0),
+            "database_size_mb": storage_info.get("database_size_mb", 0),
+            "backend": storage_info.get("backend", "sqlite-vec")
+        }
+    
     return DetailedHealthResponse(
         status="healthy",
         timestamp=datetime.utcnow().isoformat(),
         uptime_seconds=time.time() - _startup_time,
         storage=storage_info,
         system=system_info,
-        performance=performance_info
+        performance=performance_info,
+        statistics=statistics
     )
 
 
