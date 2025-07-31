@@ -88,12 +88,41 @@ This will check:
 For existing installations:
 
 1. Update dependencies: `uv pip install -e .`
-2. Existing SQLite databases may need to be recreated if they have mismatched dimensions
-3. Any memories stored without embeddings will not appear in semantic search results
+2. Use the provided migration tools to save existing memories:
+
+### Option 1: Quick Repair (Try First)
+For databases with missing embeddings but correct schema:
+
+```bash
+python3 scripts/repair_sqlite_vec_embeddings.py /path/to/your/sqlite_vec.db
+```
+
+This will:
+- Analyze your database
+- Generate missing embeddings
+- Verify search functionality
+
+### Option 2: Full Migration (If Repair Fails)
+For databases with dimension mismatches or schema issues:
+
+```bash
+python3 scripts/migrate_sqlite_vec_embeddings.py /path/to/your/sqlite_vec.db
+```
+
+This will:
+- Create a backup of your database
+- Extract all memories
+- Create a new database with correct schema
+- Regenerate all embeddings
+- Restore all memories
+
+**Important**: The migration creates a timestamped backup before making any changes.
 
 ## Future Improvements
 
-1. Add migration script for existing databases
+1. ~~Add migration script for existing databases~~ ✓ Done
 2. Add batch embedding generation for better performance
-3. Add embedding regeneration capability for existing memories
+3. ~~Add embedding regeneration capability for existing memories~~ ✓ Done
 4. Implement better rowid synchronization between tables
+5. Add automatic detection and repair on startup
+6. Add embedding model versioning to handle model changes
