@@ -146,6 +146,9 @@ class SqliteVecMemoryStorage(MemoryStorage):
             if not SQLITE_VEC_AVAILABLE:
                 raise ImportError("sqlite-vec is not available. Install with: pip install sqlite-vec")
             
+            if not SENTENCE_TRANSFORMERS_AVAILABLE:
+                raise ImportError("sentence-transformers is not available. Install with: pip install sentence-transformers torch")
+            
             # Connect to database
             self.conn = sqlite3.connect(self.db_path)
             self.conn.enable_load_extension(True)
@@ -201,7 +204,10 @@ class SqliteVecMemoryStorage(MemoryStorage):
                 )
             ''')
             
-            # Create virtual table for vector embeddings
+            # Initialize embedding model BEFORE creating vector table
+            await self._initialize_embedding_model()
+            
+            # Now create virtual table with correct dimensions
             self.conn.execute(f'''
                 CREATE VIRTUAL TABLE IF NOT EXISTS memory_embeddings USING vec0(
                     content_embedding FLOAT[{self.embedding_dimension}]
@@ -213,10 +219,7 @@ class SqliteVecMemoryStorage(MemoryStorage):
             self.conn.execute('CREATE INDEX IF NOT EXISTS idx_created_at ON memories(created_at)')
             self.conn.execute('CREATE INDEX IF NOT EXISTS idx_memory_type ON memories(memory_type)')
             
-            # Initialize embedding model
-            await self._initialize_embedding_model()
-            
-            logger.info("SQLite-vec storage initialized successfully")
+            logger.info(f"SQLite-vec storage initialized successfully with embedding dimension: {self.embedding_dimension}")
             
         except Exception as e:
             error_msg = f"Failed to initialize SQLite-vec storage: {str(e)}"
@@ -230,8 +233,7 @@ class SqliteVecMemoryStorage(MemoryStorage):
         
         try:
             if not SENTENCE_TRANSFORMERS_AVAILABLE:
-                logger.warning("Sentence transformers not available. Embeddings will not work.")
-                return
+                raise RuntimeError("Sentence transformers not available. Install with: pip install sentence-transformers torch")
             
             # Check cache first
             cache_key = self.embedding_model_name
@@ -267,8 +269,7 @@ class SqliteVecMemoryStorage(MemoryStorage):
     def _generate_embedding(self, text: str) -> List[float]:
         """Generate embedding for text."""
         if not self.embedding_model:
-            logger.warning("No embedding model available")
-            return [0.0] * self.embedding_dimension
+            raise RuntimeError("No embedding model available. Ensure sentence-transformers is installed and model is loaded.")
         
         try:
             # Check cache first
@@ -281,6 +282,17 @@ class SqliteVecMemoryStorage(MemoryStorage):
             embedding = self.embedding_model.encode([text], convert_to_numpy=True)[0]
             embedding_list = embedding.tolist()
             
+            # Validate embedding
+            if not embedding_list:
+                raise ValueError("Generated embedding is empty")
+            
+            if len(embedding_list) != self.embedding_dimension:
+                raise ValueError(f"Embedding dimension mismatch: expected {self.embedding_dimension}, got {len(embedding_list)}")
+            
+            # Validate values are finite
+            if not all(isinstance(x, (int, float)) and not (x != x) and x != float('inf') and x != float('-inf') for x in embedding_list):
+                raise ValueError("Embedding contains invalid values (NaN or infinity)")
+            
             # Cache the result
             if self.enable_cache:
                 _EMBEDDING_CACHE[cache_key] = embedding_list
@@ -289,7 +301,7 @@ class SqliteVecMemoryStorage(MemoryStorage):
             
         except Exception as e:
             logger.error(f"Failed to generate embedding: {str(e)}")
-            return [0.0] * self.embedding_dimension
+            raise RuntimeError(f"Failed to generate embedding: {str(e)}") from e
     
     async def store(self, memory: Memory) -> Tuple[bool, str]:
         """Store a memory in the SQLite-vec database."""
@@ -305,8 +317,12 @@ class SqliteVecMemoryStorage(MemoryStorage):
             if cursor.fetchone():
                 return False, "Duplicate content detected"
             
-            # Generate embedding
-            embedding = self._generate_embedding(memory.content)
+            # Generate and validate embedding
+            try:
+                embedding = self._generate_embedding(memory.content)
+            except Exception as e:
+                logger.error(f"Failed to generate embedding for memory {memory.content_hash}: {str(e)}")
+                return False, f"Failed to generate embedding: {str(e)}"
             
             # Prepare metadata
             tags_str = ",".join(memory.tags) if memory.tags else ""
@@ -336,13 +352,24 @@ class SqliteVecMemoryStorage(MemoryStorage):
             
             # Insert into embeddings table with retry logic
             def insert_embedding():
-                self.conn.execute('''
-                    INSERT INTO memory_embeddings (rowid, content_embedding)
-                    VALUES (?, ?)
-                ''', (
-                    memory_rowid,
-                    serialize_float32(embedding)
-                ))
+                # Check if we can insert with specific rowid
+                try:
+                    self.conn.execute('''
+                        INSERT INTO memory_embeddings (rowid, content_embedding)
+                        VALUES (?, ?)
+                    ''', (
+                        memory_rowid,
+                        serialize_float32(embedding)
+                    ))
+                except sqlite3.Error as e:
+                    # If rowid insert fails, try without specifying rowid
+                    logger.warning(f"Failed to insert with rowid {memory_rowid}: {e}. Trying without rowid.")
+                    self.conn.execute('''
+                        INSERT INTO memory_embeddings (content_embedding)
+                        VALUES (?)
+                    ''', (
+                        serialize_float32(embedding),
+                    ))
             
             await self._execute_with_retry(insert_embedding)
             
@@ -370,16 +397,29 @@ class SqliteVecMemoryStorage(MemoryStorage):
                 return []
             
             # Generate query embedding
-            query_embedding = self._generate_embedding(query)
+            try:
+                query_embedding = self._generate_embedding(query)
+            except Exception as e:
+                logger.error(f"Failed to generate query embedding: {str(e)}")
+                return []
+            
+            # First, check if embeddings table has data
+            cursor = self.conn.execute('SELECT COUNT(*) FROM memory_embeddings')
+            embedding_count = cursor.fetchone()[0]
+            
+            if embedding_count == 0:
+                logger.warning("No embeddings found in database. Memories may have been stored without embeddings.")
+                return []
             
             # Perform vector similarity search using JOIN with retry logic
             def search_memories():
-                return self.conn.execute('''
+                # Try direct rowid join first
+                cursor = self.conn.execute('''
                     SELECT m.content_hash, m.content, m.tags, m.memory_type, m.metadata,
                            m.created_at, m.updated_at, m.created_at_iso, m.updated_at_iso, 
                            e.distance
                     FROM memories m
-                    JOIN (
+                    INNER JOIN (
                         SELECT rowid, distance 
                         FROM memory_embeddings 
                         WHERE content_embedding MATCH ?
@@ -388,11 +428,21 @@ class SqliteVecMemoryStorage(MemoryStorage):
                     ) e ON m.id = e.rowid
                     ORDER BY e.distance
                 ''', (serialize_float32(query_embedding), n_results))
+                
+                # Check if we got results
+                results = cursor.fetchall()
+                if not results:
+                    # Log debug info
+                    logger.debug("No results from vector search. Checking database state...")
+                    mem_count = self.conn.execute('SELECT COUNT(*) FROM memories').fetchone()[0]
+                    logger.debug(f"Memories table has {mem_count} rows, embeddings table has {embedding_count} rows")
+                
+                return results
             
-            cursor = await self._execute_with_retry(search_memories)
+            search_results = await self._execute_with_retry(search_memories)
             
             results = []
-            for row in cursor.fetchall():
+            for row in search_results:
                 try:
                     # Parse row data
                     content_hash, content, tags_str, memory_type, metadata_str = row[:5]
