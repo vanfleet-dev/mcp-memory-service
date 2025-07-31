@@ -97,6 +97,30 @@ claude /memory-health
 - mDNS: `http://mcp-memory-service.local:8000`
 - API Docs: `http://localhost:8000/api/docs`
 
+#### v3.2.0 - SQLite-vec Embedding Fixes & Diagnostics
+- ✅ **Zero Vector Repair**: Comprehensive diagnostic and repair tools for corrupted embeddings
+- ✅ **Enhanced Error Handling**: Robust validation and initialization for SQLite-vec backend
+- ✅ **Migration Tools**: Safe migration utilities that preserve existing memories
+- ✅ **Dependency Management**: Moved core ML dependencies to main requirements for reliability
+- ✅ **Database Diagnostics**: Advanced tools for analyzing and fixing embedding issues
+- ✅ **HTTP API Improvements**: Fixed search endpoint compatibility and error handling
+
+#### v3.1.0 - Cross-Platform Service Installation
+- ✅ **Native Service Support**: Install as system service on Windows, macOS, and Linux
+- ✅ **Auto-Startup Configuration**: Automatic boot/login startup with service management
+- ✅ **mDNS Port Flexibility**: Clean access via port 443 without Pi-hole conflicts
+- ✅ **Service Management Commands**: Start, stop, status, and uninstall operations
+
+#### v3.0.0 - Autonomous Multi-Client Memory Service (MAJOR RELEASE)
+- 🧠 **Dream-Inspired Consolidation**: Autonomous memory processing with exponential decay and creative association discovery
+- 🌐 **Multi-Client Architecture**: Production FastAPI HTTPS server with automatic SSL certificates
+- 🔍 **mDNS Service Discovery**: Zero-configuration networking with `_mcp-memory._tcp.local.` advertisement
+- 📡 **Server-Sent Events**: Real-time updates with 30-second heartbeat for live synchronization  
+- 🚀 **Production Deployment**: Complete systemd service integration with professional management scripts
+- 🔒 **Security**: API key authentication and user-space execution for enhanced security
+- 📖 **Documentation Overhaul**: Comprehensive production setup and service lifecycle guides
+- ⚡ **Performance**: Mathematical consolidation using existing embeddings (no external AI dependencies)
+
 #### v2.2.0 - Claude Code Commands Integration
 - **5 conversational commands** for direct memory operations: `/memory-store`, `/memory-recall`, `/memory-search`, `/memory-context`, `/memory-health`
 - **Optional installation** integrated into main installer with intelligent prompting
