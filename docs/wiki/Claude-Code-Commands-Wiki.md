@@ -76,7 +76,7 @@ ls ~/.claude/commands/memory-*.md
 ### Installation Options
 - `--skip-claude-commands-prompt` - Skip interactive prompts
 - `--install-claude-commands` - Force install commands
-- See [Installation Master Guide](../docs/installation/master-guide.md) for all options
+- See [Installation Master Guide](../installation/master-guide.md) for all options
 
 ---
 
@@ -389,7 +389,7 @@ claude /memory-recall "what did I learn about Docker last month?"
 - Commands for quick operations, MCP server for deep integration
 - No conflicts or data compatibility issues
 
-See the complete [Commands vs MCP Server Guide](../docs/guides/commands-vs-mcp-server.md) for detailed comparison.
+See the complete [Commands vs MCP Server Guide](../guides/commands-vs-mcp-server.md) for detailed comparison.
 
 ---
 

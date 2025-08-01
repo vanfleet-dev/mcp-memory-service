@@ -22,7 +22,7 @@ def find_markdown_files(root_dir: str) -> List[Path]:
     
     for path in root.rglob("*.md"):
         # Skip venv and node_modules
-        if ".venv" in path.parts or "node_modules" in path.parts:
+        if ".venv" in path.parts or "venv" in path.parts or "node_modules" in path.parts:
             continue
         md_files.append(path)
     

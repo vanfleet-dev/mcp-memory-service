@@ -410,5 +410,4 @@ mDNS service discovery significantly simplifies MCP Memory Service deployment by
 
 For more information, see:
 - [Multi-Client Server Deployment Guide](../deployment/multi-client-server.md)
-- [HTTPS Configuration](../security/https-setup.md)
-- [Network Troubleshooting](../troubleshooting/network-issues.md)
+- [General Troubleshooting](../troubleshooting/general.md)
