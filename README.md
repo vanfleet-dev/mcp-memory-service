@@ -732,6 +732,12 @@ MAX_RESULTS_PER_QUERY: Maximum results per query (default: 10)
 BACKUP_RETENTION_DAYS: Number of days to keep backups (default: 7)
 LOG_LEVEL: Logging level (default: INFO)
 
+# HTTP API and Authentication
+MCP_API_KEY: API key for HTTP authentication (optional, no default)
+MCP_HTTP_ENABLED: Enable HTTP server mode (default: false)
+MCP_HTTP_HOST: HTTP server bind address (default: 127.0.0.1)
+MCP_HTTP_PORT: HTTP server port (default: 8000)
+
 # Hardware and backend configuration
 MCP_MEMORY_STORAGE_BACKEND: Storage backend to use (chromadb or sqlite_vec)
 MCP_MEMORY_SQLITE_PATH: Path to SQLite-vec database file
@@ -741,6 +747,20 @@ MCP_MEMORY_USE_DIRECTML: Use DirectML for Windows acceleration (default: 0)
 MCP_MEMORY_MODEL_NAME: Override the default embedding model
 MCP_MEMORY_BATCH_SIZE: Override the default batch size
 ```
+
+### API Key Security
+
+For production deployments with HTTP API enabled, always set a secure API key:
+
+```bash
+# Generate a secure API key
+export MCP_API_KEY="$(openssl rand -base64 32)"
+
+# Or use your preferred method
+export MCP_API_KEY="your-secure-api-key-here"
+```
+
+The API key is required in the `Authorization: Bearer <key>` header for all HTTP requests when set.
 
 ## 🚀 Service Installation (NEW!)
 

@@ -81,8 +81,23 @@ Run tests with coverage: `pytest --cov=src/mcp_memory_service tests/`
 Key configuration:
 - `MCP_MEMORY_CHROMA_PATH`: ChromaDB storage location (default: `~/.mcp_memory_chroma`)
 - `MCP_MEMORY_BACKUPS_PATH`: Backup location (default: `~/.mcp_memory_backups`)
+- `MCP_API_KEY`: API key for HTTP authentication (optional, no default)
 - `LOG_LEVEL`: Logging verbosity (DEBUG, INFO, WARNING, ERROR)
 - Platform-specific: `PYTORCH_ENABLE_MPS_FALLBACK`, `MCP_MEMORY_USE_ONNX`
+
+#### API Key Configuration
+
+The `MCP_API_KEY` environment variable enables HTTP API authentication:
+
+```bash
+# Generate a secure API key
+export MCP_API_KEY="$(openssl rand -base64 32)"
+
+# Or set manually
+export MCP_API_KEY="your-secure-api-key-here"
+```
+
+When set, all HTTP API requests require the `Authorization: Bearer <api_key>` header. This is essential for production deployments and multi-client setups.
 
 ### Platform Support
 
