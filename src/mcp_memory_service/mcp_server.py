@@ -38,9 +38,27 @@ from .config import (
     CONSOLIDATION_ENABLED, EMBEDDING_MODEL_NAME
 )
 from .storage.base import MemoryStorage
-from .storage.chroma import ChromaStorage
-from .storage.sqlite_vec import SqliteVecStorage
-from .models.memory import Memory, MemoryMetadata
+
+def get_storage_backend():
+    """Dynamically select and import storage backend based on configuration and availability."""
+    backend = STORAGE_BACKEND.lower()
+    
+    if backend == "sqlite-vec" or backend == "sqlite_vec":
+        from .storage.sqlite_vec import SqliteVecStorage
+        return SqliteVecStorage
+    elif backend == "chroma":
+        try:
+            from .storage.chroma import ChromaStorage
+            return ChromaStorage
+        except ImportError:
+            logger.warning("ChromaDB not available, falling back to SQLite-vec")
+            from .storage.sqlite_vec import SqliteVecStorage
+            return SqliteVecStorage
+    else:
+        logger.warning(f"Unknown storage backend '{backend}', defaulting to SQLite-vec")
+        from .storage.sqlite_vec import SqliteVecStorage
+        return SqliteVecStorage
+from .models.memory import Memory
 from .utils.embedding import EmbeddingManager
 from .consolidation.consolidator import MemoryConsolidator
 
@@ -60,14 +78,16 @@ async def mcp_server_lifespan(server: FastMCP) -> AsyncIterator[MCPServerContext
     """Manage MCP server lifecycle with proper resource initialization and cleanup."""
     logger.info("Initializing MCP Memory Service components...")
     
-    # Initialize storage backend based on configuration
-    if STORAGE_BACKEND.lower() == "sqlite-vec":
-        storage = SqliteVecStorage(
+    # Initialize storage backend based on configuration and availability
+    StorageClass = get_storage_backend()
+    
+    if StorageClass.__name__ == "SqliteVecStorage":
+        storage = StorageClass(
             db_path=CHROMA_PATH / "memory.db",
             embedding_manager=None  # Will be set after creation
         )
-    else:
-        storage = ChromaStorage(
+    else:  # ChromaStorage
+        storage = StorageClass(
             path=str(CHROMA_PATH),
             collection_name=COLLECTION_METADATA.get("name", "memories")
         )
