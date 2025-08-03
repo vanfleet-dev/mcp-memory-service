@@ -44,23 +44,33 @@ def get_storage_backend():
     backend = STORAGE_BACKEND.lower()
     
     if backend == "sqlite-vec" or backend == "sqlite_vec":
-        from .storage.sqlite_vec import SqliteVecStorage
-        return SqliteVecStorage
+        try:
+            from .storage.sqlite_vec import SqliteVecStorage
+            return SqliteVecStorage
+        except ImportError as e:
+            logger.error(f"Failed to import SQLite-vec storage: {e}")
+            raise
     elif backend == "chroma":
         try:
             from .storage.chroma import ChromaStorage
             return ChromaStorage
         except ImportError:
             logger.warning("ChromaDB not available, falling back to SQLite-vec")
-            from .storage.sqlite_vec import SqliteVecStorage
-            return SqliteVecStorage
+            try:
+                from .storage.sqlite_vec import SqliteVecStorage
+                return SqliteVecStorage
+            except ImportError as e:
+                logger.error(f"Failed to import fallback SQLite-vec storage: {e}")
+                raise
     else:
         logger.warning(f"Unknown storage backend '{backend}', defaulting to SQLite-vec")
-        from .storage.sqlite_vec import SqliteVecStorage
-        return SqliteVecStorage
+        try:
+            from .storage.sqlite_vec import SqliteVecStorage
+            return SqliteVecStorage
+        except ImportError as e:
+            logger.error(f"Failed to import default SQLite-vec storage: {e}")
+            raise
 from .models.memory import Memory
-from .utils.embedding import EmbeddingManager
-from .consolidation.consolidator import MemoryConsolidator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)  # Default to INFO level
@@ -70,8 +80,6 @@ logger = logging.getLogger(__name__)
 class MCPServerContext:
     """Application context for the MCP server with all required components."""
     storage: MemoryStorage
-    embedding_manager: EmbeddingManager
-    consolidator: Optional[MemoryConsolidator] = None
 
 @asynccontextmanager
 async def mcp_server_lifespan(server: FastMCP) -> AsyncIterator[MCPServerContext]:
@@ -92,26 +100,12 @@ async def mcp_server_lifespan(server: FastMCP) -> AsyncIterator[MCPServerContext
             collection_name=COLLECTION_METADATA.get("name", "memories")
         )
     
-    # Initialize embedding manager
-    embedding_manager = EmbeddingManager()
-    
-    # Set embedding manager for SQLite storage if needed
-    if hasattr(storage, 'embedding_manager'):
-        storage.embedding_manager = embedding_manager
-    
-    # Initialize consolidator if enabled
-    consolidator = None
-    if CONSOLIDATION_ENABLED:
-        consolidator = MemoryConsolidator(storage)
-    
     # Initialize storage backend
     await storage.initialize()
     
     try:
         yield MCPServerContext(
-            storage=storage,
-            embedding_manager=embedding_manager,
-            consolidator=consolidator
+            storage=storage
         )
     finally:
         # Cleanup on shutdown
@@ -121,7 +115,9 @@ async def mcp_server_lifespan(server: FastMCP) -> AsyncIterator[MCPServerContext
 
 # Create FastMCP server instance
 mcp = FastMCP(
-    name="MCP Memory Service",
+    name="MCP Memory Service", 
+    host="0.0.0.0",  # Listen on all interfaces for remote access
+    port=8000,       # Default port
     lifespan=mcp_server_lifespan,
     stateless_http=True  # Enable stateless HTTP for Claude Code compatibility
 )
@@ -154,15 +150,11 @@ async def store_memory(
         storage = ctx.request_context.lifespan_context.storage
         
         # Create memory object
-        memory_metadata = MemoryMetadata(
-            tags=tags or [],
-            memory_type=memory_type,
-            **(metadata or {})
-        )
-        
         memory = Memory(
             content=content,
-            metadata=memory_metadata
+            tags=tags or [],
+            memory_type=memory_type,
+            metadata=metadata or {}
         )
         
         # Store memory
@@ -373,11 +365,7 @@ def main():
     logger.info(f"Data path: {CHROMA_PATH}")
     
     # Run server with streamable HTTP transport
-    mcp.run(
-        transport="streamable-http",
-        host=host,
-        port=port
-    )
+    mcp.run("streamable-http")
 
 if __name__ == "__main__":
     main()
