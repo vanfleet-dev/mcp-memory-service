@@ -37,6 +37,31 @@ claude /memory-health
 
 ➡️ [**Quick Start Guide**](docs/guides/claude-code-quickstart.md) | [**Full Integration Guide**](docs/guides/claude-code-integration.md)
 
+## 🚀 NEW: FastAPI MCP Server (v4.0.0-alpha.1)
+
+**Native MCP protocol server eliminating Node.js SSL issues!**
+
+```bash
+# Dual-service deployment
+./deploy_dual_services.sh
+
+# Access points
+FastMCP Protocol: http://memory.local:8000/mcp    # For MCP clients
+HTTP Dashboard:   http://memory.local:8080/       # Web interface
+```
+
+### MCP Client Compatibility
+
+| Client | Status | Notes |
+|--------|--------|-------|
+| ✅ Standard MCP Libraries | Working | Python `mcp`, JavaScript SDK |
+| ✅ Claude Desktop | Working | With proper MCP configuration |
+| ⚠️ Claude Code | Limited | Use Claude Commands instead ([compatibility guide](CLAUDE_CODE_COMPATIBILITY.md)) |
+| ✅ Custom MCP Clients | Working | Full protocol compliance |
+| ✅ HTTP API | Working | REST interface on port 8080 |
+
+➡️ [**Dual-Service Guide**](DUAL_SERVICE_DEPLOYMENT.md) | [**Claude Code Compatibility**](CLAUDE_CODE_COMPATIBILITY.md) | [**Migration Log**](MIGRATION_LOG.md)
+
 ---
 
 ## Features
