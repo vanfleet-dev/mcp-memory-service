@@ -1827,23 +1827,23 @@ def should_offer_multi_client_setup(args, final_backend):
     # Always beneficial for development environments - any future MCP client can benefit
     return True
 
-def configure_detected_clients(clients, system_info):
+def configure_detected_clients(clients, system_info, storage_backend="sqlite_vec"):
     """Configure each detected client for multi-client access."""
     success_count = 0
     
     for client_type, config_path in clients.items():
         try:
             if client_type == 'claude_desktop':
-                if configure_claude_desktop_multi_client(config_path, system_info):
+                if configure_claude_desktop_multi_client(config_path, system_info, storage_backend):
                     success_count += 1
             elif client_type == 'vscode_mcp' or client_type == 'cursor':
-                if configure_vscode_like_multi_client(config_path, client_type):
+                if configure_vscode_like_multi_client(config_path, client_type, storage_backend):
                     success_count += 1
             elif client_type == 'continue':
-                if configure_continue_multi_client(config_path):
+                if configure_continue_multi_client(config_path, storage_backend):
                     success_count += 1
             elif client_type == 'generic_mcp':
-                if configure_generic_mcp_multi_client(config_path):
+                if configure_generic_mcp_multi_client(config_path, storage_backend):
                     success_count += 1
             elif client_type == 'claude_code':
                 # Claude Code uses project-level .mcp.json, handle separately
@@ -1854,7 +1854,7 @@ def configure_detected_clients(clients, system_info):
     
     return success_count
 
-def configure_claude_desktop_multi_client(config_path, system_info):
+def configure_claude_desktop_multi_client(config_path, system_info, storage_backend="sqlite_vec"):
     """Configure Claude Desktop for multi-client access."""
     try:
         import json
@@ -1870,14 +1870,24 @@ def configure_claude_desktop_multi_client(config_path, system_info):
         # Update memory server configuration with multi-client settings
         repo_path = str(Path.cwd()).replace('\\', '\\\\')  # Escape backslashes for JSON
         
+        # Build environment configuration based on storage backend
+        env_config = {
+            "MCP_MEMORY_STORAGE_BACKEND": storage_backend,
+            "LOG_LEVEL": "INFO"
+        }
+        
+        # Add backend-specific configuration
+        if storage_backend == "sqlite_vec":
+            env_config["MCP_MEMORY_SQLITE_PRAGMAS"] = "busy_timeout=15000,cache_size=20000"
+            # SQLite path will be auto-determined by the service
+        else:  # chromadb
+            # ChromaDB path will be auto-determined by the service
+            pass
+        
         config['mcpServers']['memory'] = {
             "command": UV_EXECUTABLE_PATH or "uv",
             "args": ["--directory", repo_path, "run", "memory"],
-            "env": {
-                "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
-                "MCP_MEMORY_SQLITE_PRAGMAS": "busy_timeout=15000,cache_size=20000",
-                "LOG_LEVEL": "INFO"
-            }
+            "env": env_config
         }
         
         # Write updated configuration
@@ -1891,7 +1901,7 @@ def configure_claude_desktop_multi_client(config_path, system_info):
         print_warning(f"  -> Claude Desktop configuration failed: {e}")
         return False
 
-def configure_vscode_like_multi_client(config_path, client_type):
+def configure_vscode_like_multi_client(config_path, client_type, storage_backend="sqlite_vec"):
     """Configure VS Code or Cursor for multi-client access."""
     try:
         import json
@@ -1902,8 +1912,11 @@ def configure_vscode_like_multi_client(config_path, client_type):
         client_name = "VS Code" if client_type == 'vscode_mcp' else "Cursor"
         print_info(f"  -> {client_name}: MCP extension detected")
         print_info(f"    Add memory server to your MCP extension with these settings:")
-        print_info(f"    - Backend: sqlite_vec")
-        print_info(f"    - Database: shared SQLite-vec database")
+        print_info(f"    - Backend: {storage_backend}")
+        if storage_backend == "sqlite_vec":
+            print_info(f"    - Database: shared SQLite-vec database")
+        else:
+            print_info(f"    - Database: shared ChromaDB database")
         print_info(f"    - See generic configuration below for details")
         return True
         
@@ -1911,7 +1924,7 @@ def configure_vscode_like_multi_client(config_path, client_type):
         print_warning(f"  -> {client_type} configuration failed: {e}")
         return False
 
-def configure_continue_multi_client(config_path):
+def configure_continue_multi_client(config_path, storage_backend="sqlite_vec"):
     """Configure Continue IDE for multi-client access."""
     try:
         import json
@@ -1926,14 +1939,20 @@ def configure_continue_multi_client(config_path):
         
         repo_path = str(Path.cwd())
         
+        # Build environment configuration based on storage backend
+        env_config = {
+            "MCP_MEMORY_STORAGE_BACKEND": storage_backend,
+            "LOG_LEVEL": "INFO"
+        }
+        
+        # Add backend-specific configuration
+        if storage_backend == "sqlite_vec":
+            env_config["MCP_MEMORY_SQLITE_PRAGMAS"] = "busy_timeout=15000,cache_size=20000"
+        
         config['mcpServers']['memory'] = {
             "command": UV_EXECUTABLE_PATH or "uv",
             "args": ["--directory", repo_path, "run", "memory"],
-            "env": {
-                "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
-                "MCP_MEMORY_SQLITE_PRAGMAS": "busy_timeout=15000,cache_size=20000",
-                "LOG_LEVEL": "INFO"
-            }
+            "env": env_config
         }
         
         # Write updated configuration
@@ -1947,7 +1966,7 @@ def configure_continue_multi_client(config_path):
         print_warning(f"  -> Continue IDE configuration failed: {e}")
         return False
 
-def configure_generic_mcp_multi_client(config_path):
+def configure_generic_mcp_multi_client(config_path, storage_backend="sqlite_vec"):
     """Configure generic MCP client for multi-client access."""
     try:
         import json
@@ -1962,14 +1981,20 @@ def configure_generic_mcp_multi_client(config_path):
         
         repo_path = str(Path.cwd())
         
+        # Build environment configuration based on storage backend
+        env_config = {
+            "MCP_MEMORY_STORAGE_BACKEND": storage_backend,
+            "LOG_LEVEL": "INFO"
+        }
+        
+        # Add backend-specific configuration
+        if storage_backend == "sqlite_vec":
+            env_config["MCP_MEMORY_SQLITE_PRAGMAS"] = "busy_timeout=15000,cache_size=20000"
+        
         config['mcpServers']['memory'] = {
             "command": UV_EXECUTABLE_PATH or "uv",
             "args": ["--directory", repo_path, "run", "memory"],
-            "env": {
-                "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
-                "MCP_MEMORY_SQLITE_PRAGMAS": "busy_timeout=15000,cache_size=20000",
-                "LOG_LEVEL": "INFO"
-            }
+            "env": env_config
         }
         
         # Write updated configuration
@@ -2106,7 +2131,7 @@ def setup_shared_environment():
         print_warning(f"  -> Environment setup failed: {e}")
         return False
 
-def provide_generic_configuration():
+def provide_generic_configuration(storage_backend="sqlite_vec"):
     """Provide configuration instructions for any MCP client."""
     print_info("")
     print_info("Universal MCP Client Configuration:")
@@ -2128,18 +2153,27 @@ def provide_generic_configuration():
     
     print_info("")
     print_info("Environment Variables:")
-    print_info("  MCP_MEMORY_STORAGE_BACKEND=sqlite_vec")
-    print_info("  MCP_MEMORY_SQLITE_PRAGMAS=busy_timeout=15000,cache_size=20000")
+    print_info(f"  MCP_MEMORY_STORAGE_BACKEND={storage_backend}")
+    if storage_backend == "sqlite_vec":
+        print_info("  MCP_MEMORY_SQLITE_PRAGMAS=busy_timeout=15000,cache_size=20000")
     print_info("  LOG_LEVEL=INFO")
     
     print_info("")
     print_info("Shared Database Location:")
-    if platform.system() == 'Windows':
-        print_info("  %LOCALAPPDATA%\\mcp-memory\\sqlite_vec.db")
-    elif platform.system() == 'Darwin':
-        print_info("  ~/Library/Application Support/mcp-memory/sqlite_vec.db")
-    else:
-        print_info("  ~/.local/share/mcp-memory/sqlite_vec.db")
+    if storage_backend == "sqlite_vec":
+        if platform.system() == 'Windows':
+            print_info("  %LOCALAPPDATA%\\mcp-memory\\sqlite_vec.db")
+        elif platform.system() == 'Darwin':
+            print_info("  ~/Library/Application Support/mcp-memory/sqlite_vec.db")
+        else:
+            print_info("  ~/.local/share/mcp-memory/sqlite_vec.db")
+    else:  # chromadb
+        if platform.system() == 'Windows':
+            print_info("  %LOCALAPPDATA%\\mcp-memory\\chroma_db")
+        elif platform.system() == 'Darwin':
+            print_info("  ~/Library/Application Support/mcp-memory/chroma_db")
+        else:
+            print_info("  ~/.local/share/mcp-memory/chroma_db")
     
     print_info("")
     print_info("Claude Code Project Configuration (.mcp.json):")
@@ -2149,15 +2183,16 @@ def provide_generic_configuration():
     print_info(f"        \"command\": \"{UV_EXECUTABLE_PATH or 'uv'}\",")
     print_info(f"        \"args\": [\"--directory\", \"{repo_path}\", \"run\", \"memory\"],")
     print_info("        \"env\": {")
-    print_info("          \"MCP_MEMORY_STORAGE_BACKEND\": \"sqlite_vec\",")
-    print_info("          \"MCP_MEMORY_SQLITE_PRAGMAS\": \"busy_timeout=15000,cache_size=20000\",")
+    print_info(f"          \"MCP_MEMORY_STORAGE_BACKEND\": \"{storage_backend}\",")
+    if storage_backend == "sqlite_vec":
+        print_info("          \"MCP_MEMORY_SQLITE_PRAGMAS\": \"busy_timeout=15000,cache_size=20000\",")
     print_info("          \"LOG_LEVEL\": \"INFO\"")
     print_info("        }")
     print_info("      }")
     print_info("    }")
     print_info("  }")
 
-def setup_universal_multi_client_access(system_info, args):
+def setup_universal_multi_client_access(system_info, args, storage_backend="sqlite_vec"):
     """Configure multi-client access for any MCP-compatible clients."""
     print_step("7", "Configuring Universal Multi-Client Access")
     
@@ -2168,16 +2203,17 @@ def setup_universal_multi_client_access(system_info, args):
     print_info("  • Single source of truth for all your project memories")
     print_info("")
     
-    # Test WAL mode coordination
-    try:
-        import asyncio
-        wal_success = asyncio.run(test_wal_mode_coordination())
-        if not wal_success:
-            print_error("WAL mode coordination test failed")
+    # Test WAL mode coordination only for sqlite_vec
+    if storage_backend == "sqlite_vec":
+        try:
+            import asyncio
+            wal_success = asyncio.run(test_wal_mode_coordination())
+            if not wal_success:
+                print_error("WAL mode coordination test failed")
+                return False
+        except Exception as e:
+            print_error(f"Failed to test WAL mode coordination: {e}")
             return False
-    except Exception as e:
-        print_error(f"Failed to test WAL mode coordination: {e}")
-        return False
     
     # Detect available MCP clients
     detected_clients = detect_mcp_clients()
@@ -2186,13 +2222,13 @@ def setup_universal_multi_client_access(system_info, args):
     
     # Configure each detected client
     print_info("Configuring detected clients...")
-    success_count = configure_detected_clients(detected_clients, system_info)
+    success_count = configure_detected_clients(detected_clients, system_info, storage_backend)
     
     # Set up shared environment variables
     setup_shared_environment()
     
     # Provide generic configuration for manual setup
-    provide_generic_configuration()
+    provide_generic_configuration(storage_backend)
     
     print_info("")
     print_success(f"Multi-client setup complete! {success_count} clients configured automatically.")
@@ -2511,7 +2547,7 @@ def main():
         if args.setup_multi_client:
             # User explicitly requested multi-client setup
             try:
-                setup_universal_multi_client_access(system_info, args)
+                setup_universal_multi_client_access(system_info, args, final_backend)
             except Exception as e:
                 print_error(f"Multi-client setup failed: {e}")
                 print_info("You can set up multi-client access manually using:")
@@ -2535,7 +2571,7 @@ def main():
                 if response in ['y', 'yes']:
                     print_info("")
                     try:
-                        setup_universal_multi_client_access(system_info, args)
+                        setup_universal_multi_client_access(system_info, args, final_backend)
                     except Exception as e:
                         print_error(f"Multi-client setup failed: {e}")
                         print_info("You can set up multi-client access manually using:")
