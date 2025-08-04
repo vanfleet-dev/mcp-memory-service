@@ -14,7 +14,7 @@
 
 """MCP Memory Service initialization."""
 
-__version__ = "4.0.0-beta.1"
+__version__ = "4.0.0"
 
 from .models import Memory, MemoryQueryResult
 from .storage import MemoryStorage
