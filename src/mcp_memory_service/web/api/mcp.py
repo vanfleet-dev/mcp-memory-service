@@ -31,7 +31,7 @@ class MCPRequest(BaseModel):
 class MCPResponse(BaseModel):
     """MCP protocol response structure."""
     jsonrpc: str = "2.0"
-    id: Optional[str] = None
+    id: Optional[Union[str, int]] = None
     result: Optional[Dict[str, Any]] = None
     error: Optional[Dict[str, Any]] = None
 
@@ -187,7 +187,7 @@ async def handle_tool_call(storage, tool_name: str, arguments: Dict[str, Any]) -
         query = arguments.get("query")
         limit = arguments.get("limit", 10)
         
-        results = await storage.search(query=query, limit=limit)
+        results = await storage.retrieve(query=query, n_results=limit)
         
         return {
             "results": [
@@ -195,7 +195,7 @@ async def handle_tool_call(storage, tool_name: str, arguments: Dict[str, Any]) -
                     "content": r.memory.content,
                     "content_hash": r.memory.content_hash,
                     "tags": r.memory.tags,
-                    "similarity_score": r.similarity_score,
+                    "similarity_score": r.relevance_score,
                     "created_at": r.memory.created_at_iso
                 }
                 for r in results
