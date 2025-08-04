@@ -37,17 +37,63 @@ claude /memory-health
 
 ➡️ [**Quick Start Guide**](docs/guides/claude-code-quickstart.md) | [**Full Integration Guide**](docs/guides/claude-code-integration.md)
 
-## 🚀 NEW: FastAPI MCP Server (v4.0.0-alpha.1)
+## 🚀 NEW: Remote MCP Memory Service (v4.0.0)
 
-**Native MCP protocol server eliminating Node.js SSL issues!**
+**Production-ready remote memory service with native MCP-over-HTTP protocol!**
+
+### Remote Deployment
+
+Deploy the memory service on any server for cross-device access:
 
 ```bash
-# Dual-service deployment
-./deploy_dual_services.sh
+# On your server
+git clone https://github.com/doobidoo/mcp-memory-service.git
+cd mcp-memory-service
+python install.py
+python scripts/run_http_server.py
+```
 
-# Access points
-FastMCP Protocol: http://memory.local:8000/mcp    # For MCP clients
-HTTP Dashboard:   http://memory.local:8080/       # Web interface
+**Server Access Points:**
+- **MCP Protocol**: `http://your-server:8000/mcp` (for MCP clients)
+- **Dashboard**: `http://your-server:8000/` (web interface)
+- **API Docs**: `http://your-server:8000/api/docs` (interactive API)
+
+### Claude Code Integration
+
+Connect Claude Code to your remote memory service:
+
+```bash
+# Test MCP connection
+curl -X POST http://your-server:8000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list"
+  }'
+
+# Store memories remotely
+curl -X POST http://your-server:8000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0", 
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "store_memory",
+      "arguments": {
+        "content": "Your memory content",
+        "tags": ["tag1", "tag2"]
+      }
+    }
+  }'
+```
+
+**Key Benefits:**
+- ✅ **Cross-Device Access**: Connect from any device running Claude Code
+- ✅ **Native MCP Protocol**: Standard JSON-RPC 2.0 implementation  
+- ✅ **No Bridge Required**: Direct HTTP/HTTPS connection
+- ✅ **Production Ready**: Proven deployment at scale
 ```
 
 ### MCP Client Compatibility
