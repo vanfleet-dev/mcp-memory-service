@@ -249,8 +249,35 @@ class SqliteVecMemoryStorage(MemoryStorage):
             logger.info(f"Loading embedding model: {self.embedding_model_name}")
             logger.info(f"Using device: {device}")
             
-            # Load model with optimal settings
-            self.embedding_model = SentenceTransformer(self.embedding_model_name, device=device)
+            # Set offline mode to use cached models
+            import os
+            os.environ['HF_HUB_OFFLINE'] = '1'
+            os.environ['TRANSFORMERS_OFFLINE'] = '1'
+            
+            # Try to load from cache first, fallback to direct model name
+            try:
+                # First try loading from Hugging Face cache
+                cache_path = f"/home/hkr/.cache/huggingface/hub/models--sentence-transformers--{self.embedding_model_name.replace('/', '--')}"
+                if os.path.exists(cache_path):
+                    # Find the snapshot directory
+                    snapshots_path = os.path.join(cache_path, "snapshots")
+                    if os.path.exists(snapshots_path):
+                        snapshot_dirs = [d for d in os.listdir(snapshots_path) if os.path.isdir(os.path.join(snapshots_path, d))]
+                        if snapshot_dirs:
+                            model_path = os.path.join(snapshots_path, snapshot_dirs[0])
+                            logger.info(f"Loading model from cache: {model_path}")
+                            self.embedding_model = SentenceTransformer(model_path, device=device)
+                        else:
+                            raise FileNotFoundError("No snapshot found")
+                    else:
+                        raise FileNotFoundError("No snapshots directory")
+                else:
+                    raise FileNotFoundError("No cache found")
+            except Exception as cache_error:
+                logger.warning(f"Failed to load from cache: {cache_error}")
+                # Fallback to normal loading (may fail if offline)
+                logger.info("Attempting normal model loading...")
+                self.embedding_model = SentenceTransformer(self.embedding_model_name, device=device)
             
             # Update embedding dimension based on actual model
             test_embedding = self.embedding_model.encode(["test"], convert_to_numpy=True)
