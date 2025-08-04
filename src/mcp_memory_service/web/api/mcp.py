@@ -7,12 +7,13 @@ to directly access memory operations using the MCP standard.
 
 import asyncio
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from ..dependencies import get_storage
+from ...utils.hashing import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/mcp", tags=["mcp"])
 class MCPRequest(BaseModel):
     """MCP protocol request structure."""
     jsonrpc: str = "2.0"
-    id: Optional[str] = None
+    id: Optional[Union[str, int]] = None
     method: str
     params: Optional[Dict[str, Any]] = None
 
@@ -104,6 +105,7 @@ MCP_TOOLS = [
 
 
 @router.post("/")
+@router.post("")
 async def mcp_endpoint(request: MCPRequest):
     """Main MCP protocol endpoint for processing MCP requests."""
     try:
@@ -164,9 +166,11 @@ async def handle_tool_call(storage, tool_name: str, arguments: Dict[str, Any]) -
         content = arguments.get("content")
         tags = arguments.get("tags", [])
         memory_type = arguments.get("memory_type")
+        content_hash = generate_content_hash(content, arguments.get("metadata", {}))
         
         memory = Memory(
             content=content,
+            content_hash=content_hash,
             tags=tags,
             memory_type=memory_type
         )
