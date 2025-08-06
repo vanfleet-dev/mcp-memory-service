@@ -112,6 +112,31 @@ curl -X POST http://your-server:8000/mcp \
 
 ## Features
 
+### 🎯 MCP Protocol Enhancements (NEW in v4.1.0!)
+
+#### 📚 **Enhanced Resources**
+Access structured memory data through URI-based resources:
+- `memory://stats` - Database statistics and health metrics
+- `memory://tags` - All available memory tags
+- `memory://recent/{n}` - N most recent memories
+- `memory://tag/{tagname}` - Memories with specific tag
+- `memory://search/{query}` - Dynamic search results
+
+#### 📋 **Guided Prompts**
+Interactive workflows for common memory operations:
+- **memory_review** - Review and organize memories from time periods
+- **memory_analysis** - Analyze patterns and themes in memories
+- **knowledge_export** - Export memories in JSON/Markdown/Text formats
+- **memory_cleanup** - Identify and remove duplicates/outdated memories
+- **learning_session** - Store structured learning notes with automatic tagging
+
+#### 📊 **Progress Tracking**
+Real-time progress notifications for long-running operations:
+- Bulk deletion operations with percentage updates
+- Database optimization with step-by-step progress
+- Operation IDs for tracking multiple concurrent tasks
+- MCP-compliant progress notification protocol
+
 ### 🧠 Dream-Inspired Memory Consolidation (NEW in v2.0!)
 - **Autonomous memory management** inspired by human sleep cycle processing
 - **Multi-layered time horizons** (daily → weekly → monthly → quarterly → yearly)

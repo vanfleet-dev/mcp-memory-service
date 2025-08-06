@@ -4,6 +4,47 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2025-08-06
+
+### 🎯 **Full MCP Specification Compliance**
+
+#### Added
+- **Enhanced Resources System**: URI-based access to memory collections
+  - `memory://stats` - Real-time database statistics and health metrics
+  - `memory://tags` - Complete list of available memory tags
+  - `memory://recent/{n}` - Access to N most recent memories
+  - `memory://tag/{tagname}` - Query memories by specific tag
+  - `memory://search/{query}` - Dynamic search with structured results
+  - Resource templates for parameterized queries
+  - JSON responses for all resource endpoints
+
+- **Guided Prompts Framework**: Interactive workflows for memory operations
+  - `memory_review` - Review and organize memories from specific time periods
+  - `memory_analysis` - Analyze patterns, themes, and tag distributions
+  - `knowledge_export` - Export memories in JSON, Markdown, or Text formats
+  - `memory_cleanup` - Identify and remove duplicate or outdated memories
+  - `learning_session` - Store structured learning notes with automatic categorization
+  - Each prompt includes proper argument schemas and validation
+
+- **Progress Tracking System**: Real-time notifications for long operations
+  - Progress notifications with percentage completion
+  - Operation IDs for tracking concurrent tasks
+  - Enhanced `delete_by_tags` with step-by-step progress
+  - Enhanced `dashboard_optimize_db` with operation stages
+  - MCP-compliant progress notification protocol
+
+#### Changed
+- Extended `MemoryStorage` base class with helper methods for resources
+- Enhanced `Memory` and `MemoryQueryResult` models with `to_dict()` methods
+- Improved server initialization with progress tracking state management
+
+#### Technical
+- Added `send_progress_notification()` method to MemoryServer
+- Implemented `get_stats()`, `get_all_tags()`, `get_recent_memories()` in storage base
+- Full backward compatibility maintained with existing operations
+
+This release brings the MCP Memory Service to full compliance with the Model Context Protocol specification, enabling richer client interactions and better user experience through structured data access and guided workflows.
+
 ## [3.3.3] - 2025-08-02
 
 ### 🔒 **SSL Certificate & MCP Bridge Compatibility**
