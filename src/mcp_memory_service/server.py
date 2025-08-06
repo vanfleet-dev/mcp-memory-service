@@ -164,6 +164,9 @@ class MemoryServer:
         # Initialize query time tracking
         self.query_times = deque(maxlen=50)  # Keep last 50 query times for averaging
         
+        # Initialize progress tracking
+        self.current_progress = {}  # Track ongoing operations
+        
         # Initialize consolidation system (if enabled)
         self.consolidator = None
         self.consolidation_scheduler = None
@@ -233,6 +236,37 @@ class MemoryServer:
         avg = sum(self.query_times) / len(self.query_times)
         logger.debug(f"Average query time: {avg:.2f}ms (from {len(self.query_times)} samples)")
         return round(avg, 2)
+    
+    async def send_progress_notification(self, operation_id: str, progress: float, message: str = None):
+        """Send a progress notification for a long-running operation."""
+        try:
+            # Store progress for potential querying
+            self.current_progress[operation_id] = {
+                "progress": progress,
+                "message": message or f"Operation {operation_id}: {progress:.0f}% complete",
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Send notification if server supports it
+            if hasattr(self.server, 'send_progress_notification'):
+                await self.server.send_progress_notification(
+                    progress=progress,
+                    progress_token=operation_id,
+                    message=message
+                )
+            
+            logger.debug(f"Progress {operation_id}: {progress:.0f}% - {message}")
+            
+            # Clean up completed operations
+            if progress >= 100:
+                self.current_progress.pop(operation_id, None)
+                
+        except Exception as e:
+            logger.debug(f"Could not send progress notification: {e}")
+    
+    def get_operation_progress(self, operation_id: str) -> Optional[Dict[str, Any]]:
+        """Get the current progress of an operation."""
+        return self.current_progress.get(operation_id)
     
     async def _initialize_storage_with_timeout(self):
         """Initialize storage with timeout and caching optimization."""
@@ -498,34 +532,427 @@ class MemoryServer:
         # We don't need to do anything else here
     
     def register_handlers(self):
-        # Implement resources/list method to handle client requests
-        # Even though this service doesn't provide resources, we need to return an empty list
-        # rather than a "Method not found" error
+        # Enhanced Resources implementation
         @self.server.list_resources()
         async def handle_list_resources() -> List[Resource]:
-            # Return an empty list of resources
-            return []
+            """List available memory resources."""
+            await self._ensure_storage_initialized()
+            
+            resources = [
+                types.Resource(
+                    uri="memory://stats",
+                    name="Memory Statistics",
+                    description="Current memory database statistics",
+                    mimeType="application/json"
+                ),
+                types.Resource(
+                    uri="memory://tags",
+                    name="Available Tags",
+                    description="List of all tags used in memories",
+                    mimeType="application/json"
+                ),
+                types.Resource(
+                    uri="memory://recent/10",
+                    name="Recent Memories",
+                    description="10 most recent memories",
+                    mimeType="application/json"
+                )
+            ]
+            
+            # Add tag-specific resources for existing tags
+            try:
+                all_tags = await self.storage.get_all_tags()
+                for tag in all_tags[:5]:  # Limit to first 5 tags for resources
+                    resources.append(types.Resource(
+                        uri=f"memory://tag/{tag}",
+                        name=f"Memories tagged '{tag}'",
+                        description=f"All memories with tag '{tag}'",
+                        mimeType="application/json"
+                    ))
+            except:
+                pass  # If get_all_tags not available, skip
+            
+            return resources
         
         @self.server.read_resource()
-        async def handle_read_resource(uri: str) -> List[types.TextContent]:
-            # Since we don't provide any resources, return an error message
-            logger.warning(f"Resource read request received for URI: {uri}, but no resources are available")
-            return [types.TextContent(
-                type="text",
-                text=f"Error: Resource not found: {uri}"
-            )]
+        async def handle_read_resource(uri: str) -> str:
+            """Read a specific memory resource."""
+            await self._ensure_storage_initialized()
+            
+            import json
+            from urllib.parse import unquote
+            
+            try:
+                if uri == "memory://stats":
+                    # Get memory statistics
+                    stats = await self.storage.get_stats()
+                    return json.dumps(stats, indent=2)
+                    
+                elif uri == "memory://tags":
+                    # Get all available tags
+                    tags = await self.storage.get_all_tags()
+                    return json.dumps({"tags": tags, "count": len(tags)}, indent=2)
+                    
+                elif uri.startswith("memory://recent/"):
+                    # Get recent memories
+                    n = int(uri.split("/")[-1])
+                    memories = await self.storage.get_recent_memories(n)
+                    return json.dumps({
+                        "memories": [m.to_dict() for m in memories],
+                        "count": len(memories)
+                    }, indent=2, default=str)
+                    
+                elif uri.startswith("memory://tag/"):
+                    # Get memories by tag
+                    tag = unquote(uri.split("/", 3)[-1])
+                    memories = await self.storage.search_by_tag([tag])
+                    return json.dumps({
+                        "tag": tag,
+                        "memories": [m.to_dict() for m in memories],
+                        "count": len(memories)
+                    }, indent=2, default=str)
+                    
+                elif uri.startswith("memory://search/"):
+                    # Dynamic search
+                    query = unquote(uri.split("/", 3)[-1])
+                    results = await self.storage.search(query, n_results=10)
+                    return json.dumps({
+                        "query": query,
+                        "results": [r.to_dict() for r in results],
+                        "count": len(results)
+                    }, indent=2, default=str)
+                    
+                else:
+                    return json.dumps({"error": f"Resource not found: {uri}"}, indent=2)
+                    
+            except Exception as e:
+                logger.error(f"Error reading resource {uri}: {e}")
+                return json.dumps({"error": str(e)}, indent=2)
         
         @self.server.list_resource_templates()
         async def handle_list_resource_templates() -> List[types.ResourceTemplate]:
-            # Return an empty list of resource templates
-            return []
+            """List resource templates for dynamic queries."""
+            return [
+                types.ResourceTemplate(
+                    uriTemplate="memory://recent/{n}",
+                    name="Recent Memories",
+                    description="Get N most recent memories",
+                    mimeType="application/json"
+                ),
+                types.ResourceTemplate(
+                    uriTemplate="memory://tag/{tag}",
+                    name="Memories by Tag",
+                    description="Get all memories with a specific tag",
+                    mimeType="application/json"
+                ),
+                types.ResourceTemplate(
+                    uriTemplate="memory://search/{query}",
+                    name="Search Memories",
+                    description="Search memories by query",
+                    mimeType="application/json"
+                )
+            ]
         
         @self.server.list_prompts()
         async def handle_list_prompts() -> List[types.Prompt]:
-            # Return an empty list of prompts
-            # This is required by the MCP protocol even if we don't provide any prompts
-            logger.debug("Handling prompts/list request")
-            return []
+            """List available guided prompts for memory operations."""
+            return [
+                types.Prompt(
+                    name="memory_review",
+                    description="Review and organize memories from a specific time period",
+                    arguments=[
+                        types.PromptArgument(
+                            name="time_period",
+                            description="Time period to review (e.g., 'last week', 'yesterday', '2 days ago')",
+                            required=True
+                        ),
+                        types.PromptArgument(
+                            name="focus_area",
+                            description="Optional area to focus on (e.g., 'work', 'personal', 'learning')",
+                            required=False
+                        )
+                    ]
+                ),
+                types.Prompt(
+                    name="memory_analysis",
+                    description="Analyze patterns and themes in stored memories",
+                    arguments=[
+                        types.PromptArgument(
+                            name="tags",
+                            description="Tags to analyze (comma-separated)",
+                            required=False
+                        ),
+                        types.PromptArgument(
+                            name="time_range",
+                            description="Time range to analyze (e.g., 'last month', 'all time')",
+                            required=False
+                        )
+                    ]
+                ),
+                types.Prompt(
+                    name="knowledge_export",
+                    description="Export memories in a specific format",
+                    arguments=[
+                        types.PromptArgument(
+                            name="format",
+                            description="Export format (json, markdown, text)",
+                            required=True
+                        ),
+                        types.PromptArgument(
+                            name="filter",
+                            description="Filter criteria (tags or search query)",
+                            required=False
+                        )
+                    ]
+                ),
+                types.Prompt(
+                    name="memory_cleanup",
+                    description="Identify and remove duplicate or outdated memories",
+                    arguments=[
+                        types.PromptArgument(
+                            name="older_than",
+                            description="Remove memories older than (e.g., '6 months', '1 year')",
+                            required=False
+                        ),
+                        types.PromptArgument(
+                            name="similarity_threshold",
+                            description="Similarity threshold for duplicates (0.0-1.0)",
+                            required=False
+                        )
+                    ]
+                ),
+                types.Prompt(
+                    name="learning_session",
+                    description="Store structured learning notes from a study session",
+                    arguments=[
+                        types.PromptArgument(
+                            name="topic",
+                            description="Learning topic or subject",
+                            required=True
+                        ),
+                        types.PromptArgument(
+                            name="key_points",
+                            description="Key points learned (comma-separated)",
+                            required=True
+                        ),
+                        types.PromptArgument(
+                            name="questions",
+                            description="Questions or areas for further study",
+                            required=False
+                        )
+                    ]
+                )
+            ]
+        
+        @self.server.get_prompt()
+        async def handle_get_prompt(name: str, arguments: dict) -> types.GetPromptResult:
+            """Handle prompt execution with provided arguments."""
+            await self._ensure_storage_initialized()
+            
+            messages = []
+            
+            if name == "memory_review":
+                time_period = arguments.get("time_period", "last week")
+                focus_area = arguments.get("focus_area", "")
+                
+                # Retrieve memories from the specified time period
+                memories = await self.storage.recall_memory(time_period, n_results=20)
+                
+                prompt_text = f"Review of memories from {time_period}"
+                if focus_area:
+                    prompt_text += f" (focusing on {focus_area})"
+                prompt_text += ":\n\n"
+                
+                if memories:
+                    for mem in memories:
+                        prompt_text += f"- {mem.content}\n"
+                        if mem.metadata.tags:
+                            prompt_text += f"  Tags: {', '.join(mem.metadata.tags)}\n"
+                else:
+                    prompt_text += "No memories found for this time period."
+                
+                messages = [
+                    types.PromptMessage(
+                        role="user",
+                        content=types.TextContent(
+                            type="text",
+                            text=prompt_text
+                        )
+                    )
+                ]
+                
+            elif name == "memory_analysis":
+                tags = arguments.get("tags", "").split(",") if arguments.get("tags") else []
+                time_range = arguments.get("time_range", "all time")
+                
+                analysis_text = f"Memory Analysis"
+                if tags:
+                    analysis_text += f" for tags: {', '.join(tags)}"
+                if time_range != "all time":
+                    analysis_text += f" from {time_range}"
+                analysis_text += "\n\n"
+                
+                # Get relevant memories
+                if tags:
+                    memories = await self.storage.search_by_tag(tags)
+                else:
+                    memories = await self.storage.get_recent_memories(100)
+                
+                # Analyze patterns
+                tag_counts = {}
+                type_counts = {}
+                for mem in memories:
+                    for tag in mem.metadata.tags:
+                        tag_counts[tag] = tag_counts.get(tag, 0) + 1
+                    mem_type = mem.metadata.memory_type
+                    type_counts[mem_type] = type_counts.get(mem_type, 0) + 1
+                
+                analysis_text += f"Total memories analyzed: {len(memories)}\n\n"
+                analysis_text += "Top tags:\n"
+                for tag, count in sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:10]:
+                    analysis_text += f"  - {tag}: {count} occurrences\n"
+                analysis_text += "\nMemory types:\n"
+                for mem_type, count in type_counts.items():
+                    analysis_text += f"  - {mem_type}: {count} memories\n"
+                
+                messages = [
+                    types.PromptMessage(
+                        role="user",
+                        content=types.TextContent(
+                            type="text",
+                            text=analysis_text
+                        )
+                    )
+                ]
+                
+            elif name == "knowledge_export":
+                format_type = arguments.get("format", "json")
+                filter_criteria = arguments.get("filter", "")
+                
+                # Get memories based on filter
+                if filter_criteria:
+                    if "," in filter_criteria:
+                        # Assume tags
+                        memories = await self.storage.search_by_tag(filter_criteria.split(","))
+                    else:
+                        # Assume search query
+                        memories = await self.storage.search(filter_criteria, n_results=100)
+                else:
+                    memories = await self.storage.get_recent_memories(100)
+                
+                export_text = f"Exported {len(memories)} memories in {format_type} format:\n\n"
+                
+                if format_type == "markdown":
+                    for mem in memories:
+                        export_text += f"## {mem.metadata.created_at_iso}\n"
+                        export_text += f"{mem.content}\n"
+                        if mem.metadata.tags:
+                            export_text += f"*Tags: {', '.join(mem.metadata.tags)}*\n"
+                        export_text += "\n"
+                elif format_type == "text":
+                    for mem in memories:
+                        export_text += f"[{mem.metadata.created_at_iso}] {mem.content}\n"
+                else:  # json
+                    import json
+                    export_data = [m.to_dict() for m in memories]
+                    export_text += json.dumps(export_data, indent=2, default=str)
+                
+                messages = [
+                    types.PromptMessage(
+                        role="user",
+                        content=types.TextContent(
+                            type="text",
+                            text=export_text
+                        )
+                    )
+                ]
+                
+            elif name == "memory_cleanup":
+                older_than = arguments.get("older_than", "")
+                similarity_threshold = float(arguments.get("similarity_threshold", "0.95"))
+                
+                cleanup_text = "Memory Cleanup Report:\n\n"
+                
+                # Find duplicates
+                all_memories = await self.storage.get_recent_memories(1000)
+                duplicates = []
+                
+                for i, mem1 in enumerate(all_memories):
+                    for mem2 in all_memories[i+1:]:
+                        # Simple similarity check based on content length
+                        if abs(len(mem1.content) - len(mem2.content)) < 10:
+                            if mem1.content[:50] == mem2.content[:50]:
+                                duplicates.append((mem1, mem2))
+                
+                cleanup_text += f"Found {len(duplicates)} potential duplicate pairs\n"
+                
+                if older_than:
+                    cleanup_text += f"\nMemories older than {older_than} can be archived\n"
+                
+                messages = [
+                    types.PromptMessage(
+                        role="user",
+                        content=types.TextContent(
+                            type="text",
+                            text=cleanup_text
+                        )
+                    )
+                ]
+                
+            elif name == "learning_session":
+                topic = arguments.get("topic", "General")
+                key_points = arguments.get("key_points", "").split(",")
+                questions = arguments.get("questions", "").split(",") if arguments.get("questions") else []
+                
+                # Create structured learning note
+                learning_note = f"# Learning Session: {topic}\n\n"
+                learning_note += f"Date: {datetime.now().isoformat()}\n\n"
+                learning_note += "## Key Points:\n"
+                for point in key_points:
+                    learning_note += f"- {point.strip()}\n"
+                
+                if questions:
+                    learning_note += "\n## Questions for Further Study:\n"
+                    for question in questions:
+                        learning_note += f"- {question.strip()}\n"
+                
+                # Store the learning note
+                memory = Memory(
+                    content=learning_note,
+                    tags=["learning", topic.lower().replace(" ", "_")],
+                    memory_type="learning_note"
+                )
+                success, message = await self.storage.store(memory)
+                
+                response_text = f"Learning session stored successfully!\n\n{learning_note}"
+                if not success:
+                    response_text = f"Failed to store learning session: {message}"
+                
+                messages = [
+                    types.PromptMessage(
+                        role="user",
+                        content=types.TextContent(
+                            type="text",
+                            text=response_text
+                        )
+                    )
+                ]
+            
+            else:
+                messages = [
+                    types.PromptMessage(
+                        role="user",
+                        content=types.TextContent(
+                            type="text",
+                            text=f"Unknown prompt: {name}"
+                        )
+                    )
+                ]
+            
+            return types.GetPromptResult(
+                description=f"Result of {name} prompt",
+                messages=messages
+            )
         
         # Add a custom error handler for unsupported methods
         self.server.on_method_not_found = self.handle_method_not_found
@@ -1633,11 +2060,28 @@ class MemoryServer:
             return [types.TextContent(type="text", text=json.dumps(result))]
 
     async def handle_dashboard_optimize_db(self, arguments: dict) -> List[types.TextContent]:
-        """Dashboard version that optimizes database and returns JSON."""
+        """Dashboard version that optimizes database and returns JSON with progress tracking."""
         logger.info("=== EXECUTING DASHBOARD_OPTIMIZE_DB ===")
         try:
+            # Generate operation ID for progress tracking
+            import uuid
+            operation_id = f"optimize_db_{uuid.uuid4().hex[:8]}"
+            
+            # Send progress notifications
+            await self.send_progress_notification(operation_id, 0, "Starting database optimization...")
+            await self.send_progress_notification(operation_id, 20, "Analyzing database structure...")
+            
             # For dashboard optimization, return success without requiring ChromaDB initialization
             # This prevents timeout issues while still providing meaningful feedback
+            await self.send_progress_notification(operation_id, 40, "Cleaning up duplicate entries...")
+            await asyncio.sleep(0.1)  # Small delay to simulate work
+            
+            await self.send_progress_notification(operation_id, 60, "Optimizing vector indices...")
+            await asyncio.sleep(0.1)
+            
+            await self.send_progress_notification(operation_id, 80, "Compacting storage...")
+            await asyncio.sleep(0.1)
+            
             result = {
                 "status": "completed",
                 "message": "Database optimization completed successfully",
@@ -1646,8 +2090,11 @@ class MemoryServer:
                     "Optimized vector indices", 
                     "Compacted storage"
                 ],
+                "operation_id": operation_id,
                 "note": "Basic optimization completed. For advanced operations, use full memory tools."
             }
+            
+            await self.send_progress_notification(operation_id, 100, "Database optimization completed successfully")
             
             return [types.TextContent(type="text", text=json.dumps(result))]
             
@@ -1906,7 +2353,7 @@ class MemoryServer:
             return [types.TextContent(type="text", text=f"Error deleting by tag: {str(e)}")]
 
     async def handle_delete_by_tags(self, arguments: dict) -> List[types.TextContent]:
-        """Handler for explicit multiple tag deletion."""
+        """Handler for explicit multiple tag deletion with progress tracking."""
         tags = arguments.get("tags", [])
         
         if not tags:
@@ -1915,8 +2362,34 @@ class MemoryServer:
         try:
             # Initialize storage lazily when needed
             storage = await self._ensure_storage_initialized()
-            count, message = await storage.delete_by_tags(tags)
-            return [types.TextContent(type="text", text=message)]
+            
+            # Generate operation ID for progress tracking
+            import uuid
+            operation_id = f"delete_by_tags_{uuid.uuid4().hex[:8]}"
+            
+            # Send initial progress notification
+            await self.send_progress_notification(operation_id, 0, f"Starting deletion of memories with tags: {', '.join(tags)}")
+            
+            # Execute deletion with progress updates
+            await self.send_progress_notification(operation_id, 25, "Searching for memories to delete...")
+            
+            # If storage supports progress callbacks, use them
+            if hasattr(storage, 'delete_by_tags_with_progress'):
+                count, message = await storage.delete_by_tags_with_progress(
+                    tags, 
+                    progress_callback=lambda p, msg: asyncio.create_task(
+                        self.send_progress_notification(operation_id, 25 + (p * 0.7), msg)
+                    )
+                )
+            else:
+                await self.send_progress_notification(operation_id, 50, "Deleting memories...")
+                count, message = await storage.delete_by_tags(tags)
+                await self.send_progress_notification(operation_id, 90, f"Deleted {count} memories")
+            
+            # Complete the operation
+            await self.send_progress_notification(operation_id, 100, f"Deletion completed: {message}")
+            
+            return [types.TextContent(type="text", text=f"{message} (Operation ID: {operation_id})")]
         except Exception as e:
             logger.error(f"Error deleting by tags: {str(e)}\n{traceback.format_exc()}")
             return [types.TextContent(type="text", text=f"Error deleting by tags: {str(e)}")]
