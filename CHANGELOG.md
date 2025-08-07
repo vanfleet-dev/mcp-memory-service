@@ -45,6 +45,98 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 This release brings the MCP Memory Service to full compliance with the Model Context Protocol specification, enabling richer client interactions and better user experience through structured data access and guided workflows.
 
+## [4.0.1] - 2025-08-04
+
+### Fixed
+- **MCP Protocol Validation**: Resolved critical ID validation errors affecting integer/string ID handling
+- **Embedding Model Loading**: Fixed model loading failures in offline environments
+- **Semantic Search**: Restored semantic search functionality that was broken in 4.0.0
+- **Version Consistency**: Fixed version mismatch between `__init__.py` and `pyproject.toml`
+
+### Technical
+- Enhanced flexible ID validation for MCP protocol compliance
+- Improved error handling for embedding model initialization
+- Corrected version bumping process for patch releases
+
+## [4.0.0] - 2025-08-04
+
+### 🚀 **Major Release: Production-Ready Remote MCP Memory Service**
+
+#### Added
+- **Native MCP-over-HTTP Protocol**: Direct MCP protocol support via FastAPI without Node.js bridge
+- **Remote Server Deployment**: Full production deployment capability with remote access
+- **Cross-Device Memory Access**: Validated multi-device memory synchronization
+- **Comprehensive Documentation**: Complete deployment guides and remote access documentation
+
+#### Changed
+- **Architecture Evolution**: Transitioned from local experimental service to production infrastructure
+- **Protocol Compliance**: Applied MCP protocol refactorings with flexible ID validation
+- **Docker CI/CD**: Fixed and operationalized Docker workflows for automated deployment
+- **Repository Maintenance**: Comprehensive cleanup and branch management
+
+#### Production Validation
+- Successfully deployed server running at remote endpoints with 65+ memories
+- SQLite-vec backend validated (1.7MB database, 384-dim embeddings)
+- all-MiniLM-L6-v2 model loaded and operational
+- Full MCP tool suite available and tested
+
+#### Milestones Achieved
+- GitHub Issue #71 (remote access) completed
+- GitHub Issue #72 (bridge deprecation) resolved
+- Production deployment proven successful
+
+## [4.0.0-beta.1] - 2025-08-03
+
+### Added
+- **Dual-Service Architecture**: Combined HTTP Dashboard + Native MCP Protocol
+- **FastAPI MCP Integration**: Complete integration for native remote access
+- **Direct MCP-over-HTTP**: Eliminated dependency on Node.js bridge
+
+### Changed
+- **Remote Access Solution**: Resolved remote memory service access (Issue #71)
+- **Bridge Deprecation**: Deprecated Node.js bridge in favor of direct protocol
+- **Docker Workflows**: Fixed CI/CD pipeline for automated testing
+
+### Technical
+- Maintained backward compatibility for existing HTTP API users
+- Repository cleanup and branch management improvements
+- Significant architectural evolution while preserving existing functionality
+
+## [4.0.0-alpha.1] - 2025-08-03
+
+### Added
+- **Initial FastAPI MCP Server**: First implementation of native MCP server structure
+- **MCP Protocol Endpoints**: Added core MCP protocol endpoints to FastAPI server
+- **Hybrid Support**: Initial HTTP+MCP hybrid architecture support
+
+### Changed
+- **Server Architecture**: Began transition from pure HTTP to MCP-native implementation
+- **Remote Access Configuration**: Initial configuration for remote server access
+- **Protocol Implementation**: Started implementing MCP specification compliance
+
+### Technical
+- Validated local testing with FastAPI MCP server
+- Fixed `mcp.run()` syntax issues
+- Established foundation for dual-protocol support
+
+## [3.3.4] - 2025-08-03
+
+### Fixed
+- **Multi-Client Backend Selection**: Fixed hardcoded sqlite_vec backend in multi-client configuration
+  - Configuration functions now properly accept and use storage_backend parameter
+  - Chosen backend is correctly passed through entire multi-client setup flow
+  - M1 Macs with MPS acceleration now correctly use ChromaDB when selected
+  - SQLite pragmas only applied when sqlite_vec is actually chosen
+
+### Changed
+- **Configuration Instructions**: Updated generic configuration to reflect chosen backend
+- **Backend Flexibility**: All systems now get optimal backend configuration in multi-client mode
+
+### Technical
+- Resolved Issue #73 affecting M1 Mac users
+- Ensures proper backend-specific configuration for all platforms
+- Version bump to 3.3.4 for critical fix release
+
 ## [3.3.3] - 2025-08-02
 
 ### 🔒 **SSL Certificate & MCP Bridge Compatibility**
