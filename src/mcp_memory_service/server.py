@@ -40,6 +40,7 @@ from mcp.server import NotificationOptions, Server
 import mcp.server.stdio
 from mcp.types import Resource, Prompt
 
+from .lm_studio_compat import patch_mcp_for_lm_studio
 from .config import (
     CHROMA_PATH,
     BACKUPS_PATH,
@@ -3301,6 +3302,9 @@ def parse_args():
 
 async def async_main():
     args = parse_args()
+    
+    # Apply LM Studio compatibility patch before anything else
+    patch_mcp_for_lm_studio()
     
     # Check if running with UV
     check_uv_environment()
