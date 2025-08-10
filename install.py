@@ -358,6 +358,8 @@ def install_pytorch_platform_specific(system_info, gpu_info, args=None):
         return install_pytorch_windows(gpu_info)
     elif system_info["is_macos"] and system_info["is_x86"]:
         return install_pytorch_macos_intel()
+    elif system_info["is_macos"] and system_info["is_arm"]:
+        return install_pytorch_macos_arm64()
     else:
         # For other platforms, let the regular installer handle it
         return True
@@ -448,6 +450,52 @@ def install_pytorch_macos_intel():
             print_warning("You may need to manually install compatible versions for Intel macOS:")
             print_info("pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1")
             print_info("pip install sentence-transformers==2.2.2")
+        
+        return False
+
+def install_pytorch_macos_arm64():
+    """Install PyTorch specifically for macOS with ARM64 (Apple Silicon)."""
+    print_step("3a", "Installing PyTorch for macOS ARM64 (Apple Silicon)")
+    
+    try:
+        # For Apple Silicon, we can use the latest PyTorch with MPS support
+        print_info("Installing PyTorch with Metal Performance Shaders (MPS) support...")
+        
+        # Install PyTorch with MPS support - let pip choose the best compatible version
+        cmd = [
+            sys.executable, '-m', 'pip', 'install',
+            'torch>=2.0.0',
+            'torchvision',
+            'torchaudio'
+        ]
+        
+        print_info(f"Running: {' '.join(cmd)}")
+        subprocess.check_call(cmd)
+        
+        # Install sentence-transformers
+        print_info("Installing sentence-transformers...")
+        cmd = [
+            sys.executable, '-m', 'pip', 'install',
+            'sentence-transformers>=2.2.2'
+        ]
+        
+        print_info(f"Running: {' '.join(cmd)}")
+        subprocess.check_call(cmd)
+        
+        print_success("PyTorch and sentence-transformers installed successfully for macOS ARM64")
+        print_info("MPS (Metal Performance Shaders) acceleration is available for GPU compute")
+        
+        return True
+    except subprocess.SubprocessError as e:
+        print_error(f"Failed to install PyTorch for macOS ARM64: {e}")
+        
+        # Provide fallback instructions
+        print_warning("You may need to manually install PyTorch for Apple Silicon:")
+        print_info("pip install torch torchvision torchaudio")
+        print_info("pip install sentence-transformers")
+        print_info("")
+        print_info("If you encounter issues, try:")
+        print_info("pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu")
         
         return False
 
