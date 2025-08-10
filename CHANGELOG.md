@@ -4,6 +4,25 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.0] - 2025-08-10
+
+### ⚡ **Developer Experience Improvements**
+
+#### Added
+- **Automated uv.lock Conflict Resolution**: Eliminates manual merge conflict resolution
+  - Custom git merge driver automatically resolves `uv.lock` conflicts
+  - Auto-runs `uv sync` after conflict resolution to ensure consistency
+  - One-time setup script for contributors: `./scripts/setup-git-merge-drivers.sh`
+  - Comprehensive documentation in README.md and CLAUDE.md
+
+#### Technical
+- Added `.gitattributes` configuration for `uv.lock` merge handling
+- Created `scripts/uv-lock-merge.sh` custom merge driver script
+- Added contributor setup script with automatic git configuration
+- Enhanced development documentation with git setup instructions
+
+This release significantly improves the contributor experience by automating the resolution of the most common merge conflicts in the repository.
+
 ## [4.2.0] - 2025-08-10
 
 ### 🔧 **Improved Client Compatibility**

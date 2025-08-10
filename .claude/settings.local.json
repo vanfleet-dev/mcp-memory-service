@@ -84,7 +84,8 @@
       "Bash(avahi-browse:*)",
       "Bash(avahi-resolve-host-name:*)",
       "Bash(systemctl status:*)",
-      "Bash(gh issue view:*)"
+      "Bash(gh issue view:*)",
+      "Bash(/home/hkr/.local/bin/uv run --no-sync python run_server.py)"
     ],
     "deny": []
   },

@@ -17,6 +17,7 @@ MCP Memory Service is a Model Context Protocol server that provides semantic mem
 - **Debug with MCP Inspector**: `npx @modelcontextprotocol/inspector uv --directory /path/to/repo run memory`
 - **Check documentation links**: `python scripts/check_documentation_links.py` (validates all internal markdown links)
 - **Test Docker functionality**: `python scripts/test_docker_functionality.py` (comprehensive Docker container verification)
+- **Setup git merge drivers**: `./scripts/setup-git-merge-drivers.sh` (one-time setup for new contributors)
 
 ### Build & Package
 - **Build package**: `python -m build`
@@ -118,9 +119,27 @@ Hardware detection is automatic via `utils/system_detection.py`.
 6. All new features should include corresponding tests
 7. Use semantic commit messages for version management
 
+### Git Configuration
+
+#### Automated uv.lock Conflict Resolution
+
+The repository includes automated resolution for `uv.lock` conflicts:
+
+1. **For new contributors**: Run `./scripts/setup-git-merge-drivers.sh` once after cloning
+2. **How it works**: 
+   - Git automatically resolves `uv.lock` conflicts using the incoming version
+   - Then runs `uv sync` to regenerate the lock file based on your `pyproject.toml`
+   - Ensures consistent dependency resolution across all environments
+
+Files involved:
+- `.gitattributes`: Defines merge strategy for `uv.lock`
+- `scripts/uv-lock-merge.sh`: Custom merge driver script
+- `scripts/setup-git-merge-drivers.sh`: One-time setup for contributors
+
 ### Common Issues
 
 1. **MPS Fallback**: On macOS, if MPS fails, set `PYTORCH_ENABLE_MPS_FALLBACK=1`
 2. **ONNX Runtime**: For compatibility issues, use `MCP_MEMORY_USE_ONNX=true`
 3. **ChromaDB Persistence**: Ensure write permissions for storage paths
 4. **Memory Usage**: Model loading is deferred until first use to reduce startup time
+5. **uv.lock Conflicts**: Should resolve automatically; if not, ensure git merge drivers are set up

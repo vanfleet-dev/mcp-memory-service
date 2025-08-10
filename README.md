@@ -1065,6 +1065,21 @@ mcp-memory-service/
 - Follow PEP 8 style guidelines
 - Include tests for new features
 
+### Git Setup for Contributors
+
+After cloning the repository, run the setup script to configure automated `uv.lock` conflict resolution:
+
+```bash
+./scripts/setup-git-merge-drivers.sh
+```
+
+This enables automatic resolution of `uv.lock` merge conflicts by:
+1. Using the incoming version to resolve conflicts
+2. Automatically running `uv sync` to regenerate the lock file
+3. Ensuring consistent dependency resolution across all environments
+
+The setup is required only once per clone and benefits all contributors by eliminating manual conflict resolution.
+
 ## License
 
 MIT License - See LICENSE file for details
