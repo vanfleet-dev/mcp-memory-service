@@ -4,6 +4,33 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2025-08-10
+
+### 🔧 **Improved Client Compatibility**
+
+#### Added
+- **LM Studio Compatibility Layer**: Automatic handling of non-standard MCP notifications
+  - Monkey patch for `notifications/cancelled` messages that aren't in the MCP specification
+  - Graceful error handling prevents server crashes when LM Studio cancels operations
+  - Debug logging for troubleshooting compatibility issues
+  - Comprehensive documentation in `docs/LM_STUDIO_COMPATIBILITY.md`
+
+#### Technical
+- Added `lm_studio_compat.py` module with compatibility patches
+- Applied patches automatically during server initialization
+- Enhanced error handling in MCP protocol communication
+
+This release significantly improves compatibility with LM Studio and other MCP clients while maintaining full backward compatibility with existing Claude Desktop integrations.
+
+## [4.1.1] - 2025-08-10
+
+### Fixed
+- **macOS ARM64 Support**: Enhanced PyTorch installation for Apple Silicon
+  - Proper dependency resolution for M1/M2/M3 Mac systems
+  - Updated torch dependency requirements from `>=1.6.0` to `>=2.0.0` in `pyproject.toml`
+  - Platform-specific installation instructions in `install.py`
+  - Improved cross-platform dependency management
+
 ## [4.1.0] - 2025-08-06
 
 ### 🎯 **Full MCP Specification Compliance**
