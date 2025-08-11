@@ -40,7 +40,7 @@ from mcp.server import NotificationOptions, Server
 import mcp.server.stdio
 from mcp.types import Resource, Prompt
 
-from .lm_studio_compat import patch_mcp_for_lm_studio
+from .lm_studio_compat import patch_mcp_for_lm_studio, add_windows_timeout_handling
 from .config import (
     CHROMA_PATH,
     BACKUPS_PATH,
@@ -423,10 +423,12 @@ class MemoryServer:
             print(f"Python: {platform.python_version()}", file=sys.stderr, flush=True)
             
             # Attempt eager storage initialization with timeout
-            print("Attempting eager storage initialization...", file=sys.stderr, flush=True)
+            # Use longer timeout on Windows due to potential security software interference
+            timeout_seconds = 30.0 if platform.system() == "Windows" else 15.0
+            print(f"Attempting eager storage initialization (timeout: {timeout_seconds}s)...", file=sys.stderr, flush=True)
             try:
                 init_task = asyncio.create_task(self._initialize_storage_with_timeout())
-                success = await asyncio.wait_for(init_task, timeout=15.0)
+                success = await asyncio.wait_for(init_task, timeout=timeout_seconds)
                 if success:
                     print("✅ Eager storage initialization successful", file=sys.stderr, flush=True)
                     logger.info("Eager storage initialization completed successfully")
@@ -3305,6 +3307,9 @@ async def async_main():
     
     # Apply LM Studio compatibility patch before anything else
     patch_mcp_for_lm_studio()
+    
+    # Add Windows-specific timeout handling
+    add_windows_timeout_handling()
     
     # Check if running with UV
     check_uv_environment()
