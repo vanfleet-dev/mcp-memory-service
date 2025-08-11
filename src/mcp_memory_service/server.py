@@ -41,6 +41,7 @@ import mcp.server.stdio
 from mcp.types import Resource, Prompt
 
 from .lm_studio_compat import patch_mcp_for_lm_studio, add_windows_timeout_handling
+from .dependency_check import run_dependency_check, get_recommended_timeout
 from .config import (
     CHROMA_PATH,
     BACKUPS_PATH,
@@ -423,8 +424,8 @@ class MemoryServer:
             print(f"Python: {platform.python_version()}", file=sys.stderr, flush=True)
             
             # Attempt eager storage initialization with timeout
-            # Use longer timeout on Windows due to potential security software interference
-            timeout_seconds = 30.0 if platform.system() == "Windows" else 15.0
+            # Get dynamic timeout based on system and dependency status
+            timeout_seconds = get_recommended_timeout()
             print(f"Attempting eager storage initialization (timeout: {timeout_seconds}s)...", file=sys.stderr, flush=True)
             try:
                 init_task = asyncio.create_task(self._initialize_storage_with_timeout())
@@ -3310,6 +3311,9 @@ async def async_main():
     
     # Add Windows-specific timeout handling
     add_windows_timeout_handling()
+    
+    # Run dependency check before starting
+    run_dependency_check()
     
     # Check if running with UV
     check_uv_environment()
