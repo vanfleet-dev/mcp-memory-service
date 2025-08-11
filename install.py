@@ -36,6 +36,133 @@ if platform.system() == "Windows":
         except AttributeError:
             pass
 
+# Enhanced logging system for installer
+import logging
+from datetime import datetime
+
+class DualOutput:
+    """Class to handle both console and file output simultaneously."""
+    def __init__(self, log_file_path):
+        self.console = sys.stdout
+        self.log_file = None
+        self.log_file_path = log_file_path
+        self._setup_log_file()
+    
+    def _setup_log_file(self):
+        """Set up the log file with proper encoding."""
+        try:
+            # Create log file with UTF-8 encoding
+            self.log_file = open(self.log_file_path, 'w', encoding='utf-8')
+            # Write header
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            # Fix Windows version display in log header
+            platform_info = f"{platform.system()} {platform.release()}"
+            if platform.system() == "Windows":
+                try:
+                    import winreg
+                    key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion")
+                    build_number = winreg.QueryValueEx(key, "CurrentBuildNumber")[0]
+                    winreg.CloseKey(key)
+                    
+                    # Windows 11 has build number >= 22000
+                    if int(build_number) >= 22000:
+                        platform_info = f"Windows 11"
+                    else:
+                        platform_info = f"Windows {platform.release()}"
+                except (ImportError, OSError, ValueError):
+                    pass  # Use default
+            
+            header = f"""
+================================================================================
+MCP Memory Service Installation Log
+Started: {timestamp}
+Platform: {platform_info} ({platform.machine()})
+Python: {sys.version}
+================================================================================
+
+"""
+            self.log_file.write(header)
+            self.log_file.flush()
+        except Exception as e:
+            print(f"Warning: Could not create log file {self.log_file_path}: {e}")
+            self.log_file = None
+    
+    def write(self, text):
+        """Write to both console and log file."""
+        # Write to console
+        self.console.write(text)
+        self.console.flush()
+        
+        # Write to log file if available
+        if self.log_file:
+            try:
+                self.log_file.write(text)
+                self.log_file.flush()
+            except Exception:
+                pass  # Silently ignore log file write errors
+    
+    def flush(self):
+        """Flush both outputs."""
+        self.console.flush()
+        if self.log_file:
+            try:
+                self.log_file.flush()
+            except Exception:
+                pass
+    
+    def close(self):
+        """Close the log file."""
+        if self.log_file:
+            try:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                footer = f"""
+================================================================================
+Installation completed: {timestamp}
+================================================================================
+"""
+                self.log_file.write(footer)
+                self.log_file.close()
+            except Exception:
+                pass
+
+# Global dual output instance
+_dual_output = None
+
+def setup_installer_logging():
+    """Set up the installer logging system."""
+    global _dual_output
+    
+    # Create log file path
+    log_file = Path.cwd() / "installation.log"
+    
+    # Remove old log file if it exists
+    if log_file.exists():
+        try:
+            log_file.unlink()
+        except Exception:
+            pass
+    
+    # Set up dual output
+    _dual_output = DualOutput(str(log_file))
+    
+    # Redirect stdout to dual output
+    sys.stdout = _dual_output
+    
+    print(f"Installation log will be saved to: {log_file}")
+    
+    return str(log_file)
+
+def cleanup_installer_logging():
+    """Clean up the installer logging system."""
+    global _dual_output
+    
+    if _dual_output:
+        # Restore original stdout
+        sys.stdout = _dual_output.console
+        _dual_output.close()
+        _dual_output = None
+
 # Import Claude commands utilities
 try:
     from scripts.claude_commands_utils import install_claude_commands, check_claude_code_cli
@@ -2380,6 +2507,13 @@ def main():
         generate_personalized_docs()
         sys.exit(0)
     
+    # Set up logging system to capture installation output
+    try:
+        log_file_path = setup_installer_logging()
+    except Exception as e:
+        print(f"Warning: Could not set up logging: {e}")
+        log_file_path = None
+    
     print_header("MCP Memory Service Installation")
     
     # Step 1: Detect system
@@ -2726,6 +2860,23 @@ def main():
         print_info("- To completely skip PyTorch installation, use: --skip-pytorch")
         print_info("- To force the SQLite-vec backend, use: --storage-backend sqlite_vec")
         print_info("- For a quick test, try running: python test_memory.py")
+    
+    # Clean up logging system
+    try:
+        cleanup_installer_logging()
+        if log_file_path:
+            print(f"\nInstallation log saved to: {log_file_path}")
+    except Exception:
+        pass  # Silently ignore cleanup errors
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nInstallation interrupted by user")
+        cleanup_installer_logging()
+        sys.exit(1)
+    except Exception as e:
+        print(f"\nInstallation failed with error: {e}")
+        cleanup_installer_logging()
+        sys.exit(1)
