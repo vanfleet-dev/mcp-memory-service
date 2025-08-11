@@ -26,6 +26,16 @@ import argparse
 import shutil
 from pathlib import Path
 
+# Fix Windows console encoding issues
+if platform.system() == "Windows":
+    # Ensure stdout uses UTF-8 on Windows to prevent character encoding issues in logs
+    if hasattr(sys.stdout, 'reconfigure'):
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+            sys.stderr.reconfigure(encoding='utf-8')
+        except AttributeError:
+            pass
+
 # Import Claude commands utilities
 try:
     from scripts.claude_commands_utils import install_claude_commands, check_claude_code_cli
@@ -68,8 +78,15 @@ def print_warning(text):
     """Print formatted warning text."""
     print(f"  [WARNING]  {text}")
 
+# Cache for system detection to avoid duplicate calls
+_system_info_cache = None
+
 def detect_system():
     """Detect the system architecture and platform."""
+    global _system_info_cache
+    if _system_info_cache is not None:
+        return _system_info_cache
+    
     system = platform.system().lower()
     machine = platform.machine().lower()
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
@@ -80,7 +97,26 @@ def detect_system():
     is_arm = machine in ("arm64", "aarch64")
     is_x86 = machine in ("x86_64", "amd64", "x64")
     
-    print_info(f"System: {platform.system()} {platform.release()}")
+    # Fix Windows version detection - Windows 11 reports as Windows 10
+    if is_windows:
+        try:
+            import winreg
+            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion")
+            build_number = winreg.QueryValueEx(key, "CurrentBuildNumber")[0]
+            winreg.CloseKey(key)
+            
+            # Windows 11 has build number >= 22000
+            if int(build_number) >= 22000:
+                windows_version = "11"
+            else:
+                windows_version = platform.release()
+        except (ImportError, OSError, ValueError):
+            windows_version = platform.release()
+        
+        print_info(f"System: {platform.system()} {windows_version}")
+    else:
+        print_info(f"System: {platform.system()} {platform.release()}")
+    
     print_info(f"Architecture: {machine}")
     print_info(f"Python: {python_version}")
     
@@ -115,7 +151,7 @@ def detect_system():
         except (subprocess.SubprocessError, FileNotFoundError):
             pass
     
-    return {
+    _system_info_cache = {
         "system": system,
         "machine": machine,
         "python_version": python_version,
@@ -128,6 +164,7 @@ def detect_system():
         "has_homebrew_pytorch": has_homebrew_pytorch,
         "homebrew_pytorch_version": homebrew_pytorch_version
     }
+    return _system_info_cache
 
 def detect_gpu():
     """Detect GPU and acceleration capabilities."""
