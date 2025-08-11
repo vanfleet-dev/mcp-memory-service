@@ -667,6 +667,62 @@ def install_pytorch_windows(gpu_info):
     """Install PyTorch on Windows using the appropriate index URL."""
     print_step("3a", "Installing PyTorch for Windows")
     
+    # Check if PyTorch is already installed and compatible
+    pytorch_installed = False
+    torch_version_installed = None
+    directml_compatible = False
+    
+    try:
+        import torch
+        torch_version_installed = torch.__version__
+        pytorch_installed = True
+        print_info(f"PyTorch {torch_version_installed} is already installed")
+        
+        # Check if version is compatible with DirectML (2.4.x works, 2.5.x doesn't)
+        version_parts = torch_version_installed.split('.')
+        major, minor = int(version_parts[0]), int(version_parts[1])
+        
+        if gpu_info["has_directml"]:
+            if major == 2 and minor == 4:
+                directml_compatible = True
+                print_success(f"PyTorch {torch_version_installed} is compatible with DirectML")
+                
+                # Check if torch-directml is also installed
+                try:
+                    import torch_directml
+                    directml_version = getattr(torch_directml, '__version__', 'Unknown version')
+                    print_success(f"torch-directml {directml_version} is already installed")
+                    return True  # Everything is compatible, no need to reinstall
+                except ImportError:
+                    print_info("torch-directml not found, will install it")
+                    # Install torch-directml only
+                    try:
+                        subprocess.check_call([
+                            sys.executable, '-m', 'pip', 'install', 'torch-directml==0.2.5.dev240914'
+                        ])
+                        print_success("torch-directml installed successfully")
+                        return True
+                    except subprocess.SubprocessError:
+                        print_warning("Failed to install torch-directml - DirectML support will be limited")
+                        return True  # Still return True since PyTorch works
+                        
+            elif major == 2 and minor >= 5:
+                print_warning(f"PyTorch {torch_version_installed} is not compatible with torch-directml")
+                print_info("torch-directml requires PyTorch 2.4.x, but 2.5.x is installed")
+                print_info("Keeping existing PyTorch installation - DirectML support will be limited")
+                return True  # Don't break existing installation
+            else:
+                print_info(f"PyTorch {torch_version_installed} compatibility with DirectML is unknown")
+        else:
+            # No DirectML needed, check if current version is reasonable
+            if major == 2 and minor >= 4:
+                print_success(f"PyTorch {torch_version_installed} is acceptable for CPU usage")
+                return True  # Keep existing installation
+                
+    except ImportError:
+        print_info("PyTorch not found, will install compatible version")
+    
+    # If we get here, we need to install PyTorch
     # Determine the appropriate PyTorch index URL based on GPU
     if gpu_info["has_cuda"]:
         # Get CUDA version and determine appropriate index URL
@@ -704,10 +760,19 @@ def install_pytorch_windows(gpu_info):
     
     # Install PyTorch with the appropriate index URL
     try:
-        # Use compatible versions that are available in the CPU index
-        torch_version = "2.5.1"
-        torchvision_version = "0.20.1"  # Compatible with torch 2.5.1
-        torchaudio_version = "2.5.1"
+        # Use versions compatible with DirectML if needed
+        if gpu_info["has_directml"]:
+            # Use PyTorch 2.4.x which is compatible with torch-directml
+            torch_version = "2.4.1"
+            torchvision_version = "0.19.1"  # Compatible with torch 2.4.1
+            torchaudio_version = "2.4.1"
+            print_info("Using PyTorch 2.4.1 for DirectML compatibility")
+        else:
+            # Use latest version for non-DirectML systems
+            torch_version = "2.5.1"
+            torchvision_version = "0.20.1"  # Compatible with torch 2.5.1
+            torchaudio_version = "2.5.1"
+            print_info("Using PyTorch 2.5.1 for optimal performance")
         
         cmd = [
             sys.executable, '-m', 'pip', 'install',

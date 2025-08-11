@@ -4,6 +4,45 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.1] - 2025-08-11
+
+### 🔧 **Critical Windows Installation Fixes**
+
+#### Fixed
+- **PyTorch-DirectML Compatibility**: Resolved major installation issues on Windows 11
+  - Fixed installer attempting to install incompatible PyTorch 2.5.1 over working 2.4.1+DirectML setup
+  - Added smart compatibility checking: PyTorch 2.4.x works with DirectML, 2.5.x doesn't
+  - Enhanced `install_pytorch_windows()` to preserve existing compatible installations
+  - Only installs torch-directml if PyTorch 2.4.1 exists without DirectML extensions
+  
+- **Corrupted Virtual Environment Recovery**: Fixed "module 'torch' has no attribute 'version'" errors
+  - Implemented complete cleanup of corrupted `~orch` and `functorch` directories  
+  - Added robust uninstall and reinstall process for broken PyTorch installations
+  - Restored proper torch.version attribute functionality
+  
+- **Windows 11 Detection**: Fixed incorrect OS identification
+  - Implemented registry-based Windows 11 detection using build numbers (≥22000)
+  - Replaced unreliable platform detection with accurate registry lookups
+  - Added system info caching to prevent duplicate detection calls
+
+- **Installation Logging Improvements**: Enhanced installer feedback and debugging
+  - Created built-in DualOutput logging system with UTF-8 encoding
+  - Fixed character encoding issues in installation logs
+  - Added comprehensive logging for PyTorch compatibility decisions
+
+#### Changed
+- **Installation Intelligence**: Installer now preserves working DirectML setups instead of force-upgrading
+- **Error Prevention**: Added extensive pre-checks to prevent corrupted package installations
+- **User Experience**: Clear messaging about PyTorch version compatibility and preservation decisions
+
+#### Technical Details
+- Enhanced PyTorch version detection and compatibility matrix
+- Smart preservation of PyTorch 2.4.1 + torch-directml 0.2.5.dev240914 combinations
+- Automatic cleanup of corrupted package directories during installation recovery
+- Registry-based Windows version detection via `SOFTWARE\Microsoft\Windows NT\CurrentVersion`
+
+This release resolves critical Windows installation failures that prevented successful PyTorch-DirectML setup, ensuring reliable DirectML acceleration on Windows 11 systems.
+
 ## [4.3.0] - 2025-08-10
 
 ### ⚡ **Developer Experience Improvements**
