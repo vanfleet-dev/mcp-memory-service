@@ -20,12 +20,54 @@ Licensed under the MIT License. See LICENSE file in the project root for full li
 import sys
 import os
 import time
-# Add path to your virtual environment's site-packages
-venv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'venv', 'Lib', 'site-packages')
-if os.path.exists(venv_path):
-    sys.path.insert(0, venv_path)
-import asyncio
 import logging
+
+# Initialize basic logging first
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Enhanced path detection for Claude Desktop compatibility
+def setup_python_paths():
+    """Setup Python paths for dependency access."""
+    current_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    
+    # Check for virtual environment
+    potential_venv_paths = [
+        os.path.join(current_dir, 'venv', 'Lib', 'site-packages'),  # Windows venv
+        os.path.join(current_dir, 'venv', 'lib', 'python3.11', 'site-packages'),  # Linux/Mac venv
+        os.path.join(current_dir, '.venv', 'Lib', 'site-packages'),  # Windows .venv
+        os.path.join(current_dir, '.venv', 'lib', 'python3.11', 'site-packages'),  # Linux/Mac .venv
+    ]
+    
+    for venv_path in potential_venv_paths:
+        if os.path.exists(venv_path):
+            sys.path.insert(0, venv_path)
+            logger.debug(f"Added venv path: {venv_path}")
+            break
+    
+    # For Claude Desktop: also check if we can access global site-packages
+    try:
+        import site
+        global_paths = site.getsitepackages()
+        user_path = site.getusersitepackages()
+        
+        # Add user site-packages if not blocked by PYTHONNOUSERSITE
+        if not os.environ.get('PYTHONNOUSERSITE') and user_path not in sys.path:
+            sys.path.append(user_path)
+            logger.debug(f"Added user site-packages: {user_path}")
+        
+        # Add global site-packages if available
+        for path in global_paths:
+            if path not in sys.path:
+                sys.path.append(path)
+                logger.debug(f"Added global site-packages: {path}")
+                
+    except Exception as e:
+        logger.warning(f"Could not access site-packages: {e}")
+
+# Setup paths before other imports
+setup_python_paths()
+import asyncio
 import traceback
 import argparse
 import json

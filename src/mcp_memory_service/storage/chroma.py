@@ -191,6 +191,14 @@ class ChromaMemoryStorage(MemoryStorage):
         device = self.embedding_settings["device"]
         batch_size = self.embedding_settings["batch_size"]
         
+        # Configure offline mode if models are cached
+        hf_home = os.environ.get('HF_HOME', os.path.expanduser("~/.cache/huggingface"))
+        model_cache_path = os.path.join(hf_home, "hub", f"models--sentence-transformers--{preferred_model.replace('/', '--')}")
+        if os.path.exists(model_cache_path):
+            os.environ['HF_HUB_OFFLINE'] = '1'
+            os.environ['TRANSFORMERS_OFFLINE'] = '1'
+            logger.info(f"Using offline mode for cached model: {preferred_model}")
+        
         # Try the preferred model first, then fall back to alternatives
         models_to_try = [preferred_model] + [m for m in MODEL_FALLBACKS if m != preferred_model]
         
@@ -301,6 +309,15 @@ class ChromaMemoryStorage(MemoryStorage):
             self.model = None
             self.embedding_function = embedding_functions.DefaultEmbeddingFunction()
             return
+            
+        # Configure offline mode for cached models
+        preferred_model = self.embedding_settings.get("model_name", "all-MiniLM-L6-v2")
+        hf_home = os.environ.get('HF_HOME', os.path.expanduser("~/.cache/huggingface"))
+        model_cache_path = os.path.join(hf_home, "hub", f"models--sentence-transformers--{preferred_model.replace('/', '--')}")
+        if os.path.exists(model_cache_path):
+            os.environ['HF_HUB_OFFLINE'] = '1'
+            os.environ['TRANSFORMERS_OFFLINE'] = '1'
+            logger.info(f"Using offline mode for cached model: {preferred_model}")
             
         # Start with the optimal model for this system
         preferred_model = self.embedding_settings["model_name"]

@@ -249,15 +249,20 @@ class SqliteVecMemoryStorage(MemoryStorage):
             logger.info(f"Loading embedding model: {self.embedding_model_name}")
             logger.info(f"Using device: {device}")
             
-            # Set offline mode to use cached models
+            # Configure for offline mode if models are cached
             import os
-            os.environ['HF_HUB_OFFLINE'] = '1'
-            os.environ['TRANSFORMERS_OFFLINE'] = '1'
+            # Only set offline mode if we detect cached models to prevent initial downloads
+            hf_home = os.environ.get('HF_HOME', os.path.expanduser("~/.cache/huggingface"))
+            model_cache_path = os.path.join(hf_home, "hub", f"models--sentence-transformers--{self.embedding_model_name.replace('/', '--')}")
+            if os.path.exists(model_cache_path):
+                os.environ['HF_HUB_OFFLINE'] = '1'
+                os.environ['TRANSFORMERS_OFFLINE'] = '1'
             
             # Try to load from cache first, fallback to direct model name
             try:
                 # First try loading from Hugging Face cache
-                cache_path = f"/home/hkr/.cache/huggingface/hub/models--sentence-transformers--{self.embedding_model_name.replace('/', '--')}"
+                hf_home = os.environ.get('HF_HOME', os.path.expanduser("~/.cache/huggingface"))
+                cache_path = os.path.join(hf_home, "hub", f"models--sentence-transformers--{self.embedding_model_name.replace('/', '--')}")
                 if os.path.exists(cache_path):
                     # Find the snapshot directory
                     snapshots_path = os.path.join(cache_path, "snapshots")
