@@ -121,17 +121,26 @@ def is_first_run() -> bool:
     """
     Check if this appears to be the first run of the server.
     """
-    # Check if model cache exists
+    # Check if sentence-transformers models are cached
     cache_indicators = [
         os.path.expanduser("~/.cache/torch/sentence_transformers"),
-        os.path.expanduser("~/.cache/huggingface"),
+        os.path.expanduser("~/.cache/huggingface/hub"),  # Primary HF cache location
         os.path.expanduser("~/AppData/Local/sentence-transformers"),  # Windows
     ]
     
     for path in cache_indicators:
-        if os.path.exists(path) and os.listdir(path):
-            return False
+        if os.path.exists(path):
+            try:
+                contents = os.listdir(path)
+                # Look for sentence-transformers models specifically
+                for item in contents:
+                    if 'sentence-transformers' in item.lower() or 'miniml' in item.lower():
+                        logger.debug(f"Found cached model in {path}: {item}")
+                        return False
+            except (OSError, PermissionError):
+                continue
     
+    logger.debug("No cached sentence-transformers models found - this appears to be first run")
     return True
 
 def get_recommended_timeout() -> float:
