@@ -4,6 +4,158 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.4.0] - 2025-08-12
+
+### 🚀 **Backup System Enhancements**
+
+#### Added
+- **SQLite-vec Backup Support**: Enhanced MCP backup system to fully support SQLite-vec backend
+  - **Multi-Backend Support**: `dashboard_create_backup` now handles both ChromaDB and SQLite-vec databases
+  - **Complete File Coverage**: Backs up main database, WAL, and SHM files for data integrity
+  - **Metadata Generation**: Creates comprehensive backup metadata with size, file count, and backend info
+  - **Error Handling**: Robust error handling and validation during backup operations
+
+- **Automated Backup Infrastructure**: Complete automation solution for production deployments
+  - **Backup Script**: `scripts/backup_sqlite_vec.sh` with 7-day retention policy
+  - **Cron Setup**: `scripts/setup_backup_cron.sh` for easy daily backup scheduling
+  - **Metadata Tracking**: JSON metadata files with backup timestamp, size, and source information
+  - **Automatic Cleanup**: Old backup removal to prevent disk space issues
+
+#### Enhanced
+- **Backup Reliability**: Improved backup system architecture for production use
+  - **Backend Detection**: Automatic detection and appropriate handling of storage backend
+  - **File Integrity**: Proper handling of SQLite WAL mode with transaction log files
+  - **Consistent Naming**: Standardized backup naming with timestamps
+  - **Validation**: Pre-backup validation of source files and post-backup verification
+
+#### Technical Details
+- **Storage Backend**: Seamless support for both `sqlite_vec` and `chroma` backends
+- **File Operations**: Safe file copying with proper permission handling
+- **Scheduling**: Cron integration for hands-off automated backups
+- **Monitoring**: Backup logs and status tracking for operational visibility
+
+## [4.3.5] - 2025-08-12
+
+### 🔧 **Critical Fix: Client Hostname Capture**
+
+#### Fixed
+- **Architecture Correction**: Fixed hostname capture to identify CLIENT machine instead of server machine
+  - **Before**: Always captured server hostname (`narrowbox`) regardless of client
+  - **After**: Prioritizes client-provided hostname, fallback to server hostname
+  - **HTTP API**: Supports `client_hostname` in request body + `X-Client-Hostname` header
+  - **MCP Server**: Added `client_hostname` parameter to store_memory tool
+  - **Legacy Server**: Supports `client_hostname` in arguments dictionary
+  - **Priority Order**: request body > HTTP header > server hostname fallback
+
+#### Changed
+- **Client Detection Logic**: Updated all three interfaces with proper client hostname detection
+  - `memories.py`: Added Request parameter and header/body hostname extraction
+  - `mcp_server.py`: Added client_hostname parameter with priority logic
+  - `server.py`: Added client_hostname argument extraction with fallback
+  - Maintains backward compatibility when `MCP_MEMORY_INCLUDE_HOSTNAME=false`
+
+#### Documentation
+- **Command Templates**: Updated repository templates with client hostname detection guidance
+- **API Documentation**: Enhanced descriptions to clarify client vs server hostname capture
+- **Test Documentation**: Added comprehensive test scenarios and verification steps
+
+#### Technical Impact
+- ✅ **Multi-device workflows**: Memories now correctly identify originating client machine
+- ✅ **Audit trails**: Proper source attribution across different client connections
+- ✅ **Remote deployments**: Works correctly when client and server are different machines
+- ✅ **Backward compatible**: No breaking changes, respects environment variable setting
+
+## [4.3.4] - 2025-08-12
+
+### 🔧 **Optional Machine Identification**
+
+#### Added
+- **Environment-Controlled Machine Tracking**: Made machine identification optional via environment variable
+  - New environment variable: `MCP_MEMORY_INCLUDE_HOSTNAME` (default: `false`)
+  - When enabled, automatically adds machine hostname to all stored memories
+  - Adds both `source:hostname` tag and hostname metadata field
+  - Supports all interfaces: MCP server, HTTP API, and legacy server
+  - Privacy-focused: disabled by default, enables multi-device workflows when needed
+
+#### Changed
+- **Memory Storage Enhancement**: All memory storage operations now support optional machine tracking
+  - Updated `mcp_server.py` store_memory function with hostname logic
+  - Enhanced HTTP API `/memories` endpoint with machine identification
+  - Updated legacy `server.py` with consistent hostname tracking
+  - Maintains backward compatibility with existing memory operations
+
+#### Documentation
+- **CLAUDE.md Updated**: Added `MCP_MEMORY_INCLUDE_HOSTNAME` environment variable documentation
+- **Configuration Guide**: Explains optional hostname tracking for audit trails and multi-device setups
+
+## [4.3.3] - 2025-08-12
+
+### 🎯 **Claude Code Command Templates Enhancement**
+
+#### Added
+- **Machine Source Tracking**: All memory storage commands now automatically include machine hostname as a tag
+  - Enables filtering memories by originating machine (e.g., `source:machine-name`)
+  - Adds hostname to both tags and metadata for redundancy
+  - Supports multi-device workflows and audit trails
+
+#### Changed
+- **Command Templates Updated**: All five memory command templates enhanced with:
+  - Updated to use generic HTTPS endpoint (`https://memory.local:8443/`)
+  - Proper API endpoint paths documented for all operations
+  - Auto-save functionality without confirmation prompts
+  - curl with `-k` flag for HTTPS self-signed certificates
+  - Machine hostname tracking integrated throughout
+
+#### Documentation
+- `memory-store.md`: Added machine context and HTTPS configuration
+- `memory-health.md`: Updated with specific health API endpoints
+- `memory-search.md`: Added all search API endpoints and machine source search
+- `memory-context.md`: Integrated machine tracking for session captures
+- `memory-recall.md`: Updated with API endpoints and time parser limitations
+
+## [4.3.2] - 2025-08-11
+
+### 🎯 **Repository Organization & PyTorch Download Fix**
+
+#### Fixed
+- **PyTorch Repeated Downloads**: Completely resolved Claude Desktop downloading PyTorch (230MB+) on every startup
+  - Root cause: UV package manager isolation prevented offline environment variables from taking effect
+  - Solution: Created `scripts/memory_offline.py` launcher that sets offline mode BEFORE any imports
+  - Updated Claude Desktop config to use Python directly instead of UV isolation
+  - Added comprehensive offline mode configuration for HuggingFace transformers
+
+- **Environment Variable Inheritance**: Fixed UV environment isolation issues
+  - Implemented direct Python execution bypass for Claude Desktop integration
+  - Added code-level offline setup in `src/mcp_memory_service/__init__.py` as fallback
+  - Ensured cached model usage without network requests
+
+#### Changed
+- **Repository Structure**: Major cleanup and reorganization of root directory
+  - Moved documentation files to appropriate `/docs` subdirectories
+  - Consolidated guides in `docs/guides/`, technical docs in `docs/technical/`
+  - Moved deployment guides to `docs/deployment/`, installation to `docs/installation/`
+  - Removed obsolete debug scripts and development notes
+  - Moved service management scripts to `/scripts` directory
+
+- **Documentation Organization**: Improved logical hierarchy
+  - Claude Code compatibility → `docs/guides/claude-code-compatibility.md`
+  - Setup guides → `docs/installation/` and `docs/guides/`
+  - Technical documentation → `docs/technical/`
+  - Integration guides → `docs/integrations/`
+
+#### Technical Details
+- **Offline Mode Implementation**: `scripts/memory_offline.py` sets `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1` before ML library imports
+- **Config Optimization**: Updated Claude Desktop config templates for both Windows and general use
+- **Cache Management**: Proper Windows cache path configuration for sentence-transformers and HuggingFace
+
+#### Impact
+- ✅ **Eliminated 230MB PyTorch downloads** - Startup time reduced from ~60s to ~3s
+- ✅ **Professional repository structure** - Clean root directory with logical documentation hierarchy  
+- ✅ **Improved maintainability** - Consolidated scripts and removed redundant files
+- ✅ **Enhanced user experience** - No more frustrating download delays in Claude Desktop
+
+This release resolves the persistent PyTorch download issue that affected Windows users and establishes a clean, professional repository structure suitable for enterprise deployment.
+
 ## [4.3.1] - 2025-08-11
 
 ### 🔧 **Critical Windows Installation Fixes**
@@ -250,6 +402,111 @@ This release brings the MCP Memory Service to full compliance with the Model Con
 - `MCP_SSL_ADDITIONAL_HOSTNAMES`: Comma-separated list of additional hostnames to include in certificate
 
 This release resolves SSL connectivity issues that prevented Claude Code from connecting to remote MCP Memory Service instances across different networks and deployment environments.
+
+## [3.3.2] - 2025-08-02
+
+### 📚 **Enhanced Documentation & API Key Management**
+
+#### Changed
+- **API Key Documentation**: Comprehensive improvements to authentication guides
+  - Enhanced multi-client server documentation with security best practices
+  - Detailed API key generation and configuration instructions
+  - Updated service installation guide with authentication setup
+  - Improved CLAUDE.md with API key environment variable explanations
+
+#### Technical
+- **Documentation Quality**: Enhanced authentication documentation across multiple guides
+- **Security Guidance**: Clear instructions for production API key management
+- **Cross-Reference Links**: Better navigation between related documentation sections
+
+This release significantly improves the user experience for setting up secure, authenticated MCP Memory Service deployments.
+
+## [3.3.1] - 2025-08-01
+
+### 🔧 **Memory Statistics & Health Monitoring**
+
+#### Added
+- **Enhanced Health Endpoint**: Memory statistics integration for dashboard display
+  - Added memory statistics to `/health` endpoint for real-time monitoring
+  - Integration with dashboard UI for comprehensive system overview
+  - Better visibility into database health and memory usage
+
+#### Fixed
+- **Dashboard Display**: Improved dashboard data integration and visualization support
+
+#### Technical
+- **Web App Enhancement**: Updated FastAPI app with integrated statistics endpoints
+- **Version Synchronization**: Updated package version to maintain consistency
+
+This release enhances monitoring capabilities and prepares the foundation for advanced dashboard features.
+
+## [3.3.0] - 2025-07-31
+
+### 🎨 **Modern Professional Dashboard UI**
+
+#### Added
+- **Professional Dashboard Interface**: Complete UI overhaul for web interface
+  - Modern, responsive design with professional styling
+  - Real-time memory statistics display
+  - Interactive memory search and management interface
+  - Enhanced user experience for memory operations
+  
+#### Changed
+- **Visual Identity**: Updated project branding with professional dashboard preview
+- **User Interface**: Complete redesign of web-based memory management
+- **Documentation Assets**: Added dashboard screenshots and visual documentation
+
+#### Technical
+- **Web App Modernization**: Updated FastAPI application with modern UI components
+- **Asset Organization**: Proper structure for dashboard images and visual assets
+
+This release transforms the web interface from a basic API into a professional, user-friendly dashboard for memory management.
+
+## [3.2.0] - 2025-07-30
+
+### 🛠️ **SQLite-vec Diagnostic & Repair Tools**
+
+#### Added
+- **Comprehensive Diagnostic Tools**: Advanced SQLite-vec backend analysis and repair
+  - Database integrity checking and validation
+  - Embedding consistency verification tools
+  - Memory preservation during repairs and migrations  
+  - Automated repair workflows for corrupted databases
+
+#### Fixed
+- **SQLite-vec Embedding Issues**: Resolved critical embedding problems causing zero search results
+  - Fixed embedding dimension mismatches
+  - Resolved database schema inconsistencies
+  - Improved embedding generation and storage reliability
+
+#### Technical
+- **Migration Tools**: Enhanced migration utilities to preserve existing memories during backend transitions
+- **Diagnostic Scripts**: Comprehensive database analysis and repair automation
+
+This release significantly improves SQLite-vec backend reliability and provides tools for database maintenance and recovery.
+
+## [3.1.0] - 2025-07-30
+
+### 🔧 **Cross-Platform Service Installation**
+
+#### Added
+- **Universal Service Installation**: Complete cross-platform service management
+  - Linux systemd service installation and configuration
+  - macOS LaunchAgent/LaunchDaemon support
+  - Windows Service installation and management
+  - Unified service utilities across all platforms
+
+#### Changed
+- **Installation Experience**: Streamlined service setup for all operating systems
+- **Service Management**: Consistent service control across platforms
+- **Documentation**: Enhanced service installation guides
+
+#### Technical
+- **Platform-Specific Scripts**: Dedicated installation scripts for each operating system
+- **Service Configuration**: Proper service definitions and startup configurations
+- **Cross-Platform Utilities**: Unified service management tools
+
+This release enables easy deployment of MCP Memory Service as a system service on any major operating system.
 
 ## [3.0.0] - 2025-07-29
 

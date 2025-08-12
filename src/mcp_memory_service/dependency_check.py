@@ -120,24 +120,72 @@ def run_dependency_check() -> bool:
 def is_first_run() -> bool:
     """
     Check if this appears to be the first run of the server.
+    Enhanced for Windows and Claude Desktop environments.
     """
-    # Check if sentence-transformers models are cached
-    cache_indicators = [
-        os.path.expanduser("~/.cache/torch/sentence_transformers"),
-        os.path.expanduser("~/.cache/huggingface/hub"),  # Primary HF cache location
-        os.path.expanduser("~/AppData/Local/sentence-transformers"),  # Windows
-    ]
+    # Enhanced cache detection for Windows and different environments
+    cache_indicators = []
     
+    # Standard HuggingFace cache locations
+    cache_indicators.extend([
+        os.path.expanduser("~/.cache/huggingface/hub"),
+        os.path.expanduser("~/.cache/torch/sentence_transformers"),
+    ])
+    
+    # Windows-specific locations
+    if platform.system() == "Windows":
+        username = os.environ.get('USERNAME', os.environ.get('USER', ''))
+        cache_indicators.extend([
+            f"C:\\Users\\{username}\\.cache\\huggingface\\hub",
+            f"C:\\Users\\{username}\\.cache\\torch\\sentence_transformers",
+            f"C:\\Users\\{username}\\AppData\\Local\\huggingface\\hub",
+            f"C:\\Users\\{username}\\AppData\\Local\\torch\\sentence_transformers",
+            os.path.expanduser("~/AppData/Local/sentence-transformers"),
+        ])
+    
+    # Check environment variables for custom cache locations
+    hf_home = os.environ.get('HF_HOME')
+    if hf_home:
+        cache_indicators.append(os.path.join(hf_home, 'hub'))
+    
+    transformers_cache = os.environ.get('TRANSFORMERS_CACHE')
+    if transformers_cache:
+        cache_indicators.append(transformers_cache)
+    
+    sentence_transformers_home = os.environ.get('SENTENCE_TRANSFORMERS_HOME')
+    if sentence_transformers_home:
+        cache_indicators.append(sentence_transformers_home)
+    
+    # Check each cache location
     for path in cache_indicators:
         if os.path.exists(path):
             try:
                 contents = os.listdir(path)
                 # Look for sentence-transformers models specifically
                 for item in contents:
-                    if 'sentence-transformers' in item.lower() or 'miniml' in item.lower():
+                    item_lower = item.lower()
+                    # Check for common sentence-transformers model indicators
+                    if any(indicator in item_lower for indicator in [
+                        'sentence-transformers', 'miniml', 'all-miniml', 
+                        'paraphrase', 'distilbert', 'mpnet', 'roberta'
+                    ]):
                         logger.debug(f"Found cached model in {path}: {item}")
                         return False
+                        
+                # Also check for any model directories
+                for item in contents:
+                    item_path = os.path.join(path, item)
+                    if os.path.isdir(item_path):
+                        try:
+                            sub_contents = os.listdir(item_path)
+                            # Look for model files
+                            if any(f.endswith(('.bin', '.safetensors', '.json')) for f in sub_contents):
+                                logger.debug(f"Found model files in {item_path}")
+                                return False
+                        except (OSError, PermissionError):
+                            continue
+                            
             except (OSError, PermissionError):
+                logger.debug(f"Could not access cache directory: {path}")
                 continue
     
     logger.debug("No cached sentence-transformers models found - this appears to be first run")

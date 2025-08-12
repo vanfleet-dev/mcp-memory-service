@@ -19,13 +19,56 @@ Licensed under the MIT License. See LICENSE file in the project root for full li
 """
 import sys
 import os
+import socket
 import time
-# Add path to your virtual environment's site-packages
-venv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'venv', 'Lib', 'site-packages')
-if os.path.exists(venv_path):
-    sys.path.insert(0, venv_path)
-import asyncio
 import logging
+
+# Initialize basic logging first
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Enhanced path detection for Claude Desktop compatibility
+def setup_python_paths():
+    """Setup Python paths for dependency access."""
+    current_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    
+    # Check for virtual environment
+    potential_venv_paths = [
+        os.path.join(current_dir, 'venv', 'Lib', 'site-packages'),  # Windows venv
+        os.path.join(current_dir, 'venv', 'lib', 'python3.11', 'site-packages'),  # Linux/Mac venv
+        os.path.join(current_dir, '.venv', 'Lib', 'site-packages'),  # Windows .venv
+        os.path.join(current_dir, '.venv', 'lib', 'python3.11', 'site-packages'),  # Linux/Mac .venv
+    ]
+    
+    for venv_path in potential_venv_paths:
+        if os.path.exists(venv_path):
+            sys.path.insert(0, venv_path)
+            logger.debug(f"Added venv path: {venv_path}")
+            break
+    
+    # For Claude Desktop: also check if we can access global site-packages
+    try:
+        import site
+        global_paths = site.getsitepackages()
+        user_path = site.getusersitepackages()
+        
+        # Add user site-packages if not blocked by PYTHONNOUSERSITE
+        if not os.environ.get('PYTHONNOUSERSITE') and user_path not in sys.path:
+            sys.path.append(user_path)
+            logger.debug(f"Added user site-packages: {user_path}")
+        
+        # Add global site-packages if available
+        for path in global_paths:
+            if path not in sys.path:
+                sys.path.append(path)
+                logger.debug(f"Added global site-packages: {path}")
+                
+    except Exception as e:
+        logger.warning(f"Could not access site-packages: {e}")
+
+# Setup paths before other imports
+setup_python_paths()
+import asyncio
 import traceback
 import argparse
 import json
@@ -51,7 +94,8 @@ from .config import (
     SQLITE_VEC_PATH,
     CONSOLIDATION_ENABLED,
     CONSOLIDATION_CONFIG,
-    CONSOLIDATION_SCHEDULE
+    CONSOLIDATION_SCHEDULE,
+    INCLUDE_HOSTNAME
 )
 # Storage imports will be done conditionally in the server class
 from .models.memory import Memory
@@ -2111,10 +2155,9 @@ class MemoryServer:
         """Dashboard version that creates backup and returns JSON."""
         logger.info("=== EXECUTING DASHBOARD_CREATE_BACKUP ===")
         try:
-            # Create a backup without requiring ChromaDB initialization
-            # This allows backup creation even if ChromaDB is not initialized
             import shutil
             import os
+            import json
             from datetime import datetime
             
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -2124,37 +2167,80 @@ class MemoryServer:
             # Create backup directory
             os.makedirs(backup_path, exist_ok=True)
             
-            # Copy ChromaDB directory to backup if it exists
             files_copied = 0
-            if os.path.exists(CHROMA_PATH):
-                shutil.copytree(CHROMA_PATH, os.path.join(backup_path, "chroma_db"), dirs_exist_ok=True)
-                
-                # Count files copied
-                for root, dirs, files in os.walk(os.path.join(backup_path, "chroma_db")):
-                    files_copied += len(files)
-                
+            backend_info = {}
+            
+            # Handle SQLite-vec backend
+            if STORAGE_BACKEND == 'sqlite_vec':
+                from ..config import SQLITE_VEC_PATH
+                sqlite_path = SQLITE_VEC_PATH
+                if os.path.exists(sqlite_path):
+                    # Copy SQLite database files
+                    shutil.copy2(sqlite_path, backup_path)
+                    files_copied += 1
+                    
+                    # Copy WAL and SHM files if they exist
+                    for ext in ['-wal', '-shm']:
+                        ext_file = sqlite_path + ext
+                        if os.path.exists(ext_file):
+                            shutil.copy2(ext_file, backup_path)
+                            files_copied += 1
+                    
+                    backend_info = {
+                        "backend": "sqlite_vec",
+                        "source_path": sqlite_path,
+                        "database_size": os.path.getsize(sqlite_path)
+                    }
+                else:
+                    logger.warning(f"SQLite database not found at {sqlite_path}")
+            
+            # Handle ChromaDB backend (fallback/legacy)
+            if STORAGE_BACKEND == 'chroma' or (files_copied == 0 and os.path.exists(CHROMA_PATH)):
+                if os.path.exists(CHROMA_PATH):
+                    shutil.copytree(CHROMA_PATH, os.path.join(backup_path, "chroma_db"), dirs_exist_ok=True)
+                    
+                    # Count files copied
+                    for root, dirs, files in os.walk(os.path.join(backup_path, "chroma_db")):
+                        files_copied += len(files)
+                    
+                    backend_info = {
+                        "backend": "chroma",
+                        "source_path": CHROMA_PATH
+                    }
+            
+            # Create backup metadata
+            backup_metadata = {
+                "backup_name": backup_name,
+                "timestamp": timestamp,
+                "created_at": datetime.now().isoformat(),
+                "storage_backend": STORAGE_BACKEND,
+                "files_copied": files_copied,
+                "backup_path": backup_path,
+                **backend_info
+            }
+            
+            with open(os.path.join(backup_path, "backup_info.json"), "w") as f:
+                json.dump(backup_metadata, f, indent=2)
+            
+            if files_copied > 0:
                 result = {
                     "status": "completed",
                     "message": f"Backup created successfully: {backup_name}",
                     "backup_path": backup_path,
                     "timestamp": timestamp,
                     "files_copied": files_copied,
-                    "source_path": CHROMA_PATH
+                    "backend": STORAGE_BACKEND,
+                    **backend_info
                 }
             else:
-                # Create empty backup with info
-                with open(os.path.join(backup_path, "backup_info.txt"), "w") as f:
-                    f.write(f"Backup created: {timestamp}\n")
-                    f.write(f"Source path: {CHROMA_PATH} (did not exist)\n")
-                    f.write("Note: ChromaDB directory was not found. This may be a fresh installation.\n")
-                
                 result = {
                     "status": "completed",
                     "message": f"Backup created (empty): {backup_name}",
                     "backup_path": backup_path,
                     "timestamp": timestamp,
                     "files_copied": 0,
-                    "note": "ChromaDB directory not found - backup is empty but ready for future data"
+                    "backend": STORAGE_BACKEND,
+                    "note": "No database files found - backup is empty but ready for future data"
                 }
             
             return [types.TextContent(type="text", text=json.dumps(result))]
@@ -2222,15 +2308,30 @@ class MemoryServer:
 
             sanitized_tags = storage.sanitized(tags)
             
+            # Add optional hostname tracking
+            final_metadata = metadata.copy()
+            if INCLUDE_HOSTNAME:
+                # Prioritize client-provided hostname, then fallback to server
+                client_hostname = arguments.get("client_hostname")
+                if client_hostname:
+                    hostname = client_hostname
+                else:
+                    hostname = socket.gethostname()
+                    
+                source_tag = f"source:{hostname}"
+                if source_tag not in tags:
+                    tags.append(source_tag)
+                final_metadata["hostname"] = hostname
+            
             # Create memory object
-            content_hash = generate_content_hash(content, metadata)
+            content_hash = generate_content_hash(content, final_metadata)
             now = time.time()
             memory = Memory(
                 content=content,
                 content_hash=content_hash,
                 tags=tags,  # keep as a list for easier use in other methods
-                memory_type=metadata.get("type"),
-                metadata = {**metadata, "tags":sanitized_tags},  # include the stringified tags in the meta data
+                memory_type=final_metadata.get("type"),
+                metadata = {**final_metadata, "tags":sanitized_tags},  # include the stringified tags in the meta data
                 created_at=now,
                 created_at_iso=datetime.utcfromtimestamp(now).isoformat() + "Z"
             )
