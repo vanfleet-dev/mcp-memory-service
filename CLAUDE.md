@@ -18,6 +18,7 @@ MCP Memory Service is a Model Context Protocol server that provides semantic mem
 - **Check documentation links**: `python scripts/check_documentation_links.py` (validates all internal markdown links)
 - **Test Docker functionality**: `python scripts/test_docker_functionality.py` (comprehensive Docker container verification)
 - **Setup git merge drivers**: `./scripts/setup-git-merge-drivers.sh` (one-time setup for new contributors)
+- **Store memory**: `/memory-store "content"` - Store information directly to MCP Memory Service at narrowbox.local:8443
 
 ### Build & Package
 - **Build package**: `python -m build`
@@ -113,6 +114,35 @@ The codebase includes platform-specific optimizations:
 
 Hardware detection is automatic via `utils/system_detection.py`.
 
+### Memory Storage Command
+
+The `/memory-store` command allows direct storage of information to the MCP Memory Service:
+
+**Basic Usage:**
+```bash
+/memory-store "content to store"
+```
+
+**Advanced Usage:**
+- Automatically detects project context and adds relevant tags
+- Captures git repository information and recent commits
+- Adds client hostname via the hostname capture feature
+- Uses direct curl to `https://narrowbox.local:8443/api/memories`
+- No temporary files or confirmation prompts required
+
+**Example Patterns:**
+```bash
+/memory-store "Fixed critical bug in hostname capture logic"
+/memory-store "Decision: Use SQLite-vec for better performance than ChromaDB"
+/memory-store "TODO: Update Docker configuration after database backend change"
+```
+
+The command will:
+1. Analyze current working directory and git context
+2. Generate appropriate tags (project name, file types, git commits)
+3. Store directly via curl with proper JSON formatting
+4. Return content hash and applied tags for confirmation
+
 ### Development Tips
 
 1. When modifying storage backends, ensure compatibility with the abstract base class
@@ -122,6 +152,7 @@ Hardware detection is automatic via `utils/system_detection.py`.
 5. The server maintains global state for models - be careful with concurrent modifications
 6. All new features should include corresponding tests
 7. Use semantic commit messages for version management
+8. Use `/memory-store` to capture important decisions and context during development
 
 ### Git Configuration
 
