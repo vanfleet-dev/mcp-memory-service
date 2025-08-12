@@ -94,7 +94,6 @@ curl -X POST http://your-server:8000/mcp \
 - ✅ **Native MCP Protocol**: Standard JSON-RPC 2.0 implementation  
 - ✅ **No Bridge Required**: Direct HTTP/HTTPS connection
 - ✅ **Production Ready**: Proven deployment at scale
-```
 
 ### MCP Client Compatibility
 
