@@ -4,6 +4,36 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.4.0] - 2025-08-12
+
+### 🚀 **Backup System Enhancements**
+
+#### Added
+- **SQLite-vec Backup Support**: Enhanced MCP backup system to fully support SQLite-vec backend
+  - **Multi-Backend Support**: `dashboard_create_backup` now handles both ChromaDB and SQLite-vec databases
+  - **Complete File Coverage**: Backs up main database, WAL, and SHM files for data integrity
+  - **Metadata Generation**: Creates comprehensive backup metadata with size, file count, and backend info
+  - **Error Handling**: Robust error handling and validation during backup operations
+
+- **Automated Backup Infrastructure**: Complete automation solution for production deployments
+  - **Backup Script**: `scripts/backup_sqlite_vec.sh` with 7-day retention policy
+  - **Cron Setup**: `scripts/setup_backup_cron.sh` for easy daily backup scheduling
+  - **Metadata Tracking**: JSON metadata files with backup timestamp, size, and source information
+  - **Automatic Cleanup**: Old backup removal to prevent disk space issues
+
+#### Enhanced
+- **Backup Reliability**: Improved backup system architecture for production use
+  - **Backend Detection**: Automatic detection and appropriate handling of storage backend
+  - **File Integrity**: Proper handling of SQLite WAL mode with transaction log files
+  - **Consistent Naming**: Standardized backup naming with timestamps
+  - **Validation**: Pre-backup validation of source files and post-backup verification
+
+#### Technical Details
+- **Storage Backend**: Seamless support for both `sqlite_vec` and `chroma` backends
+- **File Operations**: Safe file copying with proper permission handling
+- **Scheduling**: Cron integration for hands-off automated backups
+- **Monitoring**: Backup logs and status tracking for operational visibility
+
 ## [4.3.5] - 2025-08-12
 
 ### 🔧 **Critical Fix: Client Hostname Capture**
