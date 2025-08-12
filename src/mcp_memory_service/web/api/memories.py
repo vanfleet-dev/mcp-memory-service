@@ -17,6 +17,7 @@ Memory CRUD endpoints for the HTTP interface.
 """
 
 import logging
+import socket
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -26,6 +27,7 @@ from pydantic import BaseModel, Field
 from ...storage.sqlite_vec import SqliteVecMemoryStorage
 from ...models.memory import Memory
 from ...utils.hashing import generate_content_hash
+from ...config import INCLUDE_HOSTNAME
 from ..dependencies import get_storage
 from ..sse import sse_manager, create_memory_stored_event, create_memory_deleted_event
 
@@ -109,13 +111,24 @@ async def store_memory(
         # Generate content hash
         content_hash = generate_content_hash(request.content)
         
+        # Prepare tags and metadata with optional hostname
+        final_tags = request.tags or []
+        final_metadata = request.metadata or {}
+        
+        if INCLUDE_HOSTNAME:
+            hostname = socket.gethostname()
+            source_tag = f"source:{hostname}"
+            if source_tag not in final_tags:
+                final_tags.append(source_tag)
+            final_metadata["hostname"] = hostname
+        
         # Create memory object
         memory = Memory(
             content=request.content,
             content_hash=content_hash,
-            tags=request.tags,
+            tags=final_tags,
             memory_type=request.memory_type,
-            metadata=request.metadata
+            metadata=final_metadata
         )
         
         # Store the memory

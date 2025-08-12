@@ -82,6 +82,7 @@ Run tests with coverage: `pytest --cov=src/mcp_memory_service tests/`
 Key configuration:
 - `MCP_MEMORY_CHROMA_PATH`: ChromaDB storage location (default: `~/.mcp_memory_chroma`)
 - `MCP_MEMORY_BACKUPS_PATH`: Backup location (default: `~/.mcp_memory_backups`)
+- `MCP_MEMORY_INCLUDE_HOSTNAME`: Enable automatic machine identification (default: `false`)
 - `MCP_API_KEY`: API key for HTTP authentication (optional, no default)
 - `LOG_LEVEL`: Logging verbosity (DEBUG, INFO, WARNING, ERROR)
 - Platform-specific: `PYTORCH_ENABLE_MPS_FALLBACK`, `MCP_MEMORY_USE_ONNX`

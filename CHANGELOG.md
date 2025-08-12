@@ -4,6 +4,29 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.4] - 2025-08-12
+
+### 🔧 **Optional Machine Identification**
+
+#### Added
+- **Environment-Controlled Machine Tracking**: Made machine identification optional via environment variable
+  - New environment variable: `MCP_MEMORY_INCLUDE_HOSTNAME` (default: `false`)
+  - When enabled, automatically adds machine hostname to all stored memories
+  - Adds both `source:hostname` tag and hostname metadata field
+  - Supports all interfaces: MCP server, HTTP API, and legacy server
+  - Privacy-focused: disabled by default, enables multi-device workflows when needed
+
+#### Changed
+- **Memory Storage Enhancement**: All memory storage operations now support optional machine tracking
+  - Updated `mcp_server.py` store_memory function with hostname logic
+  - Enhanced HTTP API `/memories` endpoint with machine identification
+  - Updated legacy `server.py` with consistent hostname tracking
+  - Maintains backward compatibility with existing memory operations
+
+#### Documentation
+- **CLAUDE.md Updated**: Added `MCP_MEMORY_INCLUDE_HOSTNAME` environment variable documentation
+- **Configuration Guide**: Explains optional hostname tracking for audit trails and multi-device setups
+
 ## [4.3.3] - 2025-08-12
 
 ### 🎯 **Claude Code Command Templates Enhancement**

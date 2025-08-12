@@ -19,6 +19,7 @@ Licensed under the MIT License. See LICENSE file in the project root for full li
 """
 import sys
 import os
+import socket
 import time
 import logging
 
@@ -93,7 +94,8 @@ from .config import (
     SQLITE_VEC_PATH,
     CONSOLIDATION_ENABLED,
     CONSOLIDATION_CONFIG,
-    CONSOLIDATION_SCHEDULE
+    CONSOLIDATION_SCHEDULE,
+    INCLUDE_HOSTNAME
 )
 # Storage imports will be done conditionally in the server class
 from .models.memory import Memory
@@ -2264,15 +2266,24 @@ class MemoryServer:
 
             sanitized_tags = storage.sanitized(tags)
             
+            # Add optional hostname tracking
+            final_metadata = metadata.copy()
+            if INCLUDE_HOSTNAME:
+                hostname = socket.gethostname()
+                source_tag = f"source:{hostname}"
+                if source_tag not in tags:
+                    tags.append(source_tag)
+                final_metadata["hostname"] = hostname
+            
             # Create memory object
-            content_hash = generate_content_hash(content, metadata)
+            content_hash = generate_content_hash(content, final_metadata)
             now = time.time()
             memory = Memory(
                 content=content,
                 content_hash=content_hash,
                 tags=tags,  # keep as a list for easier use in other methods
-                memory_type=metadata.get("type"),
-                metadata = {**metadata, "tags":sanitized_tags},  # include the stringified tags in the meta data
+                memory_type=final_metadata.get("type"),
+                metadata = {**final_metadata, "tags":sanitized_tags},  # include the stringified tags in the meta data
                 created_at=now,
                 created_at_iso=datetime.utcfromtimestamp(now).isoformat() + "Z"
             )

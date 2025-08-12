@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Any, Union
 import os
 import sys
+import socket
 from pathlib import Path
 
 # Add src to path for imports
@@ -35,7 +36,7 @@ from mcp.types import TextContent
 # Import existing memory service components
 from .config import (
     CHROMA_PATH, COLLECTION_METADATA, STORAGE_BACKEND, 
-    CONSOLIDATION_ENABLED, EMBEDDING_MODEL_NAME
+    CONSOLIDATION_ENABLED, EMBEDDING_MODEL_NAME, INCLUDE_HOSTNAME
 )
 from .storage.base import MemoryStorage
 
@@ -149,12 +150,23 @@ async def store_memory(
     try:
         storage = ctx.request_context.lifespan_context.storage
         
+        # Prepare tags and metadata with optional hostname
+        final_tags = tags or []
+        final_metadata = metadata or {}
+        
+        if INCLUDE_HOSTNAME:
+            hostname = socket.gethostname()
+            source_tag = f"source:{hostname}"
+            if source_tag not in final_tags:
+                final_tags.append(source_tag)
+            final_metadata["hostname"] = hostname
+        
         # Create memory object
         memory = Memory(
             content=content,
-            tags=tags or [],
+            tags=final_tags,
             memory_type=memory_type,
-            metadata=metadata or {}
+            metadata=final_metadata
         )
         
         # Store memory
