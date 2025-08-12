@@ -137,9 +137,9 @@ claude /memory-health
 - Reinstall commands: `python scripts/claude_commands_utils.py`
 
 ### Service Connection Issues
-- **mDNS Discovery**: Verify MCP Memory Service is running: `memory --help`
-- **Direct HTTPS**: Check endpoint accessibility: `curl -k https://your-endpoint:8443/api/health`
-- **Service Health**: Use `claude /memory-health` for comprehensive diagnostics
+- **Service Health**: Check if service is accessible: `curl -k https://your-endpoint:8443/api/health`
+- **Comprehensive Diagnostics**: Use `claude /memory-health` for detailed service status
+- **Local Development**: Verify server can start: `python scripts/run_memory_server.py --help`
 - **Endpoint Configuration**: Verify API endpoints match your service deployment
 
 ### Permission Issues
