@@ -136,6 +136,15 @@ Real-time progress notifications for long-running operations:
 - Operation IDs for tracking multiple concurrent tasks
 - MCP-compliant progress notification protocol
 
+#### 🔄 **Database Synchronization** (NEW in v4.5.0!)
+Multi-node database synchronization for distributed memory access:
+- **JSON Export/Import**: Preserve timestamps and metadata across database migrations
+- **Litestream Integration**: Real-time database replication with conflict resolution
+- **3-Node Architecture**: Central server with replica nodes for distributed workflows
+- **Deduplication Logic**: Content hash-based duplicate prevention during imports
+- **Source Tracking**: Automatic tagging to identify memory origin machines
+- **Cross-Platform Sync**: Synchronize memories between Windows, macOS, and Linux systems
+
 ### 🧠 Dream-Inspired Memory Consolidation (NEW in v2.0!)
 - **Autonomous memory management** inspired by human sleep cycle processing
 - **Multi-layered time horizons** (daily → weekly → monthly → quarterly → yearly)
