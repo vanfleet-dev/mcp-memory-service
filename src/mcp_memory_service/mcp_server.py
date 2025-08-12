@@ -133,7 +133,8 @@ async def store_memory(
     ctx: Context,
     tags: Optional[List[str]] = None,
     memory_type: str = "note",
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None,
+    client_hostname: Optional[str] = None
 ) -> Dict[str, Union[bool, str]]:
     """
     Store a new memory with content and optional metadata.
@@ -143,6 +144,7 @@ async def store_memory(
         tags: Optional tags to categorize the memory
         memory_type: Type of memory (note, decision, task, reference)
         metadata: Additional metadata for the memory
+        client_hostname: Client machine hostname for source tracking
     
     Returns:
         Dictionary with success status and message
@@ -155,7 +157,12 @@ async def store_memory(
         final_metadata = metadata or {}
         
         if INCLUDE_HOSTNAME:
-            hostname = socket.gethostname()
+            # Prioritize client-provided hostname, then fallback to server
+            if client_hostname:
+                hostname = client_hostname
+            else:
+                hostname = socket.gethostname()
+                
             source_tag = f"source:{hostname}"
             if source_tag not in final_tags:
                 final_tags.append(source_tag)

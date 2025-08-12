@@ -83,6 +83,9 @@ Key configuration:
 - `MCP_MEMORY_CHROMA_PATH`: ChromaDB storage location (default: `~/.mcp_memory_chroma`)
 - `MCP_MEMORY_BACKUPS_PATH`: Backup location (default: `~/.mcp_memory_backups`)
 - `MCP_MEMORY_INCLUDE_HOSTNAME`: Enable automatic machine identification (default: `false`)
+  - When enabled, adds client hostname as `source:hostname` tag to stored memories
+  - Clients can specify hostname via `client_hostname` parameter or `X-Client-Hostname` header
+  - Fallback to server hostname if client doesn't provide one
 - `MCP_API_KEY`: API key for HTTP authentication (optional, no default)
 - `LOG_LEVEL`: Logging verbosity (DEBUG, INFO, WARNING, ERROR)
 - Platform-specific: `PYTORCH_ENABLE_MPS_FALLBACK`, `MCP_MEMORY_USE_ONNX`

@@ -44,7 +44,7 @@ The service endpoint is configured at:
 - **Main endpoint**: `https://memory.local:8443/`
 - **API endpoint**: `https://memory.local:8443/api/memories`
 
-I'll use the correct curl syntax with `-k` flag for HTTPS and proper JSON payload formatting.
+I'll use the correct curl syntax with `-k` flag for HTTPS, proper JSON payload formatting, and automatic client hostname detection using the `X-Client-Hostname` header.
 
 ## Arguments:
 

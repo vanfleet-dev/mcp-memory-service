@@ -4,6 +4,37 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.5] - 2025-08-12
+
+### 🔧 **Critical Fix: Client Hostname Capture**
+
+#### Fixed
+- **Architecture Correction**: Fixed hostname capture to identify CLIENT machine instead of server machine
+  - **Before**: Always captured server hostname (`narrowbox`) regardless of client
+  - **After**: Prioritizes client-provided hostname, fallback to server hostname
+  - **HTTP API**: Supports `client_hostname` in request body + `X-Client-Hostname` header
+  - **MCP Server**: Added `client_hostname` parameter to store_memory tool
+  - **Legacy Server**: Supports `client_hostname` in arguments dictionary
+  - **Priority Order**: request body > HTTP header > server hostname fallback
+
+#### Changed
+- **Client Detection Logic**: Updated all three interfaces with proper client hostname detection
+  - `memories.py`: Added Request parameter and header/body hostname extraction
+  - `mcp_server.py`: Added client_hostname parameter with priority logic
+  - `server.py`: Added client_hostname argument extraction with fallback
+  - Maintains backward compatibility when `MCP_MEMORY_INCLUDE_HOSTNAME=false`
+
+#### Documentation
+- **Command Templates**: Updated repository templates with client hostname detection guidance
+- **API Documentation**: Enhanced descriptions to clarify client vs server hostname capture
+- **Test Documentation**: Added comprehensive test scenarios and verification steps
+
+#### Technical Impact
+- ✅ **Multi-device workflows**: Memories now correctly identify originating client machine
+- ✅ **Audit trails**: Proper source attribution across different client connections
+- ✅ **Remote deployments**: Works correctly when client and server are different machines
+- ✅ **Backward compatible**: No breaking changes, respects environment variable setting
+
 ## [4.3.4] - 2025-08-12
 
 ### 🔧 **Optional Machine Identification**

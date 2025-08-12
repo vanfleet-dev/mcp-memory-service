@@ -21,7 +21,7 @@ import socket
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from pydantic import BaseModel, Field
 
 from ...storage.sqlite_vec import SqliteVecMemoryStorage
@@ -42,6 +42,7 @@ class MemoryCreateRequest(BaseModel):
     tags: List[str] = Field(default=[], description="Tags to categorize the memory")
     memory_type: Optional[str] = Field(None, description="Type of memory (e.g., 'note', 'reminder', 'fact')")
     metadata: Dict[str, Any] = Field(default={}, description="Additional metadata for the memory")
+    client_hostname: Optional[str] = Field(None, description="Client machine hostname for source tracking")
 
 
 class MemoryResponse(BaseModel):
@@ -99,6 +100,7 @@ def memory_to_response(memory: Memory) -> MemoryResponse:
 @router.post("/memories", response_model=MemoryCreateResponse, tags=["memories"])
 async def store_memory(
     request: MemoryCreateRequest,
+    http_request: Request,
     storage: SqliteVecMemoryStorage = Depends(get_storage)
 ):
     """
@@ -116,7 +118,21 @@ async def store_memory(
         final_metadata = request.metadata or {}
         
         if INCLUDE_HOSTNAME:
-            hostname = socket.gethostname()
+            # Prioritize client-provided hostname, then header, then fallback to server
+            hostname = None
+            
+            # 1. Check if client provided hostname in request body
+            if request.client_hostname:
+                hostname = request.client_hostname
+                
+            # 2. Check for X-Client-Hostname header
+            elif http_request.headers.get('X-Client-Hostname'):
+                hostname = http_request.headers.get('X-Client-Hostname')
+                
+            # 3. Fallback to server hostname (original behavior)
+            else:
+                hostname = socket.gethostname()
+            
             source_tag = f"source:{hostname}"
             if source_tag not in final_tags:
                 final_tags.append(source_tag)

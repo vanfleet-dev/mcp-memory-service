@@ -2269,7 +2269,13 @@ class MemoryServer:
             # Add optional hostname tracking
             final_metadata = metadata.copy()
             if INCLUDE_HOSTNAME:
-                hostname = socket.gethostname()
+                # Prioritize client-provided hostname, then fallback to server
+                client_hostname = arguments.get("client_hostname")
+                if client_hostname:
+                    hostname = client_hostname
+                else:
+                    hostname = socket.gethostname()
+                    
                 source_tag = f"source:{hostname}"
                 if source_tag not in tags:
                     tags.append(source_tag)

@@ -43,7 +43,7 @@ I'll automatically analyze our current session and project state, then store it 
 4. **Memory Creation**: Store the context with automatic tags including machine hostname
 5. **Auto-Save**: Memory is stored immediately without confirmation prompts
 
-The service uses HTTPS with curl `-k` flag for secure communication.
+The service uses HTTPS with curl `-k` flag for secure communication and automatically detects client hostname using the `X-Client-Hostname` header.
 
 The stored memory will include:
 - **Source Machine**: Hostname tag for tracking memory origin (e.g., "source:your-machine-name")
