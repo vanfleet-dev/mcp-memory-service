@@ -90,7 +90,12 @@
       "WebFetch(domain:docs.anthropic.com)",
       "Bash(ssh-keygen:*)",
       "Bash(ssh-copy-id:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "mcp__code-context__search_code",
+      "Bash(ssh:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh api:*)"
     ],
     "deny": []
   },

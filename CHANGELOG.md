@@ -4,6 +4,46 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.0] - 2025-08-12
+
+### 🔄 **Database Synchronization System**
+
+#### Added
+- **Multi-Node Database Sync**: Complete Litestream-based synchronization for SQLite-vec databases
+  - **JSON Export/Import**: Preserve timestamps and metadata across database migrations
+  - **Litestream Integration**: Real-time database replication with conflict resolution
+  - **3-Node Architecture**: Central server with replica nodes for distributed workflows
+  - **Deduplication Logic**: Content hash-based duplicate prevention during imports
+  - **Source Tracking**: Automatic tagging to identify memory origin machines
+
+- **New Sync Module**: `src/mcp_memory_service/sync/`
+  - `MemoryExporter`: Export memories to JSON with full metadata preservation
+  - `MemoryImporter`: Import with intelligent deduplication and source tracking
+  - `LitestreamManager`: Automated Litestream configuration and management
+
+- **Sync Scripts Suite**: `scripts/sync/`
+  - `export_memories.py`: Platform-aware memory export utility
+  - `import_memories.py`: Central server import with merge statistics
+  - `README.md`: Comprehensive usage documentation
+
+#### Enhanced
+- **Migration Tools**: Extended existing migration scripts to support sync workflows
+- **Backup Integration**: Sync capabilities integrate with existing backup system
+- **Health Monitoring**: Added sync status to health endpoints and monitoring
+
+#### Documentation
+- **Complete Sync Guide**: `docs/deployment/database-synchronization.md`
+- **Technical Architecture**: Detailed setup and troubleshooting documentation
+- **Migration Examples**: Updated migration documentation with sync procedures
+
+#### Use Cases
+- **Multi-Device Workflows**: Keep memories synchronized across Windows, macOS, and server
+- **Team Collaboration**: Shared memory databases with individual client access
+- **Backup and Recovery**: Real-time replication provides instant backup capability
+- **Offline Capability**: Local replicas work offline, sync when reconnected
+
+This release enables seamless database synchronization across multiple machines while preserving all memory metadata, timestamps, and source attribution.
+
 ## [4.4.0] - 2025-08-12
 
 ### 🚀 **Backup System Enhancements**
