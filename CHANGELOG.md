@@ -4,6 +4,31 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.3] - 2025-08-12
+
+### 🎯 **Claude Code Command Templates Enhancement**
+
+#### Added
+- **Machine Source Tracking**: All memory storage commands now automatically include machine hostname as a tag
+  - Enables filtering memories by originating machine (e.g., `source:machine-name`)
+  - Adds hostname to both tags and metadata for redundancy
+  - Supports multi-device workflows and audit trails
+
+#### Changed
+- **Command Templates Updated**: All five memory command templates enhanced with:
+  - Updated to use generic HTTPS endpoint (`https://memory.local:8443/`)
+  - Proper API endpoint paths documented for all operations
+  - Auto-save functionality without confirmation prompts
+  - curl with `-k` flag for HTTPS self-signed certificates
+  - Machine hostname tracking integrated throughout
+
+#### Documentation
+- `memory-store.md`: Added machine context and HTTPS configuration
+- `memory-health.md`: Updated with specific health API endpoints
+- `memory-search.md`: Added all search API endpoints and machine source search
+- `memory-context.md`: Integrated machine tracking for session captures
+- `memory-recall.md`: Updated with API endpoints and time parser limitations
+
 ## [4.3.2] - 2025-08-11
 
 ### 🎯 **Repository Organization & PyTorch Download Fix**
