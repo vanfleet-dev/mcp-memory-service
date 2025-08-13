@@ -22,9 +22,100 @@ import os
 import socket
 import time
 import logging
+import psutil
 
-# Initialize basic logging first
-logging.basicConfig(level=logging.INFO)
+# Client detection for environment-aware behavior
+def detect_mcp_client():
+    """Detect which MCP client is running this server."""
+    try:
+        # Get the parent process (the MCP client)
+        current_process = psutil.Process()
+        parent = current_process.parent()
+        
+        if parent:
+            parent_name = parent.name().lower()
+            parent_exe = parent.exe() if hasattr(parent, 'exe') else ""
+            
+            # Check for Claude Desktop
+            if 'claude' in parent_name or 'claude' in parent_exe.lower():
+                return 'claude_desktop'
+            
+            # Check for LM Studio
+            if 'lmstudio' in parent_name or 'lm-studio' in parent_name or 'lmstudio' in parent_exe.lower():
+                return 'lm_studio'
+            
+            # Check command line for additional clues
+            try:
+                cmdline = parent.cmdline()
+                cmdline_str = ' '.join(cmdline).lower()
+                
+                if 'claude' in cmdline_str:
+                    return 'claude_desktop'
+                if 'lmstudio' in cmdline_str or 'lm-studio' in cmdline_str:
+                    return 'lm_studio'
+            except:
+                pass
+        
+        # Fallback: check environment variables
+        if os.getenv('CLAUDE_DESKTOP'):
+            return 'claude_desktop'
+        if os.getenv('LM_STUDIO'):
+            return 'lm_studio'
+            
+        # Default to Claude Desktop for strict JSON compliance
+        return 'claude_desktop'
+        
+    except Exception:
+        # If detection fails, default to Claude Desktop (strict mode)
+        return 'claude_desktop'
+
+# Detect the current MCP client
+MCP_CLIENT = detect_mcp_client()
+
+# Custom logging handler that routes INFO/DEBUG to stdout, WARNING/ERROR to stderr
+class DualStreamHandler(logging.Handler):
+    """Client-aware handler that adjusts logging behavior based on MCP client."""
+    
+    def __init__(self, client_type='claude_desktop'):
+        super().__init__()
+        self.client_type = client_type
+        self.stdout_handler = logging.StreamHandler(sys.stdout)
+        self.stderr_handler = logging.StreamHandler(sys.stderr)
+        
+        # Set the same formatter for both handlers
+        formatter = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
+        self.stdout_handler.setFormatter(formatter)
+        self.stderr_handler.setFormatter(formatter)
+    
+    def emit(self, record):
+        """Route log records based on client type and level."""
+        # For Claude Desktop: strict JSON mode - suppress most output, route everything to stderr
+        if self.client_type == 'claude_desktop':
+            # Only emit WARNING and above to stderr to maintain JSON protocol
+            if record.levelno >= logging.WARNING:
+                self.stderr_handler.emit(record)
+            # Suppress INFO/DEBUG for Claude Desktop to prevent JSON parsing errors
+            return
+        
+        # For LM Studio: enhanced mode with dual-stream
+        if record.levelno >= logging.WARNING:  # WARNING, ERROR, CRITICAL
+            self.stderr_handler.emit(record)
+        else:  # DEBUG, INFO
+            self.stdout_handler.emit(record)
+
+# Configure logging with client-aware handler BEFORE any imports that use logging
+log_level = os.getenv('LOG_LEVEL', 'WARNING').upper()  # Default to WARNING for performance
+root_logger = logging.getLogger()
+root_logger.setLevel(getattr(logging, log_level, logging.WARNING))
+
+# Remove any existing handlers to avoid duplicates
+for handler in root_logger.handlers[:]:
+    root_logger.removeHandler(handler)
+
+# Add our custom client-aware handler
+client_aware_handler = DualStreamHandler(client_type=MCP_CLIENT)
+root_logger.addHandler(client_aware_handler)
+
 logger = logging.getLogger(__name__)
 
 # Enhanced path detection for Claude Desktop compatibility
@@ -113,14 +204,7 @@ if CONSOLIDATION_ENABLED:
     from .consolidation.consolidator import DreamInspiredConsolidator
     from .consolidation.scheduler import ConsolidationScheduler
 
-# Configure logging to go to stderr with performance optimizations
-log_level = os.getenv('LOG_LEVEL', 'WARNING').upper()  # Default to WARNING for performance
-logging.basicConfig(
-    level=getattr(logging, log_level, logging.WARNING),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stderr
-)
-logger = logging.getLogger(__name__)
+# Note: Logging is already configured at the top of the file with dual-stream handler
 
 # Configure performance-critical module logging
 if not os.getenv('DEBUG_MODE'):
@@ -240,7 +324,8 @@ class MemoryServer:
             # DEFER CHROMADB INITIALIZATION - Initialize storage lazily when needed
             # This prevents hanging during server startup due to embedding model loading
             logger.info(f"Deferring {STORAGE_BACKEND} storage initialization to prevent hanging")
-            print(f"Deferring {STORAGE_BACKEND} storage initialization to prevent startup hanging", file=sys.stderr, flush=True)
+            if MCP_CLIENT == 'lm_studio':
+                print(f"Deferring {STORAGE_BACKEND} storage initialization to prevent startup hanging", file=sys.stdout, flush=True)
             self.storage = None
             self._storage_initialized = False
 
@@ -264,7 +349,8 @@ class MemoryServer:
                 experimental_capabilities={}
             )
             logger.info(f"Server capabilities: {capabilities}")
-            print(f"Server capabilities registered successfully!", file=sys.stderr, flush=True)
+            if MCP_CLIENT == 'lm_studio':
+                print(f"Server capabilities registered successfully!", file=sys.stdout, flush=True)
         except Exception as e:
             logger.error(f"Handler registration test failed: {str(e)}")
             print(f"Handler registration issue: {str(e)}", file=sys.stderr, flush=True)
@@ -459,42 +545,49 @@ class MemoryServer:
             # Run any async initialization tasks here
             logger.info("Starting async initialization...")
             
-            # Print system diagnostics to stderr for visibility
-            print("\n=== System Diagnostics ===", file=sys.stderr, flush=True)
-            print(f"OS: {self.system_info.os_name} {self.system_info.os_version}", file=sys.stderr, flush=True)
-            print(f"Architecture: {self.system_info.architecture}", file=sys.stderr, flush=True)
-            print(f"Memory: {self.system_info.memory_gb:.2f} GB", file=sys.stderr, flush=True)
-            print(f"Accelerator: {self.system_info.accelerator}", file=sys.stderr, flush=True)
-            print(f"Python: {platform.python_version()}", file=sys.stderr, flush=True)
+            # Print system diagnostics only for LM Studio (avoid JSON parsing errors in Claude Desktop)
+            if MCP_CLIENT == 'lm_studio':
+                print("\n=== System Diagnostics ===", file=sys.stdout, flush=True)
+                print(f"OS: {self.system_info.os_name} {self.system_info.os_version}", file=sys.stdout, flush=True)
+                print(f"Architecture: {self.system_info.architecture}", file=sys.stdout, flush=True)
+                print(f"Memory: {self.system_info.memory_gb:.2f} GB", file=sys.stdout, flush=True)
+                print(f"Accelerator: {self.system_info.accelerator}", file=sys.stdout, flush=True)
+                print(f"Python: {platform.python_version()}", file=sys.stdout, flush=True)
             
             # Attempt eager storage initialization with timeout
             # Get dynamic timeout based on system and dependency status
             timeout_seconds = get_recommended_timeout()
-            print(f"Attempting eager storage initialization (timeout: {timeout_seconds}s)...", file=sys.stderr, flush=True)
+            if MCP_CLIENT == 'lm_studio':
+                print(f"Attempting eager storage initialization (timeout: {timeout_seconds}s)...", file=sys.stdout, flush=True)
             try:
                 init_task = asyncio.create_task(self._initialize_storage_with_timeout())
                 success = await asyncio.wait_for(init_task, timeout=timeout_seconds)
                 if success:
-                    print("✅ Eager storage initialization successful", file=sys.stderr, flush=True)
+                    if MCP_CLIENT == 'lm_studio':
+                        print("[OK] Eager storage initialization successful", file=sys.stdout, flush=True)
                     logger.info("Eager storage initialization completed successfully")
                 else:
-                    print("⚠️ Eager storage initialization failed, will use lazy loading", file=sys.stderr, flush=True)
+                    if MCP_CLIENT == 'lm_studio':
+                        print("[WARNING] Eager storage initialization failed, will use lazy loading", file=sys.stdout, flush=True)
                     logger.warning("Eager initialization failed, falling back to lazy loading")
             except asyncio.TimeoutError:
-                print("⏱️ Eager storage initialization timed out, will use lazy loading", file=sys.stderr, flush=True)
+                if MCP_CLIENT == 'lm_studio':
+                    print("[TIMEOUT] Eager storage initialization timed out, will use lazy loading", file=sys.stdout, flush=True)
                 logger.warning("Storage initialization timed out, falling back to lazy loading")
                 # Reset state for lazy loading
                 self.storage = None
                 self._storage_initialized = False
             except Exception as e:
-                print(f"⚠️ Eager initialization error: {str(e)}, will use lazy loading", file=sys.stderr, flush=True)
+                if MCP_CLIENT == 'lm_studio':
+                    print(f"[WARNING] Eager initialization error: {str(e)}, will use lazy loading", file=sys.stdout, flush=True)
                 logger.warning(f"Eager initialization error: {str(e)}, falling back to lazy loading")
                 # Reset state for lazy loading
                 self.storage = None
                 self._storage_initialized = False
             
-            # Add explicit console output for Smithery to see
-            print("MCP Memory Service initialization completed", file=sys.stderr, flush=True)
+            # Add explicit console output for Smithery to see (only for LM Studio)
+            if MCP_CLIENT == 'lm_studio':
+                print("MCP Memory Service initialization completed", file=sys.stdout, flush=True)
             
             return True
         except Exception as e:
@@ -1698,7 +1791,7 @@ class MemoryServer:
         @self.server.call_tool()
         async def handle_call_tool(name: str, arguments: dict | None) -> List[types.TextContent]:
             # Add immediate debugging to catch any protocol issues
-            print(f"TOOL CALL INTERCEPTED: {name}", file=sys.stderr, flush=True)
+            print(f"TOOL CALL INTERCEPTED: {name}", file=sys.stdout, flush=True)
             logger.info(f"=== HANDLING TOOL CALL: {name} ===")
             logger.info(f"Arguments: {arguments}")
             
@@ -1707,7 +1800,7 @@ class MemoryServer:
                     arguments = {}
                 
                 logger.info(f"Processing tool: {name}")
-                print(f"Processing tool: {name}", file=sys.stderr, flush=True)
+                print(f"Processing tool: {name}", file=sys.stdout, flush=True)
                 
                 if name == "store_memory":
                     return await self.handle_store_memory(arguments)
@@ -1737,7 +1830,6 @@ class MemoryServer:
                     return await self.handle_exact_match_retrieve(arguments)
                 elif name == "check_database_health":
                     logger.info("Calling handle_check_database_health")
-                    print("Calling handle_check_database_health", file=sys.stderr, flush=True)
                     return await self.handle_check_database_health(arguments)
                 elif name == "recall_by_timeframe":
                     return await self.handle_recall_by_timeframe(arguments)
@@ -1747,72 +1839,55 @@ class MemoryServer:
                     return await self.handle_delete_before_date(arguments)
                 elif name == "dashboard_check_health":
                     logger.info("Calling handle_dashboard_check_health")
-                    print("Calling handle_dashboard_check_health", file=sys.stderr, flush=True)
                     return await self.handle_dashboard_check_health(arguments)
                 elif name == "dashboard_recall_memory":
                     logger.info("Calling handle_dashboard_recall_memory")
-                    print("Calling handle_dashboard_recall_memory", file=sys.stderr, flush=True)
                     return await self.handle_dashboard_recall_memory(arguments)
                 elif name == "dashboard_retrieve_memory":
                     logger.info("Calling handle_dashboard_retrieve_memory")
-                    print("Calling handle_dashboard_retrieve_memory", file=sys.stderr, flush=True)
                     return await self.handle_dashboard_retrieve_memory(arguments)
                 elif name == "dashboard_search_by_tag":
                     logger.info("Calling handle_dashboard_search_by_tag")
-                    print("Calling handle_dashboard_search_by_tag", file=sys.stderr, flush=True)
                     return await self.handle_dashboard_search_by_tag(arguments)
                 elif name == "dashboard_get_stats":
                     logger.info("Calling handle_dashboard_get_stats")
-                    print("Calling handle_dashboard_get_stats", file=sys.stderr, flush=True)
                     return await self.handle_dashboard_get_stats(arguments)
                 elif name == "dashboard_optimize_db":
                     logger.info("Calling handle_dashboard_optimize_db")
-                    print("Calling handle_dashboard_optimize_db", file=sys.stderr, flush=True)
                     return await self.handle_dashboard_optimize_db(arguments)
                 elif name == "dashboard_create_backup":
                     logger.info("Calling handle_dashboard_create_backup")
-                    print("Calling handle_dashboard_create_backup", file=sys.stderr, flush=True)
                     return await self.handle_dashboard_create_backup(arguments)
                 elif name == "dashboard_delete_memory":
                     logger.info("Calling handle_dashboard_delete_memory")
-                    print("Calling handle_dashboard_delete_memory", file=sys.stderr, flush=True)
                     return await self.handle_dashboard_delete_memory(arguments)
                 elif name == "update_memory_metadata":
                     logger.info("Calling handle_update_memory_metadata")
-                    print("Calling handle_update_memory_metadata", file=sys.stderr, flush=True)
                     return await self.handle_update_memory_metadata(arguments)
                 # Consolidation tool handlers
                 elif name == "consolidate_memories":
                     logger.info("Calling handle_consolidate_memories")
-                    print("Calling handle_consolidate_memories", file=sys.stderr, flush=True)
                     return await self.handle_consolidate_memories(arguments)
                 elif name == "consolidation_status":
                     logger.info("Calling handle_consolidation_status")
-                    print("Calling handle_consolidation_status", file=sys.stderr, flush=True)
                     return await self.handle_consolidation_status(arguments)
                 elif name == "consolidation_recommendations":
                     logger.info("Calling handle_consolidation_recommendations")
-                    print("Calling handle_consolidation_recommendations", file=sys.stderr, flush=True)
                     return await self.handle_consolidation_recommendations(arguments)
                 elif name == "scheduler_status":
                     logger.info("Calling handle_scheduler_status")
-                    print("Calling handle_scheduler_status", file=sys.stderr, flush=True)
                     return await self.handle_scheduler_status(arguments)
                 elif name == "trigger_consolidation":
                     logger.info("Calling handle_trigger_consolidation")
-                    print("Calling handle_trigger_consolidation", file=sys.stderr, flush=True)
                     return await self.handle_trigger_consolidation(arguments)
                 elif name == "pause_consolidation":
                     logger.info("Calling handle_pause_consolidation")
-                    print("Calling handle_pause_consolidation", file=sys.stderr, flush=True)
                     return await self.handle_pause_consolidation(arguments)
                 elif name == "resume_consolidation":
                     logger.info("Calling handle_resume_consolidation")
-                    print("Calling handle_resume_consolidation", file=sys.stderr, flush=True)
                     return await self.handle_resume_consolidation(arguments)
                 else:
                     logger.warning(f"Unknown tool requested: {name}")
-                    print(f"Unknown tool requested: {name}", file=sys.stderr, flush=True)
                     raise ValueError(f"Unknown tool: {name}")
             except Exception as e:
                 error_msg = f"Error in {name}: {str(e)}\n{traceback.format_exc()}"
@@ -3426,17 +3501,18 @@ async def async_main():
     global CHROMA_PATH
     CHROMA_PATH = args.chroma_path
     
-    # Print system diagnostics to console
+    # Print system diagnostics only for LM Studio (avoid JSON parsing errors in Claude Desktop)
     system_info = get_system_info()
-    print("\n=== MCP Memory Service System Diagnostics ===", file=sys.stderr, flush=True)
-    print(f"OS: {system_info.os_name} {system_info.architecture}", file=sys.stderr, flush=True)
-    print(f"Python: {platform.python_version()}", file=sys.stderr, flush=True)
-    print(f"Hardware Acceleration: {system_info.accelerator}", file=sys.stderr, flush=True)
-    print(f"Memory: {system_info.memory_gb:.2f} GB", file=sys.stderr, flush=True)
-    print(f"Optimal Model: {system_info.get_optimal_model()}", file=sys.stderr, flush=True)
-    print(f"Optimal Batch Size: {system_info.get_optimal_batch_size()}", file=sys.stderr, flush=True)
-    print(f"ChromaDB Path: {CHROMA_PATH}", file=sys.stderr, flush=True)
-    print("================================================\n", file=sys.stderr, flush=True)
+    if MCP_CLIENT == 'lm_studio':
+        print("\n=== MCP Memory Service System Diagnostics ===", file=sys.stdout, flush=True)
+        print(f"OS: {system_info.os_name} {system_info.architecture}", file=sys.stdout, flush=True)
+        print(f"Python: {platform.python_version()}", file=sys.stdout, flush=True)
+        print(f"Hardware Acceleration: {system_info.accelerator}", file=sys.stdout, flush=True)
+        print(f"Memory: {system_info.memory_gb:.2f} GB", file=sys.stdout, flush=True)
+        print(f"Optimal Model: {system_info.get_optimal_model()}", file=sys.stdout, flush=True)
+        print(f"Optimal Batch Size: {system_info.get_optimal_batch_size()}", file=sys.stdout, flush=True)
+        print(f"ChromaDB Path: {CHROMA_PATH}", file=sys.stdout, flush=True)
+        print("================================================\n", file=sys.stdout, flush=True)
     
     logger.info(f"Starting MCP Memory Service with ChromaDB path: {CHROMA_PATH}")
     
@@ -3481,7 +3557,8 @@ async def async_main():
         
         if standalone_mode:
             logger.info("Running in standalone mode - keeping server alive without active client")
-            print("MCP Memory Service running in standalone mode", file=sys.stderr, flush=True)
+            if MCP_CLIENT == 'lm_studio':
+                print("MCP Memory Service running in standalone mode", file=sys.stdout, flush=True)
             
             # Keep the server running indefinitely
             try:
@@ -3498,7 +3575,8 @@ async def async_main():
                 
                 if running_in_docker:
                     logger.info("Detected Docker environment - ensuring proper stdio handling")
-                    print("MCP Memory Service running in Docker container", file=sys.stderr, flush=True)
+                    if MCP_CLIENT == 'lm_studio':
+                        print("MCP Memory Service running in Docker container", file=sys.stdout, flush=True)
                 
                 try:
                     await memory_server.server.run(
@@ -3526,10 +3604,23 @@ async def async_main():
                 except asyncio.CancelledError:
                     logger.info("Server run cancelled")
                     raise
-                except Exception as e:
-                    logger.error(f"Error in server.run: {str(e)}")
-                    logger.error(traceback.format_exc())
-                    raise
+                except BaseException as e:
+                    # Handle ExceptionGroup specially (Python 3.11+)
+                    if type(e).__name__ == 'ExceptionGroup' or 'ExceptionGroup' in str(type(e)):
+                        error_str = str(e)
+                        # Check if this contains the LM Studio cancelled notification error
+                        if 'notifications/cancelled' in error_str or 'ValidationError' in error_str:
+                            logger.info("LM Studio sent a cancelled notification - this is expected behavior")
+                            logger.debug(f"Full error for debugging: {error_str}")
+                            # Don't re-raise - just continue gracefully
+                        else:
+                            logger.error(f"ExceptionGroup in server.run: {str(e)}")
+                            logger.error(traceback.format_exc())
+                            raise
+                    else:
+                        logger.error(f"Error in server.run: {str(e)}")
+                        logger.error(traceback.format_exc())
+                        raise
                 finally:
                     logger.info("Server run completed")
     except Exception as e:
@@ -3553,7 +3644,8 @@ def main():
         # Check if running in Docker
         if os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER', False):
             logger.info("Running in Docker container")
-            print("MCP Memory Service starting in Docker mode", file=sys.stderr, flush=True)
+            if MCP_CLIENT == 'lm_studio':
+                print("MCP Memory Service starting in Docker mode", file=sys.stdout, flush=True)
         
         asyncio.run(async_main())
     except KeyboardInterrupt:

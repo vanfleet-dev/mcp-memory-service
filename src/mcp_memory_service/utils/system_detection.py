@@ -324,8 +324,12 @@ def get_optimal_embedding_settings() -> Dict[str, Any]:
     }
 
 
-def print_system_diagnostics():
-    """Print detailed system diagnostics for troubleshooting."""
+def print_system_diagnostics(client_type: str = 'lm_studio'):
+    """Print detailed system diagnostics for troubleshooting, conditionally based on client."""
+    # Only print for LM Studio to avoid JSON parsing errors in Claude Desktop
+    if client_type != 'lm_studio':
+        return
+        
     system_info = get_system_info()
     
     print("\n=== System Diagnostics ===")

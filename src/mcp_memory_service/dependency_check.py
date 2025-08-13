@@ -12,6 +12,31 @@ from typing import Tuple, Optional
 
 logger = logging.getLogger(__name__)
 
+def detect_mcp_client_simple():
+    """Simple MCP client detection for dependency checking."""
+    try:
+        # Check environment variables first
+        if os.getenv('LM_STUDIO'):
+            return 'lm_studio'
+        if os.getenv('CLAUDE_DESKTOP'):
+            return 'claude_desktop'
+            
+        import psutil
+        current_process = psutil.Process()
+        parent = current_process.parent()
+        
+        if parent:
+            parent_name = parent.name().lower()
+            if 'claude' in parent_name:
+                return 'claude_desktop'
+            if 'lmstudio' in parent_name or 'lm-studio' in parent_name:
+                return 'lm_studio'
+        
+        # Default to Claude Desktop for strict mode
+        return 'claude_desktop'
+    except:
+        return 'claude_desktop'
+
 def check_torch_installed() -> Tuple[bool, Optional[str]]:
     """
     Check if PyTorch is properly installed.
@@ -99,23 +124,24 @@ def run_dependency_check() -> bool:
     Run the dependency check and provide user feedback.
     Returns True if all dependencies are satisfied, False otherwise.
     """
-    print("\n=== MCP Memory Service Dependency Check ===", file=sys.stderr, flush=True)
-    
+    client_type = detect_mcp_client_simple()
     all_installed, missing = check_critical_dependencies()
     
-    if all_installed:
-        print("✅ All dependencies are installed", file=sys.stderr, flush=True)
-        return True
-    else:
-        print(f"❌ Missing dependencies detected: {', '.join(missing)}", file=sys.stderr, flush=True)
-        print("\n⚠️  IMPORTANT: Missing dependencies will cause timeouts!", file=sys.stderr, flush=True)
-        print("📦 To install missing dependencies, run:", file=sys.stderr, flush=True)
-        print(f"   {suggest_installation_command(missing)}", file=sys.stderr, flush=True)
-        print("\nThe server will attempt to continue, but may timeout during initialization.", file=sys.stderr, flush=True)
-        print("============================================\n", file=sys.stderr, flush=True)
+    # Only show output for LM Studio to avoid JSON parsing errors in Claude Desktop
+    if client_type == 'lm_studio':
+        print("\n=== MCP Memory Service Dependency Check ===", file=sys.stdout, flush=True)
         
-        # Don't block startup, but warn that it might fail
-        return False
+        if all_installed:
+            print("[OK] All dependencies are installed", file=sys.stdout, flush=True)
+        else:
+            print(f"[MISSING] Missing dependencies detected: {', '.join(missing)}", file=sys.stdout, flush=True)
+            print("\n[WARNING] IMPORTANT: Missing dependencies will cause timeouts!", file=sys.stdout, flush=True)
+            print("[INSTALL] To install missing dependencies, run:", file=sys.stdout, flush=True)
+            print(f"   {suggest_installation_command(missing)}", file=sys.stdout, flush=True)
+            print("\nThe server will attempt to continue, but may timeout during initialization.", file=sys.stdout, flush=True)
+            print("============================================\n", file=sys.stdout, flush=True)
+    
+    return all_installed
 
 def is_first_run() -> bool:
     """
