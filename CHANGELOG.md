@@ -4,6 +4,38 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.1] - 2025-08-13
+
+### 🎯 **Enhanced Multi-Client Support**
+
+#### Added
+- **Intelligent Client Detection**: Automatic detection of MCP client type
+  - Detects Claude Desktop, LM Studio, and other MCP clients
+  - Uses process inspection and environment variables for robust detection
+  - Falls back to strict JSON mode for unknown clients
+  
+- **Client-Aware Logging System**: Optimized output for different MCP clients
+  - **Claude Desktop Mode**: Pure JSON-RPC protocol compliance
+    - Suppresses diagnostic output to maintain clean JSON communication
+    - Routes only WARNING/ERROR messages to stderr
+    - Ensures maximum compatibility with Claude's strict parsing
+  - **LM Studio Mode**: Enhanced diagnostic experience
+    - Shows system diagnostics, dependency checks, and initialization status
+    - Provides detailed feedback for troubleshooting
+    - Maintains full INFO/DEBUG output to stdout
+
+#### Enhanced
+- **Improved Stability**: All diagnostic output is now conditional based on client type
+  - 15+ print statements updated with client-aware logic
+  - System diagnostics, dependency checks, and initialization messages
+  - Docker mode detection and standalone mode indicators
+
+#### Technical Details
+- Added `psutil` dependency for process-based client detection
+- Implemented `DualStreamHandler` with client-aware routing
+- Environment variable support: `CLAUDE_DESKTOP=1` or `LM_STUDIO=1` for manual override
+- Maintains full backward compatibility with existing integrations
+
 ## [4.5.0] - 2025-08-12
 
 ### 🔄 **Database Synchronization System**

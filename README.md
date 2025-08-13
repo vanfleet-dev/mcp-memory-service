@@ -145,6 +145,20 @@ Multi-node database synchronization for distributed memory access:
 - **Source Tracking**: Automatic tagging to identify memory origin machines
 - **Cross-Platform Sync**: Synchronize memories between Windows, macOS, and Linux systems
 
+#### 🎛️ **Multi-Client Optimization** (NEW in v4.5.1!)
+The MCP Memory Service automatically detects your MCP client and optimizes its output:
+- **Claude Desktop**: Clean JSON-only communication for maximum compatibility
+  - Suppresses diagnostic output to maintain strict JSON-RPC protocol
+  - Routes only WARNING/ERROR messages to stderr
+  - Ensures seamless integration with Claude's parsing requirements
+- **LM Studio**: Enhanced diagnostic output for easier troubleshooting  
+  - Shows system diagnostics, dependency checks, and initialization status
+  - Provides detailed feedback for development and debugging
+  - Maintains full INFO/DEBUG output for comprehensive monitoring
+- **Automatic Detection**: Uses process inspection and environment variables
+- **Manual Override**: Set `CLAUDE_DESKTOP=1` or `LM_STUDIO=1` for explicit control
+- **Fallback Safety**: Defaults to strict JSON mode for unknown clients
+
 ### 🧠 Dream-Inspired Memory Consolidation (NEW in v2.0!)
 - **Autonomous memory management** inspired by human sleep cycle processing
 - **Multi-layered time horizons** (daily → weekly → monthly → quarterly → yearly)
