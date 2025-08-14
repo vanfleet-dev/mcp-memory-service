@@ -4,7 +4,13 @@
 [![smithery badge](https://smithery.ai/badge/@doobidoo/mcp-memory-service)](https://smithery.ai/server/@doobidoo/mcp-memory-service)
 [![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/0513fb92-e941-4fe0-9948-2a1dbb870dcf)
 
-An intelligent MCP server providing semantic memory, persistent storage, and **autonomous memory consolidation** for Claude Desktop. This service combines ChromaDB/SQLite-vec storage with a revolutionary **dream-inspired consolidation system** that automatically organizes, compresses, and manages memories over time, creating a self-evolving knowledge base.
+[![Works with Claude](https://img.shields.io/badge/Works%20with-Claude-blue)](https://claude.ai)
+[![Works with Cursor](https://img.shields.io/badge/Works%20with-Cursor-orange)](https://cursor.sh)
+[![Works with WindSurf](https://img.shields.io/badge/Works%20with-WindSurf-green)](https://codeium.com/windsurf)
+[![Works with LM Studio](https://img.shields.io/badge/Works%20with-LM%20Studio-purple)](https://lmstudio.ai)
+[![Works with Zed](https://img.shields.io/badge/Works%20with-Zed-red)](https://zed.dev)
+
+An intelligent MCP server providing semantic memory, persistent storage, and **autonomous memory consolidation** for AI applications and development environments. This universal memory service works with **Claude Desktop, Cursor, WindSurf, LM Studio, Zed, and 10+ other AI clients**, combining ChromaDB/SQLite-vec storage with a revolutionary **dream-inspired consolidation system** that automatically organizes, compresses, and manages memories over time, creating a self-evolving knowledge base.
 
 <img width="240" alt="grafik" src="https://github.com/user-attachments/assets/eab1f341-ca54-445c-905e-273cd9e89555" />
 <a href="https://glama.ai/mcp/servers/bzvl3lz34o"><img width="380" height="200" src="https://glama.ai/mcp/servers/bzvl3lz34o/badge" alt="Memory Service MCP server" /></a>
@@ -58,9 +64,9 @@ python scripts/run_http_server.py
 - **Dashboard**: `http://your-server:8000/` (web interface)
 - **API Docs**: `http://your-server:8000/api/docs` (interactive API)
 
-### Claude Code Integration
+### Remote API Access
 
-Connect Claude Code to your remote memory service:
+Connect any MCP client or tool to your remote memory service:
 
 ```bash
 # Test MCP connection
@@ -95,21 +101,39 @@ curl -X POST http://your-server:8000/mcp \
 - ✅ **No Bridge Required**: Direct HTTP/HTTPS connection
 - ✅ **Production Ready**: Proven deployment at scale
 
-### MCP Client Compatibility
-
-| Client | Status | Notes |
-|--------|--------|-------|
-| ✅ Standard MCP Libraries | Working | Python `mcp`, JavaScript SDK |
-| ✅ Claude Desktop | Working | With proper MCP configuration |
-| ⚠️ Claude Code | Limited | Use Claude Commands instead ([compatibility guide](CLAUDE_CODE_COMPATIBILITY.md)) |
-| ✅ Custom MCP Clients | Working | Full protocol compliance |
-| ✅ HTTP API | Working | REST interface on port 8080 |
-
-➡️ [**Dual-Service Guide**](DUAL_SERVICE_DEPLOYMENT.md) | [**Claude Code Compatibility**](CLAUDE_CODE_COMPATIBILITY.md) | [**Migration Log**](MIGRATION_LOG.md)
-
 ---
 
 ## Features
+
+### 🌟 Universal AI Client Compatibility
+
+**Works with 10+ AI applications and development environments** via the standard Model Context Protocol (MCP):
+
+| Client | Status | Configuration | Notes |
+|--------|--------|--------------|-------|
+| **Claude Desktop** | ✅ Full | `claude_desktop_config.json` | Official MCP support |
+| **Claude Code** | ⚠️ Limited | CLI configuration | Use Claude Commands instead ([guide](CLAUDE_CODE_COMPATIBILITY.md)) |
+| **Cursor** | ✅ Full | `.cursor/mcp.json` | AI-powered IDE with MCP support |
+| **WindSurf** | ✅ Full | MCP config file | Codeium's AI IDE with built-in server management |
+| **LM Studio** | ✅ Full | MCP configuration | Enhanced compatibility with debug output |
+| **Cline** | ✅ Full | VS Code MCP config | VS Code extension, formerly Claude Dev |
+| **RooCode** | ✅ Full | IDE config | Full MCP client implementation |
+| **Zed** | ✅ Full | Built-in config | Native MCP support |
+| **VS Code** | ✅ Full | `.vscode/mcp.json` | Via MCP extension |
+| **Continue IDE** | ✅ Full | Continue configuration | Extension with MCP support |
+| **Standard MCP Libraries** | ✅ Full | Various | Python `mcp`, JavaScript SDK |
+| **Custom MCP Clients** | ✅ Full | Implementation-specific | Full protocol compliance |
+| **HTTP API** | ✅ Full | REST endpoints | Direct API access on port 8080 |
+
+**Key Benefits:**
+- 🔄 **Cross-Client Memory Sharing**: Use memories across all your AI tools
+- 🚀 **Universal Setup**: Single installation works everywhere  
+- 🔌 **Standard Protocol**: Full MCP compliance ensures compatibility
+- 🌐 **Remote Access**: HTTP/HTTPS support for distributed teams
+
+➡️ [**Multi-Client Setup Guide**](docs/integration/multi-client.md) | [**IDE Compatibility Details**](docs/ide-compatability.md)
+
+---
 
 ### 🎯 MCP Protocol Enhancements (NEW in v4.1.0!)
 
@@ -389,7 +413,7 @@ The easiest way to run the Memory Service is using our pre-built Docker images:
 # Pull the latest image
 docker pull doobidoo/mcp-memory-service:latest
 
-# Run with default settings (for MCP clients like Claude Desktop)
+# Run with default settings (for MCP clients)
 docker run -d -p 8000:8000 \
   -v $(pwd)/data/chroma_db:/app/chroma_db \
   -v $(pwd)/data/backups:/app/backups \
@@ -406,7 +430,7 @@ docker run -d -p 8000:8000 \
 #### Docker Compose
 
 We provide multiple Docker Compose configurations for different scenarios:
-- `docker-compose.yml` - Standard configuration for MCP clients (Claude Desktop)
+- `docker-compose.yml` - Standard configuration for MCP clients
 - `docker-compose.standalone.yml` - **Standalone mode** for testing/development (prevents boot loops)
 - `docker-compose.uv.yml` - Alternative configuration using UV package manager
 - `docker-compose.pythonpath.yml` - Configuration with explicit PYTHONPATH settings

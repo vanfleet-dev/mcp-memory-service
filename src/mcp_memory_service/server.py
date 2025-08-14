@@ -1791,7 +1791,8 @@ class MemoryServer:
         @self.server.call_tool()
         async def handle_call_tool(name: str, arguments: dict | None) -> List[types.TextContent]:
             # Add immediate debugging to catch any protocol issues
-            print(f"TOOL CALL INTERCEPTED: {name}", file=sys.stdout, flush=True)
+            if MCP_CLIENT == 'lm_studio':
+                print(f"TOOL CALL INTERCEPTED: {name}", file=sys.stdout, flush=True)
             logger.info(f"=== HANDLING TOOL CALL: {name} ===")
             logger.info(f"Arguments: {arguments}")
             
@@ -1800,7 +1801,8 @@ class MemoryServer:
                     arguments = {}
                 
                 logger.info(f"Processing tool: {name}")
-                print(f"Processing tool: {name}", file=sys.stdout, flush=True)
+                if MCP_CLIENT == 'lm_studio':
+                    print(f"Processing tool: {name}", file=sys.stdout, flush=True)
                 
                 if name == "store_memory":
                     return await self.handle_store_memory(arguments)

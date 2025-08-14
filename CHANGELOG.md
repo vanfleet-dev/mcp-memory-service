@@ -4,6 +4,30 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.2] - 2025-08-14
+
+### 🐛 **Bug Fixes & Documentation**
+
+#### Fixed
+- **JSON Protocol Compatibility**: Resolved debug output contaminating MCP JSON-RPC communication
+  - Fixed unconditional debug print statements causing "Unexpected token" errors in Claude Desktop logs
+  - Added client detection checks to `TOOL CALL INTERCEPTED` and `Processing tool` debug messages
+  - Ensures clean JSON-only output for Claude Desktop while preserving debug output for LM Studio
+
+#### Enhanced
+- **Universal README Documentation**: Transformed from Claude Desktop-specific to universal AI client focus
+  - Updated opening description to emphasize compatibility with "AI applications and development environments"
+  - Added prominent compatibility badges for Cursor, WindSurf, LM Studio, Zed, and other AI clients
+  - Moved comprehensive client compatibility table to prominent position in documentation
+  - Expanded client support details for 13+ different AI applications and IDEs
+  - Added multi-client benefits section highlighting cross-tool memory sharing capabilities
+  - Updated examples and Docker configurations to be client-agnostic
+
+#### Documentation
+- **Improved Client Visibility**: Enhanced documentation structure for broader MCP ecosystem appeal
+- **Balanced Examples**: Updated API examples to focus on universal MCP access rather than specific clients
+- **Clear Compatibility Matrix**: Detailed status and configuration for each supported AI client
+
 ## [4.5.1] - 2025-08-13
 
 ### 🎯 **Enhanced Multi-Client Support**
