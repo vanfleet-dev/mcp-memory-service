@@ -4,6 +4,29 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.6.0] - 2025-08-14
+
+### ✨ **New Features**
+
+#### Added
+- **Custom SSL Certificate Support**: Added environment variable configuration for SSL certificates
+  - New `MCP_SSL_CERT_FILE` environment variable for custom certificate path
+  - New `MCP_SSL_KEY_FILE` environment variable for custom private key path
+  - Maintains backward compatibility with self-signed certificate generation
+  - Enables production deployments with proper SSL certificates (e.g., mkcert, Let's Encrypt)
+
+#### Enhanced
+- **HTTPS Server Configuration**: Improved certificate validation and error handling
+  - Certificate file existence validation before server startup
+  - Clear error messages for missing certificate files
+  - Logging improvements for certificate source identification
+
+#### Documentation
+- **SSL/TLS Setup Guide**: Added comprehensive SSL configuration documentation
+  - Integration guide for [mkcert](https://github.com/FiloSottile/mkcert) for local development
+  - Example HTTPS startup script template
+  - Client CA installation instructions for multiple operating systems
+
 ## [4.5.2] - 2025-08-14
 
 ### 🐛 **Bug Fixes & Documentation**

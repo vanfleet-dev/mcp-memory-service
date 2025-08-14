@@ -740,6 +740,93 @@ python scripts/migrate_storage.py \
 
 For detailed SQLite-vec setup, migration, and troubleshooting, see the [SQLite-vec Backend Guide](docs/sqlite-vec-backend.md).
 
+## SSL/TLS Configuration
+
+The MCP Memory Service supports HTTPS with custom SSL certificates for secure connections. You can use either self-signed certificates (automatically generated) or provide your own certificates.
+
+### Using Custom SSL Certificates
+
+Configure custom SSL certificates using environment variables:
+
+```bash
+# Enable HTTPS
+export MCP_HTTPS_ENABLED=true
+export MCP_HTTPS_PORT=8443
+
+# Provide custom certificate paths
+export MCP_SSL_CERT_FILE="/path/to/your/certificate.pem"
+export MCP_SSL_KEY_FILE="/path/to/your/private-key.pem"
+```
+
+### Local Development with mkcert
+
+For easy local development with trusted certificates, we recommend [mkcert](https://github.com/FiloSottile/mkcert):
+
+```bash
+# Install mkcert (macOS)
+brew install mkcert
+
+# Install mkcert (Linux)
+sudo apt install libnss3-tools
+curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
+chmod +x mkcert-v*-linux-amd64
+sudo cp mkcert-v*-linux-amd64 /usr/local/bin/mkcert
+
+# Create local certificate authority
+mkcert -install
+
+# Generate certificate for your domain
+mkcert your-domain.local localhost 127.0.0.1
+
+# Set environment variables
+export MCP_SSL_CERT_FILE="./your-domain.local+2.pem"
+export MCP_SSL_KEY_FILE="./your-domain.local+2-key.pem"
+```
+
+### Example HTTPS Startup
+
+Use the provided example script as a template:
+
+```bash
+# Copy and customize the example
+cp examples/start_https_example.sh start_https.sh
+# Edit start_https.sh with your certificate paths and API key
+chmod +x start_https.sh
+./start_https.sh
+```
+
+### Client Certificate Installation
+
+To avoid certificate warnings in browsers and clients, install the mkcert root CA:
+
+**Windows:**
+```powershell
+# Copy rootCA.pem from mkcert CA root directory
+certutil -addstore -f "ROOT" rootCA.pem
+```
+
+**macOS:**
+```bash
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain rootCA.pem
+```
+
+**Linux:**
+```bash
+# Ubuntu/Debian
+sudo cp rootCA.pem /usr/local/share/ca-certificates/mkcert-rootCA.crt
+sudo update-ca-certificates
+
+# Fedora/RHEL/CentOS
+sudo cp rootCA.pem /etc/pki/ca-trust/source/anchors/
+sudo update-ca-trust
+```
+
+Find your mkcert CA root directory with: `mkcert -CAROOT`
+
+### Self-Signed Certificates (Fallback)
+
+If no custom certificates are provided, the service automatically generates self-signed certificates. These will trigger security warnings in browsers but work for testing purposes.
+
 ## Memory Operations
 
 The memory service provides the following operations through the MCP server:
