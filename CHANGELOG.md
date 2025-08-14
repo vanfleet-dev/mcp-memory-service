@@ -4,6 +4,29 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.6.1] - 2025-08-14
+
+### 🐛 **Bug Fixes**
+
+#### Fixed
+- **Export Script Database Path Detection**: Fixed critical bug in memory export script
+  - Export script now properly respects `SQLITE_VEC_PATH` configuration from `config.py`
+  - Script now uses environment variables like `MCP_MEMORY_SQLITE_PATH` correctly
+  - Fixed issue where export would use wrong database path, missing actual memories
+  - Added support for custom database paths via `--db-path` argument
+  - Ensures export captures all memories from the configured database location
+
+#### Enhanced
+- **Export Script Configuration**: Improved database path detection logic
+  - Falls back gracefully when SQLite-vec backend is not configured
+  - Maintains compatibility with different storage backend configurations
+  - Added proper imports for configuration variables
+
+#### Technical Details
+- Modified `scripts/sync/export_memories.py` to use `SQLITE_VEC_PATH` instead of `BASE_DIR`
+- Updated `get_default_db_path()` function to check storage backend configuration
+- Added version bump to exporter metadata for tracking
+
 ## [4.6.0] - 2025-08-14
 
 ### ✨ **New Features**

@@ -985,6 +985,60 @@ class SqliteVecMemoryStorage(MemoryStorage):
             logger.error(traceback.format_exc())
             return []
     
+    async def get_all_memories(self) -> List[Memory]:
+        """
+        Get all memories from the database.
+        
+        Returns:
+            List of all Memory objects in the database.
+        """
+        try:
+            if not self.conn:
+                logger.error("Database not initialized, cannot retrieve memories")
+                return []
+            
+            cursor = self.conn.execute('''
+                SELECT content_hash, content, tags, memory_type, metadata,
+                       created_at, updated_at, created_at_iso, updated_at_iso
+                FROM memories
+                ORDER BY created_at DESC
+            ''')
+            
+            results = []
+            for row in cursor.fetchall():
+                try:
+                    content_hash, content, tags_str, memory_type, metadata_str = row[:5]
+                    created_at, updated_at, created_at_iso, updated_at_iso = row[5:]
+                    
+                    # Parse tags and metadata
+                    tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()] if tags_str else []
+                    metadata = json.loads(metadata_str) if metadata_str else {}
+                    
+                    memory = Memory(
+                        content=content,
+                        content_hash=content_hash,
+                        tags=tags,
+                        memory_type=memory_type,
+                        metadata=metadata,
+                        created_at=created_at,
+                        updated_at=updated_at,
+                        created_at_iso=created_at_iso,
+                        updated_at_iso=updated_at_iso
+                    )
+                    
+                    results.append(memory)
+                    
+                except Exception as parse_error:
+                    logger.warning(f"Failed to parse memory result: {parse_error}")
+                    continue
+            
+            logger.info(f"Retrieved {len(results)} total memories")
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error getting all memories: {str(e)}")
+            return []
+
     def close(self):
         """Close the database connection."""
         if self.conn:
