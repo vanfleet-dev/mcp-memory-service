@@ -9,23 +9,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### 🐛 **Bug Fixes**
 
 #### Fixed
-- **Export Script Database Path Detection**: Fixed critical bug in memory export script
+- **Export/Import Script Database Path Detection**: Fixed critical bug in memory export and import scripts
   - Export script now properly respects `SQLITE_VEC_PATH` configuration from `config.py`
-  - Script now uses environment variables like `MCP_MEMORY_SQLITE_PATH` correctly
-  - Fixed issue where export would use wrong database path, missing actual memories
+  - Import script now properly respects `SQLITE_VEC_PATH` configuration from `config.py`
+  - Scripts now use environment variables like `MCP_MEMORY_SQLITE_PATH` correctly
+  - Fixed issue where export/import would use wrong database path, missing actual memories
   - Added support for custom database paths via `--db-path` argument
   - Ensures export captures all memories from the configured database location
+  - Ensures import writes to the correct configured database location
 
 #### Enhanced
-- **Export Script Configuration**: Improved database path detection logic
+- **Export/Import Script Configuration**: Improved database path detection logic
   - Falls back gracefully when SQLite-vec backend is not configured
   - Maintains compatibility with different storage backend configurations
   - Added proper imports for configuration variables
 
 #### Technical Details
 - Modified `scripts/sync/export_memories.py` to use `SQLITE_VEC_PATH` instead of `BASE_DIR`
-- Updated `get_default_db_path()` function to check storage backend configuration
+- Modified `scripts/sync/import_memories.py` to use `SQLITE_VEC_PATH` instead of `BASE_DIR`
+- Updated `get_default_db_path()` functions in both scripts to check storage backend configuration
 - Added version bump to exporter metadata for tracking
+- Added `get_all_memories()` method to `SqliteVecMemoryStorage` for proper export functionality
 
 ## [4.6.0] - 2025-08-14
 
