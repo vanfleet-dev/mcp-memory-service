@@ -112,7 +112,7 @@ curl -X POST http://your-server:8000/mcp \
 | Client | Status | Configuration | Notes |
 |--------|--------|--------------|-------|
 | **Claude Desktop** | ✅ Full | `claude_desktop_config.json` | Official MCP support |
-| **Claude Code** | ⚠️ Limited | CLI configuration | Use Claude Commands instead ([guide](CLAUDE_CODE_COMPATIBILITY.md)) |
+| **Claude Code** | ✅ Full | `.claude.json` | Optionally use Claude Commands instead ([guide](CLAUDE_CODE_COMPATIBILITY.md)) |
 | **Cursor** | ✅ Full | `.cursor/mcp.json` | AI-powered IDE with MCP support |
 | **WindSurf** | ✅ Full | MCP config file | Codeium's AI IDE with built-in server management |
 | **LM Studio** | ✅ Full | MCP configuration | Enhanced compatibility with debug output |
