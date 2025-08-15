@@ -21,6 +21,75 @@ An intelligent MCP server providing semantic memory, persistent storage, and **a
 
 ---
 
+## 📋 Table of Contents
+
+### 🚀 Getting Started
+- [⚡ Quick Start](#-quick-start)
+- [🎯 Claude Code Commands (v2.2.0)](#-new-claude-code-commands-v220)
+- [🚀 Remote MCP Memory Service (v4.0.0)](#-new-remote-mcp-memory-service-v400)
+- [📦 Installation Methods](#installation-methods)
+- [⚙️ Claude MCP Configuration](#claude-mcp-configuration)
+
+### 🌟 Features & Capabilities
+- [✨ Features Overview](#features)
+- [🧠 Dream-Inspired Memory Consolidation](#-dream-inspired-memory-consolidation)
+- [💾 Storage Backends](#storage-backends)
+- [🔧 Memory Operations](#memory-operations)
+
+### 🌐 Deployment & Multi-Client
+- [🌐 Multi-Client Deployment](#-multi-client-deployment)
+- [🔒 SSL/TLS Configuration](#ssltls-configuration)
+- [🚀 Service Installation](#-service-installation-new)
+
+### 📖 Documentation & Support
+- [📝 Usage Guide](#usage-guide)
+- [⚙️ Configuration Options](#configuration-options)
+- [🖥️ Hardware Compatibility](#hardware-compatibility)
+- [🧪 Testing](#testing)
+- [❓ FAQ](#faq)
+- [🛠️ Troubleshooting](#troubleshooting)
+- [📚 Comprehensive Documentation](#-comprehensive-documentation)
+
+### 👨‍💻 Development & Community
+- [🏗️ Project Structure](#project-structure)
+- [📋 Development Guidelines](#development-guidelines)
+- [🤝 Integrations](#integrations)
+- [💖 Sponsorship](#-why-sponsor-mcp-memory-service)
+
+---
+
+## 🚀 Quick Start
+
+Choose your preferred installation method to get started in under 5 minutes:
+
+### Option 1: Docker (Fastest - 2 minutes)
+```bash
+# Pull and run with default settings
+docker pull doobidoo/mcp-memory-service:latest
+docker run -d -p 8000:8000 -v $(pwd)/data:/app/data doobidoo/mcp-memory-service:latest
+```
+✅ **Perfect for**: Testing, production deployment, isolation  
+➡️ [Complete Docker Setup](#docker-installation)
+
+### Option 2: Smithery (Simplest - 1 minute)  
+```bash
+# Auto-install for Claude Desktop
+npx -y @smithery/cli install @doobidoo/mcp-memory-service --client claude
+```
+✅ **Perfect for**: Claude Desktop users, zero configuration  
+➡️ [Smithery Details](#installing-via-smithery)
+
+### Option 3: Python Installer (Most Flexible - 5 minutes)
+```bash
+# Clone and install with hardware detection
+git clone https://github.com/doobidoo/mcp-memory-service.git
+cd mcp-memory-service && python install.py
+```
+✅ **Perfect for**: Developers, customization, multi-client setup  
+➡️ [Full Installation Guide](#-intelligent-installer-recommended)
+
+---
+
 ## 🎯 NEW: Claude Code Commands (v2.2.0)
 
 **Get started in 2 minutes with direct memory commands!**
@@ -107,7 +176,7 @@ curl -X POST http://your-server:8000/mcp \
 
 ### 🌟 Universal AI Client Compatibility
 
-**Works with 10+ AI applications and development environments** via the standard Model Context Protocol (MCP):
+**Works with 13+ AI applications and development environments** via the standard Model Context Protocol (MCP):
 
 | Client | Status | Configuration | Notes |
 |--------|--------|--------------|-------|
@@ -123,9 +192,9 @@ curl -X POST http://your-server:8000/mcp \
 | **Continue IDE** | ✅ Full | Continue configuration | Extension with MCP support |
 | **Standard MCP Libraries** | ✅ Full | Various | Python `mcp`, JavaScript SDK |
 | **Custom MCP Clients** | ✅ Full | Implementation-specific | Full protocol compliance |
-| **HTTP API** | ✅ Full | REST endpoints | Direct API access on port 8080 |
+| **HTTP API** | ✅ Full | REST endpoints | Direct API access on port 8000 |
 
-**Key Benefits:**
+**Core Benefits:**
 - 🔄 **Cross-Client Memory Sharing**: Use memories across all your AI tools
 - 🚀 **Universal Setup**: Single installation works everywhere  
 - 🔌 **Standard Protocol**: Full MCP compliance ensures compatibility
@@ -133,95 +202,49 @@ curl -X POST http://your-server:8000/mcp \
 
 ➡️ [**Multi-Client Setup Guide**](docs/integration/multi-client.md) | [**IDE Compatibility Details**](docs/ide-compatability.md)
 
----
+### 🧠 Intelligent Memory System
 
-### 🎯 MCP Protocol Enhancements (NEW in v4.1.0!)
-
-#### 📚 **Enhanced Resources**
-Access structured memory data through URI-based resources:
-- `memory://stats` - Database statistics and health metrics
-- `memory://tags` - All available memory tags
-- `memory://recent/{n}` - N most recent memories
-- `memory://tag/{tagname}` - Memories with specific tag
-- `memory://search/{query}` - Dynamic search results
-
-#### 📋 **Guided Prompts**
-Interactive workflows for common memory operations:
-- **memory_review** - Review and organize memories from time periods
-- **memory_analysis** - Analyze patterns and themes in memories
-- **knowledge_export** - Export memories in JSON/Markdown/Text formats
-- **memory_cleanup** - Identify and remove duplicates/outdated memories
-- **learning_session** - Store structured learning notes with automatic tagging
-
-#### 📊 **Progress Tracking**
-Real-time progress notifications for long-running operations:
-- Bulk deletion operations with percentage updates
-- Database optimization with step-by-step progress
-- Operation IDs for tracking multiple concurrent tasks
-- MCP-compliant progress notification protocol
-
-#### 🔄 **Database Synchronization** (NEW in v4.5.0!)
-Multi-node database synchronization for distributed memory access:
-- **JSON Export/Import**: Preserve timestamps and metadata across database migrations
-- **Litestream Integration**: Real-time database replication with conflict resolution
-- **3-Node Architecture**: Central server with replica nodes for distributed workflows
-- **Deduplication Logic**: Content hash-based duplicate prevention during imports
-- **Source Tracking**: Automatic tagging to identify memory origin machines
-- **Cross-Platform Sync**: Synchronize memories between Windows, macOS, and Linux systems
-
-#### 🎛️ **Multi-Client Optimization** (NEW in v4.5.1!)
-The MCP Memory Service automatically detects your MCP client and optimizes its output:
-- **Claude Desktop**: Clean JSON-only communication for maximum compatibility
-  - Suppresses diagnostic output to maintain strict JSON-RPC protocol
-  - Routes only WARNING/ERROR messages to stderr
-  - Ensures seamless integration with Claude's parsing requirements
-- **LM Studio**: Enhanced diagnostic output for easier troubleshooting  
-  - Shows system diagnostics, dependency checks, and initialization status
-  - Provides detailed feedback for development and debugging
-  - Maintains full INFO/DEBUG output for comprehensive monitoring
-- **Automatic Detection**: Uses process inspection and environment variables
-- **Manual Override**: Set `CLAUDE_DESKTOP=1` or `LM_STUDIO=1` for explicit control
-- **Fallback Safety**: Defaults to strict JSON mode for unknown clients
-
-### 🧠 Dream-Inspired Memory Consolidation (NEW in v2.0!)
-- **Autonomous memory management** inspired by human sleep cycle processing
-- **Multi-layered time horizons** (daily → weekly → monthly → quarterly → yearly)
+#### **Autonomous Memory Consolidation**
+- **Dream-inspired processing** with multi-layered time horizons (daily → yearly)
 - **Creative association discovery** finding non-obvious connections between memories
 - **Semantic clustering** automatically organizing related memories
 - **Intelligent compression** preserving key information while reducing storage
 - **Controlled forgetting** with safe archival and recovery systems
 - **Performance optimized** for processing 10k+ memories efficiently
-- **Health monitoring** with comprehensive error handling and alerts
 
-### 🔍 Core Memory Operations
-- Semantic search using sentence transformers
+#### **Advanced Memory Operations**
+- **Semantic search** using sentence transformers
 - **Natural language time-based recall** (e.g., "last week", "yesterday morning")
 - **Enhanced tag deletion system** with flexible multi-tag support
-- Tag-based memory retrieval system
-- Exact match retrieval
-- Debug mode for similarity analysis
-- Duplicate detection and cleanup
+- **Tag-based memory retrieval** system with OR/AND logic
+- **Exact match retrieval** and duplicate detection
+- **Debug mode** for similarity analysis and troubleshooting
 
-### 🗄️ Storage & Performance
-- **SQLite-vec backend (default)**: Fast, lightweight, zero network dependencies
-- **Legacy ChromaDB support**: Available for backward compatibility
-- Automatic database backups
-- Memory optimization tools
-- Database health monitoring
-- Customizable embedding model
-- **Cross-platform compatibility** (Apple Silicon, Intel, Windows, Linux)
-- **Hardware-aware optimizations** for different environments
+#### **Enhanced MCP Protocol Features** (v4.1.0+)
+- **📚 URI-based Resources**: `memory://stats`, `memory://tags`, `memory://recent/{n}`, `memory://search/{query}`
+- **📋 Guided Prompts**: Interactive workflows (memory_review, memory_analysis, knowledge_export)
+- **📊 Progress Tracking**: Real-time notifications for long operations
+- **🔄 Database Synchronization**: Multi-node sync with Litestream integration
+- **🎛️ Client Optimization**: Auto-detection and optimization for Claude Desktop vs LM Studio
+
+### 🚀 Deployment & Performance
+
+#### **Storage Backends**
+- **🪶 SQLite-vec (default)**: 10x faster startup, 75% less memory, zero network dependencies
+- **📦 ChromaDB (legacy)**: Available for backward compatibility, deprecated in v6.0.0
+
+#### **Multi-Client Architecture**
+- **Production FastAPI server** with auto-generated SSL certificates
+- **mDNS Service Discovery** for zero-configuration networking
+- **Server-Sent Events (SSE)** with real-time updates
+- **API key authentication** for secure deployments
+- **Cross-platform service installation** (systemd, LaunchAgent, Windows Service)
+
+#### **Platform Support**
+- **Cross-platform compatibility**: Apple Silicon, Intel, Windows, Linux
+- **Hardware-aware optimizations**: CUDA, MPS, DirectML, ROCm support
 - **Graceful fallbacks** for limited hardware resources
-
-### 🔗 Integration & Coordination
-- **🆕 Modern Dashboard UI (v3.3.0)** - Professional web interface with live stats and interactive endpoint documentation
-- **🆕 Claude Code Commands (v2.2.0)** - Conversational memory commands following CCPlugins pattern
-- **🆕 Multi-client coordination** for Claude Desktop + Claude Code concurrent access
-- **🆕 Intelligent coordination modes** with automatic WAL/HTTP detection
-- **🆕 mDNS Service Discovery (v2.1.0)** - Zero-configuration networking with automatic service discovery
-- **🆕 HTTPS Support** with auto-generated certificates for secure connections
-- **7 new MCP tools** for consolidation operations
-- Environment variable-based configuration
+- **Container support** with Docker images and Docker Compose configurations
 
 ### Recent Highlights
 
@@ -236,19 +259,12 @@ The MCP Memory Service automatically detects your MCP client and optimizes its o
 
 ## Installation Methods
 
+*For quick setup, see the [⚡ Quick Start](#-quick-start) section above.*
+
 [![Docker](https://img.shields.io/badge/Docker-Fastest_Setup-008fe2?style=for-the-badge&logo=docker&logoColor=white)](#docker-installation)
 [![Smithery](https://img.shields.io/badge/Smithery-Auto_Install-9f7aea?style=for-the-badge&logo=npm&logoColor=white)](#installing-via-smithery)
 [![Python](https://img.shields.io/badge/Python-Intelligent_Installer-ffd343?style=for-the-badge&logo=python&logoColor=black)](#-intelligent-installer-recommended)
 [![uvx](https://img.shields.io/badge/uvx-Isolated_Install-00d2d3?style=for-the-badge&logo=python&logoColor=white)](#uvx-installation)
-
-### 🚀 Quick Start Options
-
-| Method | Best For | Setup Time | Features |
-|--------|----------|------------|----------|
-| **Docker** | Production, Multi-platform | 2 minutes | ✅ Isolated, ✅ Multi-client ready |
-| **Smithery** | Claude Desktop users | 1 minute | ✅ Auto-config, ✅ One command |
-| **Python Installer** | Developers, Customization | 5 minutes | ✅ Hardware detection, ✅ Full control |
-| **uvx** | Temporary use, Testing | 3 minutes | ✅ No virtual env, ✅ Clean install |
 
 ### 🚀 Intelligent Installer (Recommended)
 
@@ -325,27 +341,10 @@ python install.py --skip-claude-commands-prompt
 
 ### 📊 Storage Backend Selection
 
-MCP Memory Service uses SQLite-vec as the default storage backend, with ChromaDB available for legacy support:
+**SQLite-vec (default)**: 10x faster startup, zero dependencies, recommended for all users  
+**ChromaDB (deprecated)**: Legacy support only, will be removed in v6.0.0
 
-#### SQLite-vec 🪶 (Default - Recommended)
-**Best for**: All systems - from 2015 MacBook Pro to modern M-series Macs
-
-- ✅ **10x faster startup** (2-3 seconds vs 15-30 seconds)
-- ✅ **Zero network dependencies** - no Hugging Face downloads required
-- ✅ **Single file database** (easy backup/sharing)
-- ✅ **Minimal memory usage** (~150MB vs ~600MB)
-- ✅ **No external model downloads**
-- ✅ **HTTP/SSE API support**
-- ✅ **Works offline immediately**
-
-#### ChromaDB 📦 (Legacy - Deprecated)
-⚠️ **DEPRECATED**: ChromaDB support will be removed in v6.0.0. Please migrate to SQLite-vec.
-
-**Known Issues**: 
-- ❌ Requires network access for model downloads
-- ❌ Frequent connection failures to Hugging Face
-- ❌ Higher memory usage and slower startup
-- ❌ Complex dependency chain
+➡️ **[Detailed Storage Backend Comparison](#storage-backends)**
 
 To explicitly select a backend during installation:
 ```bash
@@ -453,74 +452,114 @@ npx -y @smithery/cli install @doobidoo/mcp-memory-service --client claude
 
 For comprehensive installation instructions and troubleshooting, see the [Installation Guide](docs/installation/master-guide.md).
 
-## Claude MCP Configuration
+## Configuration
 
-### Standard Configuration
+### Basic Client Configuration
 
-Add the following to your `claude_desktop_config.json` file:
+#### Claude Desktop Configuration
+Add to your `claude_desktop_config.json` file:
 
 ```json
 {
   "memory": {
     "command": "uv",
-    "args": [
-      "--directory",
-      "your_mcp_memory_service_directory",  // e.g., "C:\\REPOSITORIES\\mcp-memory-service"
-      "run",
-      "memory"
-    ],
+    "args": ["--directory", "/path/to/mcp-memory-service", "run", "memory"],
     "env": {
-      "MCP_MEMORY_CHROMA_PATH": "your_chroma_db_path",  // e.g., "C:\\Users\\John.Doe\\AppData\\Local\\mcp-memory\\chroma_db"
-      "MCP_MEMORY_BACKUPS_PATH": "your_backups_path"  // e.g., "C:\\Users\\John.Doe\\AppData\\Local\\mcp-memory\\backups"
+      "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+      "MCP_MEMORY_SQLITE_PATH": "/path/to/sqlite_vec.db",
+      "MCP_MEMORY_BACKUPS_PATH": "/path/to/backups"
     }
   }
 }
 ```
 
-### Windows-Specific Configuration (Recommended)
-
-For Windows users, we recommend using the wrapper script to ensure PyTorch is properly installed:
+#### Windows-Specific Configuration
+For Windows, use the wrapper script for PyTorch compatibility:
 
 ```json
 {
   "memory": {
     "command": "python",
-    "args": [
-      "C:\\path\\to\\mcp-memory-service\\memory_wrapper.py"
-    ],
+    "args": ["C:\\path\\to\\mcp-memory-service\\memory_wrapper.py"],
     "env": {
-      "MCP_MEMORY_CHROMA_PATH": "C:\\Users\\YourUsername\\AppData\\Local\\mcp-memory\\chroma_db",
+      "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+      "MCP_MEMORY_SQLITE_PATH": "C:\\Users\\YourUsername\\AppData\\Local\\mcp-memory\\sqlite_vec.db",
       "MCP_MEMORY_BACKUPS_PATH": "C:\\Users\\YourUsername\\AppData\\Local\\mcp-memory\\backups"
     }
   }
 }
 ```
 
-### SQLite-vec Configuration (Lightweight)
+➡️ **[Multi-Client Setup Guide](#-multi-client-deployment)** for Claude Desktop + VS Code + other MCP clients
 
-For a lighter-weight configuration that doesn't require PyTorch:
+### Environment Variables
 
-```json
-{
-  "memory": {
-    "command": "python",
-    "args": ["-m", "mcp_memory_service.server"],
-    "cwd": "/path/to/mcp-memory-service",
-    "env": {
-      "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
-      "MCP_MEMORY_SQLITE_PATH": "/path/to/mcp-memory/sqlite_vec.db",
-      "MCP_MEMORY_BACKUPS_PATH": "/path/to/mcp-memory/backups",
-      "MCP_MEMORY_USE_ONNX": "1",
-      "PYTHONPATH": "/path/to/mcp-memory-service"
-    }
-  }
-}
+#### Core Configuration
+```bash
+# Storage Backend
+MCP_MEMORY_STORAGE_BACKEND=sqlite_vec          # sqlite_vec (default) or chromadb
+MCP_MEMORY_SQLITE_PATH=/path/to/database.db    # SQLite database location
+MCP_MEMORY_BACKUPS_PATH=/path/to/backups       # Backup directory
+
+# Performance & Hardware
+MCP_MEMORY_BATCH_SIZE=32                       # Processing batch size
+MCP_MEMORY_MODEL_NAME=all-MiniLM-L6-v2        # Embedding model
+PYTORCH_ENABLE_MPS_FALLBACK=1                  # Apple Silicon fallback
+MCP_MEMORY_USE_ONNX=0                          # CPU-only mode
+LOG_LEVEL=INFO                                 # Logging level
 ```
 
-The wrapper script will:
-1. Check if PyTorch is installed and properly configured
-2. Install PyTorch with the correct index URL if needed
-3. Run the memory server with the appropriate configuration
+#### HTTP API & Remote Access
+```bash
+# Server Configuration
+MCP_HTTP_ENABLED=true                          # Enable HTTP server
+MCP_HTTP_HOST=0.0.0.0                         # Bind to all interfaces
+MCP_HTTP_PORT=8000                            # Server port
+
+# Security
+MCP_API_KEY="your-secure-api-key"             # API authentication
+MCP_HTTPS_ENABLED=true                        # Enable SSL/TLS
+MCP_HTTPS_PORT=8443                           # HTTPS port
+```
+
+### Advanced Configuration
+
+#### SSL/TLS Setup
+For production deployments with HTTPS:
+
+```bash
+# Enable HTTPS with custom certificates
+export MCP_HTTPS_ENABLED=true
+export MCP_SSL_CERT_FILE="/path/to/certificate.pem"
+export MCP_SSL_KEY_FILE="/path/to/private-key.pem"
+
+# Generate secure API key
+export MCP_API_KEY="$(openssl rand -base64 32)"
+```
+
+**Local Development with mkcert:**
+```bash
+# Install mkcert for trusted local certificates
+brew install mkcert                           # macOS
+sudo apt install mkcert                       # Linux
+
+# Generate local certificates
+mkcert -install
+mkcert localhost 127.0.0.1 your-domain.local
+```
+
+#### Memory Consolidation
+```bash
+# Enable autonomous memory consolidation
+MCP_CONSOLIDATION_ENABLED=true
+MCP_CONSOLIDATION_ARCHIVE_PATH=/path/to/archive
+
+# Retention periods (days)
+MCP_RETENTION_CRITICAL=365
+MCP_RETENTION_REFERENCE=180
+MCP_RETENTION_STANDARD=30
+MCP_RETENTION_TEMPORARY=7
+```
 
 ## 🌐 Multi-Client Deployment
 
@@ -560,6 +599,26 @@ python scripts/run_http_server.py
 ❌ **Performance issues** - Full database re-upload on every change  
 
 **✅ Solution**: Use centralized HTTP server deployment instead!
+
+### 🔗 Local Multi-Client Coordination
+
+**For local development with multiple MCP clients** (Claude Desktop + VS Code + Continue, etc.):
+
+The MCP Memory Service features **universal multi-client coordination** for seamless concurrent access:
+
+**🚀 Integrated Setup (Recommended):**
+```bash
+python install.py  # Automatically detects and configures all MCP clients
+```
+
+**Key Benefits:**
+- ✅ **Automatic Coordination**: Intelligent detection of optimal access mode
+- ✅ **Universal Setup**: Works with any MCP-compatible application  
+- ✅ **Shared Memory**: All clients access the same memory database
+- ✅ **No Lock Conflicts**: WAL mode prevents database locking issues
+- ✅ **IDE-Agnostic**: Switch between development tools while maintaining context
+
+**Supported Clients:** Claude Desktop, Claude Code, VS Code, Continue IDE, Cursor, Cline, Zed, and more
 
 ### 📖 Complete Documentation
 
@@ -692,92 +751,6 @@ python scripts/migrate_storage.py \
 
 For detailed SQLite-vec setup, migration, and troubleshooting, see the [SQLite-vec Backend Guide](docs/sqlite-vec-backend.md).
 
-## SSL/TLS Configuration
-
-The MCP Memory Service supports HTTPS with custom SSL certificates for secure connections. You can use either self-signed certificates (automatically generated) or provide your own certificates.
-
-### Using Custom SSL Certificates
-
-Configure custom SSL certificates using environment variables:
-
-```bash
-# Enable HTTPS
-export MCP_HTTPS_ENABLED=true
-export MCP_HTTPS_PORT=8443
-
-# Provide custom certificate paths
-export MCP_SSL_CERT_FILE="/path/to/your/certificate.pem"
-export MCP_SSL_KEY_FILE="/path/to/your/private-key.pem"
-```
-
-### Local Development with mkcert
-
-For easy local development with trusted certificates, we recommend [mkcert](https://github.com/FiloSottile/mkcert):
-
-```bash
-# Install mkcert (macOS)
-brew install mkcert
-
-# Install mkcert (Linux)
-sudo apt install libnss3-tools
-curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
-chmod +x mkcert-v*-linux-amd64
-sudo cp mkcert-v*-linux-amd64 /usr/local/bin/mkcert
-
-# Create local certificate authority
-mkcert -install
-
-# Generate certificate for your domain
-mkcert your-domain.local localhost 127.0.0.1
-
-# Set environment variables
-export MCP_SSL_CERT_FILE="./your-domain.local+2.pem"
-export MCP_SSL_KEY_FILE="./your-domain.local+2-key.pem"
-```
-
-### Example HTTPS Startup
-
-Use the provided example script as a template:
-
-```bash
-# Copy and customize the example
-cp examples/start_https_example.sh start_https.sh
-# Edit start_https.sh with your certificate paths and API key
-chmod +x start_https.sh
-./start_https.sh
-```
-
-### Client Certificate Installation
-
-To avoid certificate warnings in browsers and clients, install the mkcert root CA:
-
-**Windows:**
-```powershell
-# Copy rootCA.pem from mkcert CA root directory
-certutil -addstore -f "ROOT" rootCA.pem
-```
-
-**macOS:**
-```bash
-sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain rootCA.pem
-```
-
-**Linux:**
-```bash
-# Ubuntu/Debian
-sudo cp rootCA.pem /usr/local/share/ca-certificates/mkcert-rootCA.crt
-sudo update-ca-certificates
-
-# Fedora/RHEL/CentOS
-sudo cp rootCA.pem /etc/pki/ca-trust/source/anchors/
-sudo update-ca-trust
-```
-
-Find your mkcert CA root directory with: `mkcert -CAROOT`
-
-### Self-Signed Certificates (Fallback)
-
-If no custom certificates are provided, the service automatically generates self-signed certificates. These will trigger security warnings in browsers but work for testing purposes.
 
 ## Memory Operations
 
@@ -899,49 +872,6 @@ export MCP_SCHEDULE_MONTHLY="01 04:00"   # 4 AM on 1st of month
 - Safe archival system - no data is ever permanently deleted
 - Full recovery capabilities for all archived memories
 
-## Configuration Options
-
-Configure through environment variables:
-
-```
-CHROMA_DB_PATH: Path to ChromaDB storage
-BACKUP_PATH: Path for backups
-AUTO_BACKUP_INTERVAL: Backup interval in hours (default: 24)
-MAX_MEMORIES_BEFORE_OPTIMIZE: Threshold for auto-optimization (default: 10000)
-SIMILARITY_THRESHOLD: Default similarity threshold (default: 0.7)
-MAX_RESULTS_PER_QUERY: Maximum results per query (default: 10)
-BACKUP_RETENTION_DAYS: Number of days to keep backups (default: 7)
-LOG_LEVEL: Logging level (default: INFO)
-
-# HTTP API and Authentication
-MCP_API_KEY: API key for HTTP authentication (optional, no default)
-MCP_HTTP_ENABLED: Enable HTTP server mode (default: false)
-MCP_HTTP_HOST: HTTP server bind address (default: 127.0.0.1)
-MCP_HTTP_PORT: HTTP server port (default: 8000)
-
-# Hardware and backend configuration
-MCP_MEMORY_STORAGE_BACKEND: Storage backend to use (chromadb or sqlite_vec)
-MCP_MEMORY_SQLITE_PATH: Path to SQLite-vec database file
-PYTORCH_ENABLE_MPS_FALLBACK: Enable MPS fallback for Apple Silicon (default: 1)
-MCP_MEMORY_USE_ONNX: Use ONNX Runtime for CPU-only deployments (default: 0)
-MCP_MEMORY_USE_DIRECTML: Use DirectML for Windows acceleration (default: 0)
-MCP_MEMORY_MODEL_NAME: Override the default embedding model
-MCP_MEMORY_BATCH_SIZE: Override the default batch size
-```
-
-### API Key Security
-
-For production deployments with HTTP API enabled, always set a secure API key:
-
-```bash
-# Generate a secure API key
-export MCP_API_KEY="$(openssl rand -base64 32)"
-
-# Or use your preferred method
-export MCP_API_KEY="your-secure-api-key-here"
-```
-
-The API key is required in the `Authorization: Bearer <key>` header for all HTTP requests when set.
 
 ## 🚀 Service Installation (NEW!)
 
@@ -1018,55 +948,49 @@ python scripts/test_installation.py
 
 ## FAQ
 
-### Can I run the MCP Memory Service across multiple applications simultaneously?
+### Can I use MCP Memory Service with multiple AI clients simultaneously?
 
-**Yes!** The MCP Memory Service now features **universal multi-client coordination** that enables seamless concurrent access from any MCP-compatible applications. Share memories between Claude Desktop, Claude Code, VS Code, Continue, Cursor, and other MCP clients with automatic coordination.
+**Yes!** The service features universal multi-client coordination for seamless concurrent access across Claude Desktop, VS Code, Continue, Cursor, and other MCP clients. See the [Local Multi-Client Coordination](#-local-multi-client-coordination) section for details.
 
-**🚀 Integrated Setup (Recommended):**
+### What's the difference between SQLite-vec and ChromaDB backends?
+
+**SQLite-vec (recommended)**: 10x faster startup, zero network dependencies, 75% less memory usage, single-file database  
+**ChromaDB (deprecated)**: Legacy support only, requires network access for models, will be removed in v6.0.0
+
+➡️ **[Detailed Backend Comparison](#storage-backends)**
+
+### How do I migrate from ChromaDB to SQLite-vec?
+
+Run the migration script to safely transfer your existing memories:
 ```bash
-# During installation, you'll be prompted:
+python scripts/migrate_to_sqlite_vec.py
+```
+The process preserves all memories, tags, and metadata while improving performance.
+
+### Can I deploy MCP Memory Service on a remote server?
+
+**Yes!** The service supports production deployment with HTTP/HTTPS server, API authentication, SSL certificates, and Docker containers. Perfect for teams and cross-device access.
+
+➡️ **[Remote Server Deployment](#-centralized-server-deployment-recommended)**
+
+### Why does my installation fail on Apple Silicon Macs?
+
+Use the intelligent installer which handles Apple Silicon optimizations automatically:
+```bash
 python install.py
-
-# Would you like to configure multi-client access? (y/N): y
-# ✅ Automatically detects and configures all your MCP clients!
 ```
+It detects MPS support, configures fallbacks, and selects compatible PyTorch versions.
 
-**🔧 Manual Setup:**
-```bash
-python examples/setup/setup_multi_client_complete.py
-```
+### How much memory and storage does the service use?
 
-**🌐 Universal Compatibility:**
-- ✅ **Claude Desktop + Claude Code**: Original use case with automatic config
-- ✅ **VS Code with MCP Extension**: Seamless integration instructions
-- ✅ **Continue IDE**: Automatic configuration file updates
-- ✅ **Cursor IDE**: MCP extension support with guidance
-- ✅ **Any MCP Client**: Generic configuration for future applications
+**SQLite-vec**: ~50MB RAM for 1K memories, single database file  
+**ChromaDB**: ~200MB RAM for 1K memories, multiple files
 
-**Key Benefits:**
-- ✅ **Automatic Coordination**: Intelligent detection of optimal access mode
-- ✅ **Universal Setup**: Works with any MCP-compatible application
-- ✅ **Shared Memory**: All clients access the same memory database
-- ✅ **No Lock Conflicts**: WAL mode prevents database locking issues
-- ✅ **IDE-Agnostic**: Switch between development tools while maintaining context
+Storage scales linearly: ~1MB per 1000 memories with SQLite-vec.
 
-**Multi-Client Features:**
-- **Phase 1: WAL Mode** - Direct SQLite access with Write-Ahead Logging (default)
-- **Phase 2: HTTP Coordination** - Advanced server-based coordination (optional)
-- **Automatic Retry Logic** - Handles transient lock conflicts gracefully
-- **Performance Optimized** - Tuned for concurrent access patterns
+### Is my data secure and private?
 
-**Technical Implementation:**
-- **SQLite WAL Mode**: Multiple readers + single writer coordination
-- **HTTP Auto-Detection**: Intelligent server coordination when beneficial
-- **Connection Retry**: Exponential backoff for robust access
-- **Shared Database**: Single source of truth across all clients
-
-**Setup Guides:**
-- **🚀 Quick Start:** Integrated into `python install.py` with automatic detection
-- **📖 Universal Setup:** [Universal Multi-Client Setup Guide](docs/integration/multi-client.md)
-- **🔧 Manual Setup:** [Multi-Client Setup Guide](docs/integration/multi-client.md) 
-- **⚙️ Legacy Setup:** `python examples/setup/setup_multi_client_complete.py`
+**Yes!** All data is stored locally by default. For remote deployments, the service supports API key authentication, HTTPS encryption, and runs in user-space (not as root) for security.
 
 ## Troubleshooting
 
