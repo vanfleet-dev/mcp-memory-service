@@ -26,6 +26,7 @@ import sys
 import os
 import time
 import traceback
+import warnings
 from chromadb.utils import embedding_functions
 import logging
 from typing import List, Dict, Any, Tuple, Set, Optional
@@ -78,6 +79,19 @@ MODEL_FALLBACKS = [
 class ChromaMemoryStorage(MemoryStorage):
     def __init__(self, path: str, preload_model: bool = True):
         """Initialize ChromaDB storage with hardware-aware embedding function and performance optimizations."""
+        # Issue deprecation warning
+        warnings.warn(
+            "ChromaDB backend is deprecated and will be removed in v6.0.0. "
+            "Please migrate to SQLite-vec backend for better performance and reliability. "
+            "See migration guide at: https://github.com/doobidoo/mcp-memory-service#migration",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        logger.warning(
+            "DEPRECATION: ChromaDB backend is deprecated. Consider migrating to SQLite-vec backend. "
+            "Run 'python scripts/migrate_to_sqlite_vec.py' to migrate your data."
+        )
+        
         self.path = path
         self.model = None
         self.embedding_function = None

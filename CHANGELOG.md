@@ -4,6 +4,44 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2025-08-15
+
+### ⚠️ **BREAKING CHANGES**
+
+#### ChromaDB Deprecation
+- **DEPRECATED**: ChromaDB backend is now deprecated and will be removed in v6.0.0
+- **DEFAULT CHANGE**: SQLite-vec is now the default storage backend (previously ChromaDB)
+- **MIGRATION REQUIRED**: Users with existing ChromaDB data should migrate to SQLite-vec
+  - Run `python scripts/migrate_to_sqlite_vec.py` to migrate your data
+  - Migration is one-way only (ChromaDB → SQLite-vec)
+  - Backup your data before migration
+
+#### Why This Change?
+- **Network Issues**: ChromaDB requires downloading models from Hugging Face, causing frequent failures
+- **Performance**: SQLite-vec is 10x faster at startup (2-3 seconds vs 15-30 seconds)
+- **Resource Usage**: SQLite-vec uses 75% less memory than ChromaDB
+- **Reliability**: Zero network dependencies means no download failures or connection issues
+- **Simplicity**: Single-file database, easier backup and portability
+
+#### Changed
+- **Default Backend**: Changed from ChromaDB to SQLite-vec in all configurations
+- **Installation**: `install.py` now installs SQLite-vec dependencies by default
+- **Documentation**: Updated all guides to recommend SQLite-vec as primary backend
+- **Warnings**: Added deprecation warnings when ChromaDB backend is used
+- **Migration Prompts**: Server now prompts for migration when ChromaDB data is detected
+
+#### Migration Guide
+1. **Backup your data**: `python scripts/create_backup.py`
+2. **Run migration**: `python scripts/migrate_to_sqlite_vec.py`
+3. **Update configuration**: Set `MCP_MEMORY_STORAGE_BACKEND=sqlite_vec`
+4. **Restart server**: Your memories are now in SQLite-vec format
+
+#### Backward Compatibility
+- ChromaDB backend still functions but displays deprecation warnings
+- Existing ChromaDB installations continue to work until v6.0.0
+- Migration tools provided for smooth transition
+- All APIs remain unchanged regardless of backend
+
 ## [4.6.1] - 2025-08-14
 
 ### 🐛 **Bug Fixes**

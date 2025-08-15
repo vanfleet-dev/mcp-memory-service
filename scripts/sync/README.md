@@ -111,7 +111,7 @@ The export format preserves all memory data:
     "total_memories": 450,
     "database_path": "/path/to/sqlite_vec.db",
     "platform": "Windows",
-    "exporter_version": "4.5.0"
+    "exporter_version": "5.0.0"
   },
   "memories": [
     {

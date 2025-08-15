@@ -508,7 +508,29 @@ class MemoryServer:
                         self.storage = SqliteVecMemoryStorage(SQLITE_VEC_PATH)
                         logger.info(f"Created SQLite-vec storage at: {SQLITE_VEC_PATH}")
                 else:
-                    # Default to ChromaDB
+                    # ChromaDB backend (deprecated) - Check for migration
+                    logger.warning("=" * 70)
+                    logger.warning("DEPRECATION WARNING: ChromaDB backend is deprecated!")
+                    logger.warning("ChromaDB will be removed in v6.0.0.")
+                    logger.warning("Please migrate to SQLite-vec for better performance and reliability.")
+                    logger.warning("To migrate your data, run: python scripts/migrate_to_sqlite_vec.py")
+                    logger.warning("=" * 70)
+                    
+                    # Check if ChromaDB has existing data
+                    if os.path.exists(CHROMA_PATH) and os.listdir(CHROMA_PATH):
+                        logger.warning("")
+                        logger.warning("MIGRATION RECOMMENDED: Existing ChromaDB data detected!")
+                        logger.warning("Your memories are stored in the deprecated ChromaDB format.")
+                        logger.warning("")
+                        logger.warning("To migrate now (recommended):")
+                        logger.warning("  1. Stop this server (Ctrl+C)")
+                        logger.warning("  2. Run: python scripts/migrate_to_sqlite_vec.py")
+                        logger.warning("  3. Set environment: export MCP_MEMORY_STORAGE_BACKEND=sqlite_vec")
+                        logger.warning("  4. Restart the server")
+                        logger.warning("")
+                        logger.warning("Continuing with ChromaDB for now...")
+                        logger.warning("")
+                    
                     from .storage.chroma import ChromaMemoryStorage
                     self.storage = ChromaMemoryStorage(CHROMA_PATH, preload_model=False)
                     logger.info(f"Created ChromaDB storage at: {CHROMA_PATH}")

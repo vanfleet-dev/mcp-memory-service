@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-memory-service"
-version = "4.6.1"  
-description = "An intelligent semantic memory service with dream-inspired autonomous consolidation using ChromaDB and sentence-transformers"
+version = "5.0.0"  
+description = "An intelligent semantic memory service with dream-inspired autonomous consolidation using SQLite-vec for efficient local storage"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [

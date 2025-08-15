@@ -809,8 +809,8 @@ def detect_storage_backend_compatibility(system_info, gpu_info):
     print_step("3a", "Analyzing storage backend compatibility")
     
     compatibility = {
-        "chromadb": {"supported": True, "issues": [], "recommendation": "default"},
-        "sqlite_vec": {"supported": True, "issues": [], "recommendation": "lightweight"}
+        "chromadb": {"supported": True, "issues": [], "recommendation": "legacy"},
+        "sqlite_vec": {"supported": True, "issues": [], "recommendation": "default"}
     }
     
     # Check ChromaDB compatibility issues
@@ -897,7 +897,7 @@ def choose_storage_backend(system_info, gpu_info, args):
             break
     
     if not recommended_backend:
-        recommended_backend = "chromadb"  # Default fallback
+        recommended_backend = "sqlite_vec"  # Default fallback
     
     # Interactive selection if no auto-recommendation is clear
     if compatibility["chromadb"]["recommendation"] == "problematic":
@@ -1313,7 +1313,7 @@ def configure_paths(args):
         base_dir = home_dir / '.local' / 'share' / 'mcp-memory'
     
     # Create directories based on storage backend
-    storage_backend = args.storage_backend or os.environ.get('MCP_MEMORY_STORAGE_BACKEND', 'chromadb')
+    storage_backend = args.storage_backend or os.environ.get('MCP_MEMORY_STORAGE_BACKEND', 'sqlite_vec')
     
     if storage_backend == 'sqlite_vec':
         # For sqlite-vec, we need a database file path
@@ -1686,18 +1686,18 @@ def recommend_backend_intelligent(system_info, gpu_info, memory_gb, args):
                 os.environ['MCP_MEMORY_USE_ONNX'] = '1'
             return "sqlite_vec"
     
-    # Hardware with GPU acceleration - ChromaDB can utilize this
+    # Hardware with GPU acceleration - SQLite-vec still recommended for simplicity
     if gpu_info.get("has_cuda") or gpu_info.get("has_mps") or gpu_info.get("has_directml"):
         gpu_type = "CUDA" if gpu_info.get("has_cuda") else "MPS" if gpu_info.get("has_mps") else "DirectML"
-        print_info(f"[GPU] {gpu_type} acceleration detected - ChromaDB recommended for performance")
-        return "chromadb"
+        print_info(f"[GPU] {gpu_type} acceleration detected - SQLite-vec recommended for simplicity and speed")
+        return "sqlite_vec"
     
     # High memory systems without GPU - explain the choice
     if memory_gb >= 16:
         print_info("[CHOICE] High-memory system without GPU detected")
-        print_info("  -> ChromaDB: Better for large datasets (10K+ memories), production use")
-        print_info("  -> SQLite-vec: Faster startup, simpler setup, same features for typical use")
-        print_info("  -> Defaulting to SQLite-vec for simplicity (use --storage-backend chromadb to override)")
+        print_info("  -> SQLite-vec: Faster startup, simpler setup, no network dependencies")
+        print_info("  -> ChromaDB: Legacy option, being deprecated in v6.0.0")
+        print_info("  -> Defaulting to SQLite-vec (recommended for all users)")
         return "sqlite_vec"
     
     # Default recommendation for most users
@@ -1735,16 +1735,16 @@ def show_detailed_help():
         print_success("Apple Silicon Mac - Modern Hardware Path")
         print_info("  Recommended: python install.py")
         print_info("  This will:")
-        print_info("    • Use ChromaDB backend (full-featured)")
+        print_info("    • Use SQLite-vec backend (fast and efficient)")
         print_info("    • Enable MPS acceleration")
-        print_info("    • Install latest PyTorch with MPS support")
+        print_info("    • Zero network dependencies")
     elif system_info["is_windows"] and gpu_info.get("has_cuda"):
         print_success("Windows with CUDA GPU - High Performance Path")
         print_info("  Recommended: python install.py")
         print_info("  This will:")
-        print_info("    • Use ChromaDB backend (GPU acceleration advantage)")
+        print_info("    • Use SQLite-vec backend (fast and efficient)")
         print_info("    • Enable CUDA acceleration")
-        print_info("    • Install PyTorch with CUDA support")
+        print_info("    • Zero network dependencies")
     elif memory_gb > 0 and memory_gb < 4:
         print_success("Low-Memory System")
         print_info("  Recommended: python install.py --storage-backend sqlite_vec")
@@ -1764,9 +1764,9 @@ def show_detailed_help():
         print_success(f"GPU-Accelerated System ({gpu_type}) - High Performance Path")
         print_info("  Recommended: python install.py")
         print_info("  This will:")
-        print_info(f"    • Use ChromaDB backend (takes advantage of {gpu_type})")
-        print_info("    • Enable hardware acceleration")
-        print_info("    • Optimize for performance and large datasets")
+        print_info(f"    • Use SQLite-vec backend (fast and efficient)")
+        print_info(f"    • Enable {gpu_type} hardware acceleration")
+        print_info("    • Zero network dependencies")
     else:
         print_success("Standard Installation")
         print_info("  Recommended: python install.py")

@@ -10,7 +10,7 @@
 [![Works with LM Studio](https://img.shields.io/badge/Works%20with-LM%20Studio-purple)](https://lmstudio.ai)
 [![Works with Zed](https://img.shields.io/badge/Works%20with-Zed-red)](https://zed.dev)
 
-An intelligent MCP server providing semantic memory, persistent storage, and **autonomous memory consolidation** for AI applications and development environments. This universal memory service works with **Claude Desktop, Cursor, WindSurf, LM Studio, Zed, and 10+ other AI clients**, combining ChromaDB/SQLite-vec storage with a revolutionary **dream-inspired consolidation system** that automatically organizes, compresses, and manages memories over time, creating a self-evolving knowledge base.
+An intelligent MCP server providing semantic memory, persistent storage, and **autonomous memory consolidation** for AI applications and development environments. This universal memory service works with **Claude Desktop, Cursor, WindSurf, LM Studio, Zed, and 10+ other AI clients**, using SQLite-vec for efficient local storage with a revolutionary **dream-inspired consolidation system** that automatically organizes, compresses, and manages memories over time, creating a self-evolving knowledge base.
 
 <img width="240" alt="grafik" src="https://github.com/user-attachments/assets/eab1f341-ca54-445c-905e-273cd9e89555" />
 <a href="https://glama.ai/mcp/servers/bzvl3lz34o"><img width="380" height="200" src="https://glama.ai/mcp/servers/bzvl3lz34o/badge" alt="Memory Service MCP server" /></a>
@@ -203,7 +203,8 @@ The MCP Memory Service automatically detects your MCP client and optimizes its o
 - Duplicate detection and cleanup
 
 ### 🗄️ Storage & Performance
-- **Dual storage backends**: ChromaDB (full-featured) and SQLite-vec (lightweight, fast)
+- **SQLite-vec backend (default)**: Fast, lightweight, zero network dependencies
+- **Legacy ChromaDB support**: Available for backward compatibility
 - Automatic database backups
 - Memory optimization tools
 - Database health monitoring
@@ -370,7 +371,7 @@ python install.py --skip-claude-commands-prompt
 ### 🧠 What the Installer Does
 
 1. **Hardware Detection**: CPU, GPU, memory, and platform analysis
-2. **Intelligent Backend Selection**: ChromaDB vs SQLite-vec based on your hardware
+2. **Intelligent Backend Selection**: SQLite-vec by default, with ChromaDB as legacy option
 3. **Platform Optimization**: macOS Intel fixes, Windows CUDA setup, Linux variations
 4. **Dependency Management**: Compatible PyTorch and ML library versions
 5. **Auto-Configuration**: Claude Desktop config and environment variables
@@ -378,29 +379,33 @@ python install.py --skip-claude-commands-prompt
 
 ### 📊 Storage Backend Selection
 
-MCP Memory Service supports two optimized storage backends:
+MCP Memory Service uses SQLite-vec as the default storage backend, with ChromaDB available for legacy support:
 
-#### SQLite-vec 🪶 (Lightweight & Fast)
-**Best for**: 2015 MacBook Pro, older Intel Macs, low-memory systems, Docker deployments
+#### SQLite-vec 🪶 (Default - Recommended)
+**Best for**: All systems - from 2015 MacBook Pro to modern M-series Macs
 
 - ✅ **10x faster startup** (2-3 seconds vs 15-30 seconds)
+- ✅ **Zero network dependencies** - no Hugging Face downloads required
 - ✅ **Single file database** (easy backup/sharing)
 - ✅ **Minimal memory usage** (~150MB vs ~600MB)
-- ✅ **No external dependencies**
+- ✅ **No external model downloads**
 - ✅ **HTTP/SSE API support**
+- ✅ **Works offline immediately**
 
-#### ChromaDB 📦 (Full-Featured)
-**Best for**: Modern Macs (M1/M2/M3), GPU-enabled systems, production deployments
+#### ChromaDB 📦 (Legacy - Deprecated)
+⚠️ **DEPRECATED**: ChromaDB support will be removed in v6.0.0. Please migrate to SQLite-vec.
 
-- ✅ **Advanced vector search** with multiple metrics
-- ✅ **Rich metadata support** and complex queries
-- ✅ **Battle-tested scalability**
-- ✅ **Extensive ecosystem** integration
+**Known Issues**: 
+- ❌ Requires network access for model downloads
+- ❌ Frequent connection failures to Hugging Face
+- ❌ Higher memory usage and slower startup
+- ❌ Complex dependency chain
 
-**The installer automatically recommends the best backend for your hardware**, but you can override with:
+To explicitly select a backend during installation:
 ```bash
-python install.py --storage-backend sqlite_vec    # Lightweight
-python install.py --storage-backend chromadb      # Full-featured
+python install.py                                 # Uses SQLite-vec by default
+python install.py --storage-backend sqlite_vec    # Explicitly use SQLite-vec
+python install.py --storage-backend chromadb      # Use legacy ChromaDB (not recommended)
 ```
 
 ### Docker Installation
@@ -662,17 +667,18 @@ See the [Invocation Guide](docs/guides/invocation_guide.md) for a complete list 
 
 The MCP Memory Service supports multiple storage backends to suit different use cases:
 
-### ChromaDB (Default)
-- **Best for**: Large memory collections (>100K entries), high-performance requirements
-- **Features**: Advanced vector indexing, excellent query performance, rich ecosystem
-- **Memory usage**: Higher (~200MB for 1K memories)
-- **Setup**: Automatically configured, no additional dependencies
+### SQLite-vec (Default - Recommended)
+- **Best for**: All use cases - from personal to production deployments
+- **Features**: Single-file database, 75% lower memory usage, zero network dependencies
+- **Memory usage**: Minimal (~50MB for 1K memories)
+- **Setup**: Automatically configured, works offline immediately
 
-### SQLite-vec (Lightweight Alternative)
-- **Best for**: Smaller collections (<100K entries), resource-constrained environments
-- **Features**: Single-file database, 75% lower memory usage, better portability
-- **Memory usage**: Lower (~50MB for 1K memories)
-- **Setup**: Requires `sqlite-vec` package
+### ChromaDB (Legacy - Deprecated)
+⚠️ **DEPRECATED**: Will be removed in v6.0.0. Please migrate to SQLite-vec.
+- **Previous use cases**: Large memory collections, advanced vector metrics
+- **Issues**: Network dependencies, Hugging Face download failures, high resource usage
+- **Memory usage**: Higher (~200MB for 1K memories)
+- **Migration**: Run `python scripts/migrate_to_sqlite_vec.py` to migrate your data
 
 #### Quick Setup for SQLite-vec
 
