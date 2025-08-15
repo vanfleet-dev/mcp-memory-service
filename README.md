@@ -1,6 +1,11 @@
 # MCP Memory Service
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![GitHub stars](https://img.shields.io/github/stars/doobidoo/mcp-memory-service?style=social)](https://github.com/doobidoo/mcp-memory-service/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/doobidoo/mcp-memory-service?style=social)](https://github.com/doobidoo/mcp-memory-service/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/doobidoo/mcp-memory-service)](https://github.com/doobidoo/mcp-memory-service/issues)
+[![GitHub last commit](https://img.shields.io/github/last-commit/doobidoo/mcp-memory-service)](https://github.com/doobidoo/mcp-memory-service/commits)
+
 [![smithery badge](https://smithery.ai/badge/@doobidoo/mcp-memory-service)](https://smithery.ai/server/@doobidoo/mcp-memory-service)
 [![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/0513fb92-e941-4fe0-9948-2a1dbb870dcf)
 
@@ -10,7 +15,13 @@
 [![Works with LM Studio](https://img.shields.io/badge/Works%20with-LM%20Studio-purple)](https://lmstudio.ai)
 [![Works with Zed](https://img.shields.io/badge/Works%20with-Zed-red)](https://zed.dev)
 
-An intelligent MCP server providing semantic memory, persistent storage, and **autonomous memory consolidation** for AI applications and development environments. This universal memory service works with **Claude Desktop, Cursor, WindSurf, LM Studio, Zed, and 10+ other AI clients**, using SQLite-vec for efficient local storage with a revolutionary **dream-inspired consolidation system** that automatically organizes, compresses, and manages memories over time, creating a self-evolving knowledge base.
+[![MCP Protocol](https://img.shields.io/badge/MCP-Compatible-4CAF50?style=flat&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K)](https://modelcontextprotocol.io/)
+[![Multi-Client](https://img.shields.io/badge/Multi--Client-13+%20Apps-FF6B35?style=flat&logo=network-wired)](https://github.com/doobidoo/mcp-memory-service#features)
+[![Cross Platform](https://img.shields.io/badge/Platform-Cross--Platform-success?style=flat&logo=windows&logoColor=white)](https://github.com/doobidoo/mcp-memory-service#hardware-compatibility)
+[![Production Ready](https://img.shields.io/badge/Production-Ready-brightgreen?style=flat&logo=checkmark)](https://github.com/doobidoo/mcp-memory-service#-in-production)
+[![SQLite-vec](https://img.shields.io/badge/Storage-SQLite--vec-336791?style=flat&logo=sqlite&logoColor=white)](https://github.com/doobidoo/mcp-memory-service#storage-backends)
+
+A **universal MCP memory service** providing **semantic memory search**, persistent storage, and **autonomous memory consolidation** for **AI assistants** and development environments. This **Model Context Protocol server** works with **Claude Desktop, VS Code, Cursor, Continue, WindSurf, LM Studio, Zed, and 13+ AI applications**, featuring **vector database storage** with SQLite-vec for **fast semantic search** and a revolutionary **dream-inspired consolidation system** that automatically organizes, compresses, and manages your **AI conversation history** over time, creating a **self-evolving knowledge base** for enhanced **AI productivity**.
 
 <img width="240" alt="grafik" src="https://github.com/user-attachments/assets/eab1f341-ca54-445c-905e-273cd9e89555" />
 <a href="https://glama.ai/mcp/servers/bzvl3lz34o"><img width="380" height="200" src="https://glama.ai/mcp/servers/bzvl3lz34o/badge" alt="Memory Service MCP server" /></a>
