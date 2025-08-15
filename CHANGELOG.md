@@ -4,6 +4,73 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.1] - 2025-08-15
+
+### 🐛 **Critical Migration Fixes**
+
+This patch release addresses critical issues in the v5.0.0 ChromaDB to SQLite-vec migration process reported in [Issue #83](https://github.com/doobidoo/mcp-memory-service/issues/83).
+
+#### Fixed
+- **Custom Data Paths**: Migration scripts now properly support custom ChromaDB locations via CLI arguments and environment variables
+  - Added `--chroma-path` and `--sqlite-path` arguments to migration scripts
+  - Support for `MCP_MEMORY_CHROMA_PATH` and `MCP_MEMORY_SQLITE_PATH` environment variables
+  - Fixed hardcoded path assumptions that ignored user configurations
+
+- **Content Hash Generation**: Fixed critical bug where ChromaDB document IDs were used instead of proper SHA256 hashes
+  - Now generates correct content hashes using SHA256 algorithm
+  - Prevents "NOT NULL constraint failed" errors during migration
+  - Ensures data integrity and proper deduplication
+
+- **Tag Format Corruption**: Fixed issue where 60% of tags became malformed during migration
+  - Improved tag validation and format conversion
+  - Handles comma-separated strings, arrays, and single tags correctly
+  - Prevents array syntax from being stored as strings
+
+- **Migration Progress**: Added progress indicators and better error reporting
+  - Shows percentage completion during migration
+  - Batch processing with configurable batch size
+  - Verbose mode for detailed debugging
+  - Clear error messages for troubleshooting
+
+#### Added
+- **Enhanced Migration Script** (`scripts/migrate_v5_enhanced.py`):
+  - Comprehensive migration tool with all fixes
+  - Dry-run mode for testing migrations
+  - Transaction-based migration with rollback support
+  - Progress bars with `tqdm` support
+  - JSON backup creation
+  - Automatic path detection for common installations
+
+- **Migration Validator** (`scripts/validate_migration.py`):
+  - Validates migrated SQLite database integrity
+  - Checks for missing fields and corrupted data
+  - Compares with original ChromaDB data
+  - Generates detailed validation report
+  - Identifies specific issues like hash mismatches and tag corruption
+
+- **Comprehensive Documentation**:
+  - Updated migration guide with troubleshooting section
+  - Documented all known v5.0.0 issues and solutions
+  - Added recovery procedures for failed migrations
+  - Migration best practices and validation steps
+
+#### Enhanced
+- **Original Migration Script** (`scripts/migrate_chroma_to_sqlite.py`):
+  - Added CLI argument support for custom paths
+  - Fixed content hash generation
+  - Improved tag handling
+  - Better duplicate detection
+  - Progress percentage display
+
+#### Documentation
+- **Migration Troubleshooting Guide**: Added comprehensive troubleshooting section covering:
+  - Custom data location issues
+  - Content hash errors
+  - Tag corruption problems
+  - Migration hangs
+  - Dependency conflicts
+  - Recovery procedures
+
 ## [5.0.0] - 2025-08-15
 
 ### ⚠️ **BREAKING CHANGES**
