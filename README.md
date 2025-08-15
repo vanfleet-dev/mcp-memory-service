@@ -223,70 +223,16 @@ The MCP Memory Service automatically detects your MCP client and optimizes its o
 - **7 new MCP tools** for consolidation operations
 - Environment variable-based configuration
 
-### Recent Enhancements
+### Recent Highlights
 
-#### v3.3.0 - Modern Dashboard UI
-- ✅ **Professional Web Interface**: Modern gradient design with card-based layout
-- ✅ **Live Statistics**: Real-time memory count, model info, server status, and response times
-- ✅ **Interactive API Documentation**: Organized endpoint cards with direct links to API docs
-- ✅ **Tech Stack Display**: Visual representation of underlying technologies
-- ✅ **Mobile Responsive**: Optimized for desktop and mobile devices
-- ✅ **Auto-Refresh**: Live stats update every 30 seconds automatically
+#### 🚀 Latest Features
+- **v5.0.0**: SQLite-vec is now the default backend - 10x faster startup, 75% less memory
+- **v4.5.0**: Database synchronization for distributed memory access across multiple machines  
+- **v4.1.0**: Enhanced MCP resources, guided prompts, and progress tracking
+- **v3.0.0**: Dream-inspired autonomous memory consolidation with exponential decay
+- **v2.2.0**: Claude Code Commands for direct conversational memory operations
 
-<!-- Screenshot of the modern dashboard will be added here -->
-*Dashboard screenshot coming soon - shows modern gradient design with live stats, interactive endpoint cards, and tech stack badges*
-
-**Access the Dashboard:**
-- Local: `http://localhost:8000`
-- mDNS: `http://mcp-memory-service.local:8000`
-- API Docs: `http://localhost:8000/api/docs`
-
-#### v3.2.0 - SQLite-vec Embedding Fixes & Diagnostics
-- ✅ **Zero Vector Repair**: Comprehensive diagnostic and repair tools for corrupted embeddings
-- ✅ **Enhanced Error Handling**: Robust validation and initialization for SQLite-vec backend
-- ✅ **Migration Tools**: Safe migration utilities that preserve existing memories
-- ✅ **Dependency Management**: Moved core ML dependencies to main requirements for reliability
-- ✅ **Database Diagnostics**: Advanced tools for analyzing and fixing embedding issues
-- ✅ **HTTP API Improvements**: Fixed search endpoint compatibility and error handling
-
-#### v3.1.0 - Cross-Platform Service Installation
-- ✅ **Native Service Support**: Install as system service on Windows, macOS, and Linux
-- ✅ **Auto-Startup Configuration**: Automatic boot/login startup with service management
-- ✅ **mDNS Port Flexibility**: Clean access via port 443 without Pi-hole conflicts
-- ✅ **Service Management Commands**: Start, stop, status, and uninstall operations
-
-#### v3.0.0 - Autonomous Multi-Client Memory Service (MAJOR RELEASE)
-- 🧠 **Dream-Inspired Consolidation**: Autonomous memory processing with exponential decay and creative association discovery
-- 🌐 **Multi-Client Architecture**: Production FastAPI HTTPS server with automatic SSL certificates
-- 🔍 **mDNS Service Discovery**: Zero-configuration networking with `_mcp-memory._tcp.local.` advertisement
-- 📡 **Server-Sent Events**: Real-time updates with 30-second heartbeat for live synchronization  
-- 🚀 **Production Deployment**: Complete systemd service integration with professional management scripts
-- 🔒 **Security**: API key authentication and user-space execution for enhanced security
-- 📖 **Documentation Overhaul**: Comprehensive production setup and service lifecycle guides
-- ⚡ **Performance**: Mathematical consolidation using existing embeddings (no external AI dependencies)
-
-#### v2.2.0 - Claude Code Commands Integration
-- **5 conversational commands** for direct memory operations: `/memory-store`, `/memory-recall`, `/memory-search`, `/memory-context`, `/memory-health`
-- **Optional installation** integrated into main installer with intelligent prompting
-- **CCPlugins-compatible** markdown-based conversational command format
-- **Context-aware operations** with automatic project and session detection
-- **Cross-platform support** with comprehensive error handling and fallback systems
-
-#### v2.1.0 - Zero-Configuration Networking
-- ✅ **mDNS Service Discovery**: Automatic service advertisement and discovery using `_mcp-memory._tcp.local.`
-- ✅ **HTTPS Integration**: SSL/TLS support with automatic self-signed certificate generation
-- ✅ **Enhanced HTTP-MCP Bridge**: Auto-discovery mode with health validation and fallback
-- ✅ **Zero-Config Deployment**: No manual endpoint configuration needed for local networks
-
-#### Previous Enhancements
-- ✅ **PyTorch Optional**: Now works without PyTorch for basic functionality when using SQLite-vec backend
-- ✅ **Improved SQLite-vec**: Robust error handling and validation for the lightweight backend
-- ✅ **Intelligent Health Checks**: Backend-specific health monitoring with detailed diagnostics
-- ✅ **Comprehensive Testing**: Added test scripts for all critical functions
-- ✅ **API Consistency**: Enhanced `delete_by_tag` to support both single and multiple tags
-- ✅ **New Delete Methods**: Added `delete_by_tags` (OR logic) and `delete_by_all_tags` (AND logic)
-- ✅ **Backward Compatibility**: All existing code continues to work unchanged
-- ✅ **Dashboard Integration**: Enhanced UI with multiple tag selection capabilities
+➡️ **[View Full Changelog](CHANGELOG.md)** for complete version history and detailed release notes
 
 ## Installation Methods
 
