@@ -174,6 +174,7 @@ from mcp.server import NotificationOptions, Server
 import mcp.server.stdio
 from mcp.types import Resource, Prompt
 
+from . import __version__
 from .lm_studio_compat import patch_mcp_for_lm_studio, add_windows_timeout_handling
 from .dependency_check import run_dependency_check, get_recommended_timeout
 from .config import (
@@ -3344,6 +3345,7 @@ Memories Archived: {report.memories_archived}"""
             
             # Combine results with performance data
             result = {
+                "version": __version__,
                 "validation": {
                     "status": "healthy" if is_valid else "unhealthy",
                     "message": message

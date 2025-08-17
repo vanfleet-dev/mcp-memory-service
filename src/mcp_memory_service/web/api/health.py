@@ -27,6 +27,7 @@ from pydantic import BaseModel
 
 from ...storage.sqlite_vec import SqliteVecMemoryStorage
 from ..dependencies import get_storage
+from ... import __version__
 
 router = APIRouter()
 
@@ -34,6 +35,7 @@ router = APIRouter()
 class HealthResponse(BaseModel):
     """Basic health check response."""
     status: str
+    version: str
     timestamp: str
     uptime_seconds: float
 
@@ -41,6 +43,7 @@ class HealthResponse(BaseModel):
 class DetailedHealthResponse(BaseModel):
     """Detailed health check response."""
     status: str
+    version: str
     timestamp: str
     uptime_seconds: float
     storage: Dict[str, Any]
@@ -58,6 +61,7 @@ async def health_check():
     """Basic health check endpoint."""
     return HealthResponse(
         status="healthy",
+        version=__version__,
         timestamp=datetime.utcnow().isoformat(),
         uptime_seconds=time.time() - _startup_time
     )
@@ -132,6 +136,7 @@ async def detailed_health_check(storage: SqliteVecMemoryStorage = Depends(get_st
     
     return DetailedHealthResponse(
         status="healthy",
+        version=__version__,
         timestamp=datetime.utcnow().isoformat(),
         uptime_seconds=time.time() - _startup_time,
         storage=storage_info,

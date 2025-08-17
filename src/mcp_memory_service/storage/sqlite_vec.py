@@ -608,6 +608,68 @@ class SqliteVecMemoryStorage(MemoryStorage):
             logger.error(traceback.format_exc())
             return []
     
+    async def search_by_tags(self, tags: List[str], operation: str = "AND") -> List[Memory]:
+        """Search memories by tags with AND/OR operation support."""
+        try:
+            if not self.conn:
+                logger.error("Database not initialized")
+                return []
+            
+            if not tags:
+                return []
+            
+            # Build query based on operation
+            if operation.upper() == "AND":
+                # All tags must be present (each tag must appear in the tags field)
+                tag_conditions = " AND ".join(["tags LIKE ?" for _ in tags])
+            else:  # OR operation (default for backward compatibility)
+                tag_conditions = " OR ".join(["tags LIKE ?" for _ in tags])
+            
+            tag_params = [f"%{tag}%" for tag in tags]
+            
+            cursor = self.conn.execute(f'''
+                SELECT content_hash, content, tags, memory_type, metadata,
+                       created_at, updated_at, created_at_iso, updated_at_iso
+                FROM memories 
+                WHERE {tag_conditions}
+                ORDER BY updated_at DESC
+            ''', tag_params)
+            
+            results = []
+            for row in cursor.fetchall():
+                try:
+                    content_hash, content, tags_str, memory_type, metadata_str, created_at, updated_at, created_at_iso, updated_at_iso = row
+                    
+                    # Parse tags and metadata
+                    memory_tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()] if tags_str else []
+                    metadata = json.loads(metadata_str) if metadata_str else {}
+                    
+                    memory = Memory(
+                        content=content,
+                        content_hash=content_hash,
+                        tags=memory_tags,
+                        memory_type=memory_type,
+                        metadata=metadata,
+                        created_at=created_at,
+                        updated_at=updated_at,
+                        created_at_iso=created_at_iso,
+                        updated_at_iso=updated_at_iso
+                    )
+                    
+                    results.append(memory)
+                    
+                except Exception as parse_error:
+                    logger.warning(f"Failed to parse memory result: {parse_error}")
+                    continue
+            
+            logger.info(f"Found {len(results)} memories with tags: {tags} (operation: {operation})")
+            return results
+            
+        except Exception as e:
+            logger.error(f"Failed to search by tags with operation {operation}: {str(e)}")
+            logger.error(traceback.format_exc())
+            return []
+    
     async def delete(self, content_hash: str) -> Tuple[bool, str]:
         """Delete a memory by its content hash."""
         try:

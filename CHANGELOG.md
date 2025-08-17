@@ -4,6 +4,34 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.3] - 2025-08-17
+
+### 🐛 **Bug Fixes**
+
+#### SQLite-vec Backend Method Support
+- **Fixed Missing Method**: Added `search_by_tags` method to SQLite-vec backend
+  - Web API was calling `search_by_tags` (plural) but backend only had `search_by_tag` (singular)
+  - This caused 500 errors when using tag-based search via HTTP/MCP endpoints
+  - New method supports both AND/OR operations for tag matching
+  - Fixes network distribution and memory retrieval functionality
+
+### 🚀 **Enhancements**
+
+#### Version Information in Health Checks
+- **Added Version Field**: All health endpoints now return service version
+  - Basic health endpoint (`/api/health`) includes version field
+  - Detailed health endpoint (`/api/health/detailed`) includes version field
+  - MCP `check_database_health` tool returns version in response
+  - Enables easier debugging and version tracking across deployments
+
+### 📝 **Documentation**
+
+#### Network Distribution Updates
+- **Fixed Memory Retrieval Commands**: Updated scripts to use working API methods
+  - Changed from non-existent `search_by_tag` to `retrieve_memory` for current deployments
+  - Updated prompt templates and distribution scripts
+  - Improved error handling for memory context loading
+
 ## [5.0.2] - 2025-08-17
 
 ### 🚀 **New Features**
