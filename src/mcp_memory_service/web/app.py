@@ -164,11 +164,11 @@ def create_app() -> FastAPI:
     @app.get("/", response_class=HTMLResponse)
     async def dashboard():
         """Serve the dashboard homepage."""
-        return f"""
+        return """
         <!DOCTYPE html>
         <html lang="en">
         <head>
-            <title>MCP Memory Service v{__version__}</title>
+            <title>MCP Memory Service v{version}</title>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
@@ -488,7 +488,7 @@ def create_app() -> FastAPI:
                         </div>
                     </div>
                     <div class="version-badge">
-                        <span>✅</span> v{__version__} - Latest Release
+                        <span>✅</span> v{version} - Latest Release
                     </div>
                 </header>
                 
@@ -703,7 +703,7 @@ def create_app() -> FastAPI:
             </script>
         </body>
         </html>
-        """
+        """.format(version=__version__)
     
     return app
 
