@@ -24,6 +24,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - MCP `check_database_health` tool returns version in response
   - Enables easier debugging and version tracking across deployments
 
+### 🚀 **New Features**
+
+#### Memory Distribution and Network Sharing
+- **Export Tool**: Added `scripts/export_distributable_memories.sh` for memory export
+  - Export memories tagged with `distributable-reference` for team sharing
+  - JSON format for easy import to other MCP instances
+  - Support for cross-network memory synchronization
+- **Personalized CLAUDE.md Generator**: Added `scripts/generate_personalized_claude_md.sh`
+  - Generate CLAUDE.md with embedded memory service endpoints
+  - Customize for different network deployments
+  - Include memory retrieval commands for each environment
+- **Memory Context Templates**: Added `prompts/load_memory_context.md`
+  - Ready-to-use prompts for loading project context
+  - Quick retrieval commands for Claude Code sessions
+  - Network distribution instructions
+
 ### 📝 **Documentation**
 
 #### Network Distribution Updates
@@ -31,6 +47,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Changed from non-existent `search_by_tag` to `retrieve_memory` for current deployments
   - Updated prompt templates and distribution scripts
   - Improved error handling for memory context loading
+- **CLAUDE.md Enhancements**: Added optional memory context section
+  - Instructions for setting up local memory service integration
+  - Guidelines for creating CLAUDE_MEMORY.md (git-ignored) for local configurations
+  - Best practices for memory management and quarterly reviews
 
 ## [5.0.2] - 2025-08-17
 
