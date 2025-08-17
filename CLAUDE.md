@@ -2,6 +2,37 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Memory Context Reference (Optional)
+
+This project supports enhanced context through MCP Memory Service integration. If you have a local MCP Memory Service instance running, you can store and retrieve project context to reduce token usage in Claude Code sessions.
+
+### Setup Memory Context (Optional)
+1. **Deploy MCP Memory Service**: Follow deployment instructions for your environment
+2. **Store Reference Memories**: Use the `distributable-reference` tag for shareable context
+3. **Create Local CLAUDE_MEMORY.md**: Add your memory hashes (git-ignored)
+
+### Memory Categories for Storage
+- **Project Structure**: Server architecture, file locations, component relationships
+- **Key Commands**: Installation, testing, debugging, deployment commands
+- **Environment Variables**: Configuration options and platform-specific settings
+- **Recent Changes**: Version history, resolved issues, breaking changes
+- **Testing Practices**: Framework preferences, test patterns, validation steps
+
+### Local Memory Configuration
+Create `CLAUDE_MEMORY.md` (git-ignored) with your memory service details:
+```markdown
+# Local Memory Hashes
+- Memory Service: https://your-instance:port
+- Auth: Bearer your-api-key
+- Retrieve Command: curl -k -s -X POST https://your-instance:port/mcp -H "Authorization: Bearer your-key" -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "search_by_tag", "arguments": {"tags": ["claude-code-reference"]}}}'
+```
+
+### Memory Management Guidelines
+- **Review Schedule**: Quarterly review of reference memories for accuracy
+- **Distribution**: Use `distributable-reference` tag for team sharing
+- **Export Tool**: `./scripts/export_distributable_memories.sh` for network distribution
+- **Documentation**: Keep memory hashes in local files, not in version control
+
 ## Overview
 
 MCP Memory Service is a Model Context Protocol server that provides semantic memory and persistent storage capabilities for Claude Desktop using ChromaDB and sentence transformers. The project enables long-term memory storage with semantic search across conversations.
