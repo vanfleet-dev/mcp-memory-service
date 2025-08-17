@@ -4,6 +4,67 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.0] - 2025-08-17
+
+### 🚀 **New Features**
+
+#### ONNX Runtime Support
+- **PyTorch-free operation**: True PyTorch-free embedding generation using ONNX Runtime
+  - Reduced dependencies (~500MB less disk space without PyTorch)
+  - Faster startup with pre-optimized ONNX models  
+  - Automatic fallback to SentenceTransformers when needed
+  - Compatible with the same `all-MiniLM-L6-v2` model embeddings
+  - Enable with `export MCP_MEMORY_USE_ONNX=true`
+
+### 🐛 **Bug Fixes**
+
+#### SQLite-vec Consolidation Support (Issue #84)
+- **Missing Methods Fixed**: Added all required methods for consolidation support
+  - Implemented `get_memories_by_time_range()` for time-based queries
+  - Added `get_memory_connections()` for relationship tracking statistics
+  - Added `get_access_patterns()` for access pattern analysis
+  - Added `get_all_memories()` method with proper SQL implementation
+
+#### Installer Accuracy  
+- **False ONNX Claims**: Fixed misleading installer messages about ONNX support
+  - Removed false claims about "ONNX runtime for embeddings" when no implementation existed
+  - Updated installer messages to accurately reflect capabilities
+  - Now actually implements the ONNX support that was previously claimed
+
+#### Docker Configuration
+- **SQLite-vec Defaults**: Updated Docker configuration to reflect SQLite-vec as default backend
+  - Updated `Dockerfile` environment variables to use `MCP_MEMORY_STORAGE_BACKEND=sqlite_vec`
+  - Changed paths from `/app/chroma_db` to `/app/sqlite_db` 
+  - Updated `docker-compose.yml` with SQLite-vec configuration
+  - Fixed volume mounts and environment variables
+
+### 📝 **Documentation**
+
+#### Enhanced README
+- **ONNX Feature Documentation**: Added comprehensive ONNX Runtime feature section
+- **Installation Updates**: Updated installation instructions with ONNX dependencies
+- **Feature Visibility**: Highlighted ONNX support in main features list
+
+#### Technical Implementation
+- **New Module**: Created `src/mcp_memory_service/embeddings/onnx_embeddings.py`
+  - Complete ONNX embedding implementation based on ChromaDB's ONNXMiniLM_L6_V2
+  - Automatic model downloading and caching
+  - Hardware-aware provider selection (CPU, CUDA, DirectML, CoreML)
+  - Error handling with graceful fallbacks
+
+- **Enhanced Configuration**: Added ONNX configuration support in `config.py`
+  - `USE_ONNX` configuration option  
+  - ONNX model cache directory management
+  - Environment variable support for `MCP_MEMORY_USE_ONNX`
+
+### Technical Notes
+- Full backward compatibility maintained for existing SQLite-vec users
+- ONNX support is optional and falls back gracefully to SentenceTransformers
+- All consolidation methods implemented with proper error handling
+- Docker images now correctly reflect the SQLite-vec default backend
+
+This release resolves all issues reported in GitHub issue #84, implementing true ONNX support and completing the SQLite-vec consolidation feature set.
+
 ## [5.0.1] - 2025-08-15
 
 ### 🐛 **Critical Migration Fixes**

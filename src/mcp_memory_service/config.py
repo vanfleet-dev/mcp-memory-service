@@ -194,6 +194,14 @@ if STORAGE_BACKEND == 'sqlite_vec':
 else:
     SQLITE_VEC_PATH = None
 
+# ONNX Configuration
+USE_ONNX = os.getenv('MCP_MEMORY_USE_ONNX', '').lower() in ('1', 'true', 'yes')
+if USE_ONNX:
+    logger.info("ONNX embeddings enabled - using PyTorch-free embedding generation")
+    # ONNX model cache directory
+    ONNX_MODEL_CACHE = os.path.join(BASE_DIR, 'onnx_models')
+    os.makedirs(ONNX_MODEL_CACHE, exist_ok=True)
+
 # ChromaDB settings with performance optimizations
 CHROMA_SETTINGS = {
     "anonymized_telemetry": False,

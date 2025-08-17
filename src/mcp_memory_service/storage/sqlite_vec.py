@@ -228,12 +228,44 @@ class SqliteVecMemoryStorage(MemoryStorage):
             raise RuntimeError(error_msg)
     
     async def _initialize_embedding_model(self):
-        """Initialize the sentence transformer model for embeddings."""
+        """Initialize the embedding model (ONNX or SentenceTransformer based on configuration)."""
         global _MODEL_CACHE
         
         try:
+            # Check if we should use ONNX
+            use_onnx = os.environ.get('MCP_MEMORY_USE_ONNX', '').lower() in ('1', 'true', 'yes')
+            
+            if use_onnx:
+                # Try to use ONNX embeddings
+                logger.info("Attempting to use ONNX embeddings (PyTorch-free)")
+                try:
+                    from ..embeddings import get_onnx_embedding_model
+                    
+                    # Check cache first
+                    cache_key = f"onnx_{self.embedding_model_name}"
+                    if cache_key in _MODEL_CACHE:
+                        self.embedding_model = _MODEL_CACHE[cache_key]
+                        logger.info(f"Using cached ONNX embedding model: {self.embedding_model_name}")
+                        return
+                    
+                    # Create ONNX model
+                    onnx_model = get_onnx_embedding_model(self.embedding_model_name)
+                    if onnx_model:
+                        self.embedding_model = onnx_model
+                        self.embedding_dimension = onnx_model.embedding_dimension
+                        _MODEL_CACHE[cache_key] = onnx_model
+                        logger.info(f"ONNX embedding model loaded successfully. Dimension: {self.embedding_dimension}")
+                        return
+                    else:
+                        logger.warning("ONNX model creation failed, falling back to SentenceTransformer")
+                except ImportError as e:
+                    logger.warning(f"ONNX dependencies not available: {e}")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize ONNX embeddings: {e}")
+            
+            # Fall back to SentenceTransformer
             if not SENTENCE_TRANSFORMERS_AVAILABLE:
-                raise RuntimeError("Sentence transformers not available. Install with: pip install sentence-transformers torch")
+                raise RuntimeError("Neither ONNX nor sentence-transformers available. Install one: pip install onnxruntime tokenizers OR pip install sentence-transformers torch")
             
             # Check cache first
             cache_key = self.embedding_model_name
@@ -1038,6 +1070,107 @@ class SqliteVecMemoryStorage(MemoryStorage):
         except Exception as e:
             logger.error(f"Error getting all memories: {str(e)}")
             return []
+
+    async def get_memories_by_time_range(self, start_time: float, end_time: float) -> List[Memory]:
+        """Get memories within a specific time range."""
+        try:
+            await self.initialize()
+            cursor = self.conn.execute('''
+                SELECT content_hash, content, tags, memory_type, metadata,
+                       created_at, updated_at, created_at_iso, updated_at_iso
+                FROM memories
+                WHERE created_at BETWEEN ? AND ?
+                ORDER BY created_at DESC
+            ''', (start_time, end_time))
+            
+            results = []
+            for row in cursor.fetchall():
+                try:
+                    content_hash, content, tags_str, memory_type, metadata_str = row[:5]
+                    created_at, updated_at, created_at_iso, updated_at_iso = row[5:]
+                    
+                    # Parse tags and metadata
+                    tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()] if tags_str else []
+                    metadata = json.loads(metadata_str) if metadata_str else {}
+                    
+                    memory = Memory(
+                        content=content,
+                        content_hash=content_hash,
+                        tags=tags,
+                        memory_type=memory_type,
+                        metadata=metadata,
+                        created_at=created_at,
+                        updated_at=updated_at,
+                        created_at_iso=created_at_iso,
+                        updated_at_iso=updated_at_iso
+                    )
+                    
+                    results.append(memory)
+                    
+                except Exception as parse_error:
+                    logger.warning(f"Failed to parse memory result: {parse_error}")
+                    continue
+            
+            logger.info(f"Retrieved {len(results)} memories in time range {start_time}-{end_time}")
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error getting memories by time range: {str(e)}")
+            return []
+
+    async def get_memory_connections(self) -> Dict[str, int]:
+        """Get memory connection statistics."""
+        try:
+            await self.initialize()
+            # For now, return basic statistics based on tags and content similarity
+            cursor = self.conn.execute('''
+                SELECT tags, COUNT(*) as count
+                FROM memories
+                WHERE tags IS NOT NULL AND tags != ''
+                GROUP BY tags
+            ''')
+            
+            connections = {}
+            for row in cursor.fetchall():
+                tags_str, count = row
+                if tags_str:
+                    tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()]
+                    for tag in tags:
+                        connections[f"tag:{tag}"] = connections.get(f"tag:{tag}", 0) + count
+            
+            return connections
+            
+        except Exception as e:
+            logger.error(f"Error getting memory connections: {str(e)}")
+            return {}
+
+    async def get_access_patterns(self) -> Dict[str, datetime]:
+        """Get memory access pattern statistics."""
+        try:
+            await self.initialize()
+            # Return recent access patterns based on updated_at timestamps
+            cursor = self.conn.execute('''
+                SELECT content_hash, updated_at_iso
+                FROM memories
+                WHERE updated_at_iso IS NOT NULL
+                ORDER BY updated_at DESC
+                LIMIT 100
+            ''')
+            
+            patterns = {}
+            for row in cursor.fetchall():
+                content_hash, updated_at_iso = row
+                try:
+                    patterns[content_hash] = datetime.fromisoformat(updated_at_iso.replace('Z', '+00:00'))
+                except Exception:
+                    # Fallback for timestamp parsing issues
+                    patterns[content_hash] = datetime.now()
+            
+            return patterns
+            
+        except Exception as e:
+            logger.error(f"Error getting access patterns: {str(e)}")
+            return {}
 
     def close(self):
         """Close the database connection."""

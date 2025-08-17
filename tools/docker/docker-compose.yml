@@ -8,10 +8,11 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-      - ${CHROMA_DB_PATH:-$HOME/mcp-memory/chroma_db}:/app/chroma_db
+      - ${SQLITE_DB_PATH:-$HOME/mcp-memory/sqlite_db}:/app/sqlite_db
       - ${BACKUPS_PATH:-$HOME/mcp-memory/backups}:/app/backups
     environment:
-      - MCP_MEMORY_CHROMA_PATH=/app/chroma_db
+      - MCP_MEMORY_STORAGE_BACKEND=sqlite_vec
+      - MCP_MEMORY_SQLITE_PATH=/app/sqlite_db
       - MCP_MEMORY_BACKUPS_PATH=/app/backups
       - LOG_LEVEL=INFO
       - MAX_RESULTS_PER_QUERY=10

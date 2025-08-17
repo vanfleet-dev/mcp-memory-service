@@ -223,8 +223,16 @@ curl -X POST http://your-server:8000/mcp \
 - **Controlled forgetting** with safe archival and recovery systems
 - **Performance optimized** for processing 10k+ memories efficiently
 
+### ⚡ ONNX Runtime Support (NEW!)
+- **PyTorch-free operation** using ONNX Runtime for embeddings
+- **Reduced dependencies** (~500MB less disk space without PyTorch)
+- **Faster startup** with pre-optimized ONNX models
+- **Automatic fallback** to SentenceTransformers when needed
+- **Compatible models** with the same all-MiniLM-L6-v2 embeddings
+- Enable with: `export MCP_MEMORY_USE_ONNX=true`
+
 #### **Advanced Memory Operations**
-- **Semantic search** using sentence transformers
+- **Semantic search** using sentence transformers or ONNX embeddings
 - **Natural language time-based recall** (e.g., "last week", "yesterday morning")
 - **Enhanced tag deletion system** with flexible multi-tag support
 - **Tag-based memory retrieval** system with OR/AND logic
@@ -260,6 +268,7 @@ curl -X POST http://your-server:8000/mcp \
 ### Recent Highlights
 
 #### 🚀 Latest Features
+- **v5.1.0**: ONNX Runtime support for PyTorch-free embeddings and SQLite-vec consolidation fixes
 - **v5.0.0**: SQLite-vec is now the default backend - 10x faster startup, 75% less memory
 - **v4.5.0**: Database synchronization for distributed memory access across multiple machines  
 - **v4.1.0**: Enhanced MCP resources, guided prompts, and progress tracking

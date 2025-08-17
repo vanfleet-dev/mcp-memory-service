@@ -3,7 +3,8 @@ FROM python:3.10-slim
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
-    MCP_MEMORY_CHROMA_PATH=/app/chroma_db \
+    MCP_MEMORY_STORAGE_BACKEND=sqlite_vec \
+    MCP_MEMORY_SQLITE_PATH=/app/sqlite_db \
     MCP_MEMORY_BACKUPS_PATH=/app/backups \
     PYTHONPATH=/app \
     DOCKER_CONTAINER=1 \
@@ -31,7 +32,7 @@ COPY scripts/install_uv.py .
 RUN python install_uv.py
 
 # Create directories for data persistence
-RUN mkdir -p /app/chroma_db /app/backups
+RUN mkdir -p /app/sqlite_db /app/backups
 
 # Copy source code
 COPY src/ /app/src/
@@ -48,7 +49,7 @@ RUN chmod a+rw /dev/stdin /dev/stdout /dev/stderr && \
     chmod +x /usr/local/bin/docker-entrypoint-persistent.sh
 
 # Add volume mount points for data persistence
-VOLUME ["/app/chroma_db", "/app/backups"]
+VOLUME ["/app/sqlite_db", "/app/backups"]
 
 # Expose the port (if needed)
 EXPOSE 8000

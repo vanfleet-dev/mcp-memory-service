@@ -96,6 +96,9 @@
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(gh api:*)",
+      "Bash(git stash:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
       "Bash(git stash:*)"
     ],
     "deny": []
