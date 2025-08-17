@@ -268,7 +268,7 @@ curl -X POST http://your-server:8000/mcp \
 ### Recent Highlights
 
 #### 🚀 Latest Features
-- **v5.1.0**: ONNX Runtime support for PyTorch-free embeddings and SQLite-vec consolidation fixes
+- **v5.0.2**: ONNX Runtime support for PyTorch-free embeddings and SQLite-vec consolidation fixes
 - **v5.0.0**: SQLite-vec is now the default backend - 10x faster startup, 75% less memory
 - **v4.5.0**: Database synchronization for distributed memory access across multiple machines  
 - **v4.1.0**: Enhanced MCP resources, guided prompts, and progress tracking
