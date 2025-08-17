@@ -282,7 +282,6 @@ class SqliteVecMemoryStorage(MemoryStorage):
             logger.info(f"Using device: {device}")
             
             # Configure for offline mode if models are cached
-            import os
             # Only set offline mode if we detect cached models to prevent initial downloads
             hf_home = os.environ.get('HF_HOME', os.path.expanduser("~/.cache/huggingface"))
             model_cache_path = os.path.join(hf_home, "hub", f"models--sentence-transformers--{self.embedding_model_name.replace('/', '--')}")

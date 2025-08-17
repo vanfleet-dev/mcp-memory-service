@@ -185,6 +185,64 @@ The command will:
 7. Use semantic commit messages for version management
 8. Use `/memory-store` to capture important decisions and context during development
 
+### Deployment & Debugging
+
+#### Remote Server Deployment Process
+When deploying changes to production servers (e.g., 10.0.1.30:8443):
+
+1. **Pre-deployment**: Test changes locally first
+2. **Deploy**: SSH to server, `git pull`, restart service
+3. **Verify**: Check `/api/health` for new version number
+4. **Test**: Verify web frontend loads at https://server:8443/
+
+#### Web Frontend Debugging
+Common issues and solutions for internal server errors:
+
+**Python Syntax Errors in HTML Templates**:
+- **Problem**: F-strings or `.format()` with CSS cause syntax errors
+- **Symptom**: `SyntaxError: invalid decimal literal` or `KeyError` with CSS fragments
+- **Solution**: Use string concatenation instead: `"text" + variable + "more text"`
+- **Example**: Replace `f"CSS {color: blue;}"` with `"CSS " + color_var + ": blue;"`
+
+**Cache-Related Issues**:
+- **Problem**: Code changes not taking effect despite restart
+- **Symptoms**: Old behavior persists, web frontend shows errors
+- **Solution**: Clear all Python caches:
+  ```bash
+  # Clear Python bytecode cache
+  find . -name "*.pyc" -delete
+  find . -name "__pycache__" -type d -exec rm -rf {} +
+  
+  # Clear UV cache (can be several GB)
+  uv cache clean
+  
+  # Kill all running server processes
+  pkill -f "run_server.py"
+  pkill -f "python -m src.mcp_memory_service.server"
+  
+  # Restart with fresh environment
+  ```
+
+**Environment Reset Procedure**:
+When persistent issues occur:
+1. Stop all services: `sudo systemctl stop mcp-memory-service`
+2. Clear caches (see above)
+3. Reset UV environment: `rm -rf .venv && uv sync`
+4. Restart service: `sudo systemctl start mcp-memory-service`
+5. Monitor logs: `journalctl -u mcp-memory-service -f`
+
+#### Version Mismatch Issues
+- **Problem**: Health endpoints show old version after deployment
+- **Check**: Verify `__version__` import in affected files
+- **Files to verify**: `server.py`, `web/app.py`, `web/api/health.py`
+- **Solution**: Ensure all files import `from . import __version__` or `from ... import __version__`
+
+#### Backend Method Compatibility
+- **Problem**: Web API calls methods not available in storage backend
+- **Example**: API calls `search_by_tags` but backend only has `search_by_tag`
+- **Solution**: Implement missing methods with backward compatibility
+- **Check**: Verify API endpoints match storage backend method names
+
 ### Git Configuration
 
 #### Automated uv.lock Conflict Resolution
