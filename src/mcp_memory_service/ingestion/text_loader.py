@@ -142,10 +142,14 @@ class TextLoader(DocumentLoader):
         def _read_sync():
             # Auto-detect encoding if not specified
             if encoding is None:
-                with open(file_path, 'rb') as file:
-                    raw_data = file.read()
-                detected = chardet.detect(raw_data)
-                file_encoding = detected['encoding'] or 'utf-8'
+                # For markdown files, default to UTF-8 as it's the standard
+                if file_path.suffix.lower() in ['.md', '.markdown']:
+                    file_encoding = 'utf-8'
+                else:
+                    with open(file_path, 'rb') as file:
+                        raw_data = file.read()
+                    detected = chardet.detect(raw_data)
+                    file_encoding = detected['encoding'] or 'utf-8'
             else:
                 file_encoding = encoding
             
