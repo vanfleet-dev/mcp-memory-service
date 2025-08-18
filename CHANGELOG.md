@@ -4,6 +4,60 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.4] - 2025-08-18
+
+### 🐛 **Critical Bug Fixes**
+
+#### SQLite-vec Embedding Model Loading
+- **Fixed UnboundLocalError**: Removed redundant `import os` statement at line 285 in `sqlite_vec.py`
+  - Variable shadowing prevented ONNX embedding model initialization
+  - Caused "cannot access local variable 'os'" error in production
+  - Restored full embedding functionality for memory storage
+
+#### Docker HTTP Server Support
+- **Fixed Missing Files**: Added `run_server.py` to Docker image (reported by Joe Esposito)
+  - HTTP server wouldn't start without this critical file
+  - Now properly copied in Dockerfile for HTTP/API mode
+- **Fixed Python Path**: Corrected `PYTHONPATH` from `/app` to `/app/src`
+  - Modules couldn't be found with incorrect path
+  - Essential for both MCP and HTTP modes
+
+### 🚀 **Major Docker Improvements**
+
+#### Simplified Docker Architecture
+- **Reduced Complexity by 60%**: Consolidated from 4 confusing compose files to 2 clear options
+  - `docker-compose.yml` for MCP protocol mode (Claude Desktop, VS Code)
+  - `docker-compose.http.yml` for HTTP/API mode (REST API, Web Dashboard)
+- **Unified Entrypoint**: Created single smart entrypoint script
+  - Auto-detects mode from `MCP_MODE` environment variable
+  - Eliminates confusion about which script to use
+- **Pre-download Models**: Embedding models now downloaded during Docker build
+  - Prevents runtime failures from network/DNS issues
+  - Makes containers fully self-contained
+  - Faster startup times
+
+#### Deprecated Docker Files
+- Marked 4 redundant Docker files as deprecated:
+  - `docker-compose.standalone.yml` → Use `docker-compose.http.yml`
+  - `docker-compose.uv.yml` → UV now built into main Dockerfile
+  - `docker-compose.pythonpath.yml` → Fix applied to main Dockerfile
+  - `docker-entrypoint-persistent.sh` → Replaced by unified entrypoint
+
+### 📝 **Documentation**
+
+#### Docker Documentation Overhaul
+- **Added Docker README**: Clear instructions for both MCP and HTTP modes
+- **Created DEPRECATED.md**: Migration guide for old Docker setups
+- **Added Test Script**: `test-docker-modes.sh` to verify both modes work
+- **Troubleshooting Guide**: Added comprehensive debugging section to CLAUDE.md
+  - Web frontend debugging (CSS/format string conflicts)
+  - Cache clearing procedures
+  - Environment reset steps
+  - Backend method compatibility
+
+### 🙏 **Credits**
+- Special thanks to **Joe Esposito** for identifying and helping fix critical Docker issues
+
 ## [5.0.3] - 2025-08-17
 
 ### 🐛 **Bug Fixes**
