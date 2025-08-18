@@ -4,6 +4,28 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.0] - 2025-08-18
+
+### 🚀 **New Features**
+
+#### Remote ChromaDB Support
+- **Enterprise-Ready**: Connect to remote ChromaDB servers, Chroma Cloud, or self-hosted instances
+- **HttpClient Implementation**: Full support for remote ChromaDB connectivity
+- **Authentication**: API key authentication via `X_CHROMA_TOKEN` header
+- **SSL/HTTPS Support**: Secure connections to remote ChromaDB servers
+- **Custom Collections**: Specify collection names for multi-tenant deployments
+
+**New Environment Variables:**
+- `MCP_MEMORY_CHROMADB_HOST`: Remote server hostname (enables remote mode)
+- `MCP_MEMORY_CHROMADB_PORT`: Server port (default: 8000)
+- `MCP_MEMORY_CHROMADB_SSL`: Use HTTPS ('true'/'false')
+- `MCP_MEMORY_CHROMADB_API_KEY`: Authentication token
+- `MCP_MEMORY_COLLECTION_NAME`: Custom collection name (default: 'memory_collection')
+
+**Perfect Timing**: Arrives just as Chroma Cloud launches Q1 2025 (early access available)
+
+**Resolves**: #36 (Remote ChromaDB support request)
+
 ## [5.0.5] - 2025-08-18
 
 ### 🐛 **Bug Fixes**
