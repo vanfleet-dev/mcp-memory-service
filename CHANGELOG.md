@@ -4,6 +4,41 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.0] - 2025-08-18
+
+### 🚀 **New Features**
+
+#### Command Line Interface (CLI)
+- **Comprehensive CLI**: Added `memory` command with subcommands for document ingestion and management
+- **Document Ingestion Commands**: 
+  - `memory ingest-document <file>` - Ingest single documents with customizable chunking
+  - `memory ingest-directory <path>` - Batch process entire directories 
+  - `memory list-formats` - Show all supported document formats
+- **Management Commands**:
+  - `memory server` - Start the MCP server (replaces old `memory` command)
+  - `memory status` - Show service status and statistics
+- **Advanced Options**: Tags, chunk sizing, storage backend selection, verbose output, dry-run mode
+- **Progress Tracking**: Real-time progress bars and detailed error reporting
+- **Cross-Platform**: Works on Windows, macOS, and Linux with proper path handling
+
+#### Enhanced Document Processing
+- **Click Framework**: Professional CLI with help system and tab completion support
+- **Async Operations**: Non-blocking document processing with proper resource management
+- **Error Recovery**: Graceful handling of processing errors with detailed diagnostics
+- **Batch Limits**: Configurable file limits and extension filtering for large directories
+
+**New Dependencies**: `click>=8.0.0` for CLI framework
+
+**Examples**:
+```bash
+memory ingest-document manual.pdf --tags documentation,manual --verbose
+memory ingest-directory ./docs --recursive --max-files 50
+memory list-formats
+memory status
+```
+
+**Backward Compatibility**: Old `memory` server command now available as `memory server` and `memory-server`
+
 ## [5.1.0] - 2025-08-18
 
 ### 🚀 **New Features**

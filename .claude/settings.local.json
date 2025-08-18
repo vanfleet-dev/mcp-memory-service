@@ -100,9 +100,13 @@
       "Bash(git log:*)",
       "Bash(git branch:*)",
       "Bash(git stash:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "WebSearch"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "/home/hkr/Repositories"
+    ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": []
