@@ -48,6 +48,8 @@ MCP Memory Service is a Model Context Protocol server that provides semantic mem
 - **Debug with MCP Inspector**: `npx @modelcontextprotocol/inspector uv --directory /path/to/repo run memory`
 - **Check documentation links**: `python scripts/check_documentation_links.py` (validates all internal markdown links)
 - **Test Docker functionality**: `python scripts/test_docker_functionality.py` (comprehensive Docker container verification)
+- **Find and remove duplicates**: `python scripts/find_duplicates.py --execute` (removes duplicate memories from database)
+- **Clean corrupted encoding**: `python scripts/cleanup_corrupted_encoding.py --execute` (removes memories with corrupted emoji encoding)
 - **Setup git merge drivers**: `./scripts/setup-git-merge-drivers.sh` (one-time setup for new contributors)
 - **Store memory**: `/memory-store "content"` - Store information directly to MCP Memory Service at narrowbox.local:8443
 
