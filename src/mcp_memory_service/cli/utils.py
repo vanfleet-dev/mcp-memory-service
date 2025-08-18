@@ -41,10 +41,14 @@ async def get_storage(backend: Optional[str] = None) -> MemoryStorage:
     if backend in ('sqlite_vec', 'sqlite-vec'):
         from ..storage.sqlite_vec import SqliteVecMemoryStorage
         from ..config import SQLITE_VEC_PATH
-        return SqliteVecMemoryStorage(SQLITE_VEC_PATH)
+        storage = SqliteVecMemoryStorage(SQLITE_VEC_PATH)
+        await storage.initialize()
+        return storage
     elif backend == 'chromadb':
         from ..storage.chroma import ChromaMemoryStorage
         from ..config import CHROMA_PATH
-        return ChromaMemoryStorage(CHROMA_PATH)
+        storage = ChromaMemoryStorage(CHROMA_PATH)
+        await storage.initialize()
+        return storage
     else:
         raise ValueError(f"Unsupported storage backend: {backend}")

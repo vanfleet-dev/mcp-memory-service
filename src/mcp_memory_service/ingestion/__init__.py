@@ -24,7 +24,7 @@ documentation, knowledge bases, and other content for semantic retrieval.
 
 from .base import DocumentLoader, DocumentChunk, IngestionResult
 from .chunker import TextChunker
-from .registry import get_loader_for_file, register_loader, SUPPORTED_FORMATS
+from .registry import get_loader_for_file, register_loader, SUPPORTED_FORMATS, is_supported_file
 
 # Import loaders to trigger registration
 from . import text_loader
@@ -37,5 +37,6 @@ __all__ = [
     'TextChunker',
     'get_loader_for_file',
     'register_loader',
-    'SUPPORTED_FORMATS'
+    'SUPPORTED_FORMATS',
+    'is_supported_file'
 ]
