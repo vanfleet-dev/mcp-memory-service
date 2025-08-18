@@ -474,6 +474,16 @@ def create_app() -> FastAPI:
                     h1 { font-size: 2rem; }
                     .endpoint-grid { grid-template-columns: 1fr; }
                     .stats { grid-template-columns: 1fr; }
+                    .action-buttons {
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 0.75rem;
+                    }
+                    .btn {
+                        width: 100%;
+                        max-width: 300px;
+                        justify-content: center;
+                    }
                 }
             </style>
         </head>

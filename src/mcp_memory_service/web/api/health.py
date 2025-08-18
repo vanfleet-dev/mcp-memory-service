@@ -19,7 +19,7 @@ Health check endpoints for the HTTP interface.
 import time
 import platform
 import psutil
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from fastapi import APIRouter, Depends
@@ -62,7 +62,7 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         version=__version__,
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
         uptime_seconds=time.time() - _startup_time
     )
 
@@ -137,7 +137,7 @@ async def detailed_health_check(storage: SqliteVecMemoryStorage = Depends(get_st
     return DetailedHealthResponse(
         status="healthy",
         version=__version__,
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
         uptime_seconds=time.time() - _startup_time,
         storage=storage_info,
         system=system_info,

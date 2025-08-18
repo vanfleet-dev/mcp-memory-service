@@ -4,6 +4,28 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.5] - 2025-08-18
+
+### 🐛 **Bug Fixes**
+
+#### Code Quality & Future Compatibility
+- **Fixed datetime deprecation warnings**: Replaced all `datetime.utcnow()` usage with `datetime.now(timezone.utc)`
+  - Updated `src/mcp_memory_service/web/api/health.py` (2 occurrences)
+  - Updated `src/mcp_memory_service/web/sse.py` (3 occurrences)
+  - Eliminates deprecation warnings in Python 3.12+
+  - Future-proof timezone-aware datetime handling
+
+### 🎨 **UI Improvements**
+
+#### Dashboard Mobile Responsiveness
+- **Enhanced mobile UX**: Added responsive design for action buttons
+  - Buttons now stack vertically on screens < 768px width
+  - Improved touch-friendly spacing and sizing
+  - Better mobile experience for API documentation links
+  - Maintains desktop horizontal layout on larger screens
+
+**Issues Resolved**: #68 (Code Quality & Deprecation Fixes), #80 (Dashboard Mobile Responsiveness)
+
 ## [5.0.4] - 2025-08-18
 
 ### 🐛 **Critical Bug Fixes**
