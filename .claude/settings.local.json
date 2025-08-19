@@ -102,7 +102,13 @@
       "Bash(git stash:*)",
       "Bash(sed:*)",
       "WebSearch",
-      "WebFetch(domain:hub.docker.com)"
+      "WebFetch(domain:hub.docker.com)",
+      "mcp__terminator-mcp-agent__get_focused_window_tree",
+      "Bash(gh repo view:*)",
+      "WebFetch(domain:10.0.1.30)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(git describe:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "additionalDirectories": [

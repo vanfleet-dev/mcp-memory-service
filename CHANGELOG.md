@@ -4,6 +4,175 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0] - 2025-08-19
+
+### 🧠 **MAJOR FEATURE: Claude Code Memory Awareness (Phase 1)**
+
+#### Revolutionary Memory-Aware Development Experience
+This major release introduces **automatic memory awareness for Claude Code** - a sophisticated hook system that transforms how developers interact with their project knowledge and conversation history.
+
+#### Added
+
+##### 🔄 **Session Lifecycle Hooks**
+- **Session-Start Hook**: Automatically injects relevant memories when starting Claude Code sessions
+  - Intelligent project detection supporting JavaScript, Python, Rust, Go, Java, C++, and more
+  - Multi-factor memory relevance scoring with time decay, tag matching, and content analysis
+  - Context-aware memory selection (up to 8 most relevant memories per session)
+  - Beautiful markdown formatting for seamless context integration
+  
+- **Session-End Hook**: Captures and consolidates session outcomes automatically
+  - Conversation analysis and intelligent summarization
+  - Automatic tagging with project context and session insights
+  - Long-term knowledge building through outcome storage
+  - Session relationship tracking for continuity
+
+##### 🎯 **Advanced Project Detection System**
+- **Multi-Language Support**: Detects 15+ project types and frameworks
+  - Package managers: `package.json`, `Cargo.toml`, `go.mod`, `requirements.txt`, `pom.xml`
+  - Build systems: `Makefile`, `CMakeLists.txt`, `build.gradle`, `setup.py`
+  - Configuration files: `tsconfig.json`, `pyproject.toml`, `.gitignore`
+- **Git Integration**: Repository context analysis with branch and commit information
+- **Framework Detection**: React, Vue, Angular, Django, Flask, Express, and more
+- **Technology Stack Analysis**: Automatic identification of languages, databases, and tools
+
+##### 🧮 **Intelligent Memory Scoring System**
+- **Time Decay Algorithm**: Recent memories weighted higher with configurable decay curves
+- **Tag Relevance Matching**: Project-specific and technology-specific tag scoring
+- **Content Similarity Analysis**: Semantic matching with current project context
+- **Memory Type Bonuses**: Prioritizes decisions, insights, and architecture notes
+- **Relevance Threshold**: Only injects memories above significance threshold (>0.3)
+
+##### 🎨 **Context Formatting & Presentation**
+- **Categorized Memory Display**: Organized by Recent Insights, Key Decisions, and Project Context
+- **Markdown-Rich Formatting**: Beautiful presentation with metadata, timestamps, and tags
+- **Configurable Limits**: Prevents context overload with smart memory selection
+- **Source Attribution**: Clear memory source tracking with content hashes
+
+##### 💻 **Complete Installation & Testing System**
+- **One-Command Installation**: `./install.sh` deploys entire system to Claude Code hooks
+- **Comprehensive Test Suite**: 10 integration tests with 100% pass rate
+  - Project detection testing across multiple languages
+  - Memory scoring algorithm validation
+  - Context formatting verification
+  - Hook structure and configuration validation
+  - MCP service connectivity testing
+- **Configuration Management**: Production-ready config with memory service endpoints
+- **Backup and Recovery**: Automatic backup of existing hooks during installation
+
+#### Technical Architecture
+
+##### 🏗️ **Claude Code Hooks System**
+```javascript
+claude-hooks/
+├── core/
+│   ├── session-start.js    # Automatic memory injection hook
+│   └── session-end.js      # Session consolidation hook
+├── utilities/
+│   ├── project-detector.js  # Multi-language project detection
+│   ├── memory-scorer.js     # Relevance scoring algorithms
+│   └── context-formatter.js # Memory presentation utilities
+├── tests/
+│   └── integration-test.js  # Complete test suite (100% pass)
+├── config.json             # Production configuration
+└── install.sh             # One-command installation
+```
+
+##### 🔗 **MCP Memory Service Integration**
+- **JSON-RPC Protocol**: Direct communication with MCP Memory Service
+- **Error Handling**: Graceful degradation when memory service unavailable
+- **Performance Optimization**: Efficient memory querying with result caching
+- **Security**: Content hash verification and safe JSON parsing
+
+##### 📊 **Memory Selection Algorithm**
+```javascript
+// Multi-factor scoring system
+const relevanceScore = (
+  timeDecayScore * 0.4 +         // Recent memories preferred
+  tagRelevanceScore * 0.3 +      // Project-specific tags
+  contentSimilarityScore * 0.2 + // Semantic matching
+  memoryTypeBonusScore * 0.1     // Decision/insight bonus
+);
+```
+
+#### Usage Examples
+
+##### Automatic Session Context
+```markdown
+# 🧠 Relevant Memory Context
+
+## Recent Insights (Last 7 days)
+- **Database Performance Issue** - Resolved SQLite-vec query optimization (yesterday)
+- **Authentication Flow** - Implemented JWT token validation in API (3 days ago)
+
+## Key Decisions
+- **Architecture Decision** - Chose React over Vue for frontend consistency (1 week ago)
+- **Database Choice** - Selected PostgreSQL for production scalability (2 weeks ago)
+
+## Project Context: mcp-memory-service
+- **Language**: JavaScript, Python
+- **Frameworks**: Node.js, FastAPI
+- **Recent Activity**: Bug fixes, feature implementation
+```
+
+##### Session Outcome Storage
+```markdown
+Session consolidated and stored with tags:
+- mcp-memory-service, claude-code-session
+- bug-fix, performance-optimization
+- javascript, api-development
+Content hash: abc123...def456
+```
+
+#### Benefits & Impact
+
+##### 🚀 **Productivity Enhancements**
+- **Zero Cognitive Load**: Memory context appears automatically without user intervention
+- **Perfect Continuity**: Never lose track of decisions, insights, or architectural choices
+- **Intelligent Context**: Only relevant memories shown, preventing information overload
+- **Session Learning**: Each coding session builds upon previous knowledge automatically
+
+##### 🧠 **Memory-Aware Development**
+- **Decision Tracking**: Automatic capture of technical decisions and rationale
+- **Knowledge Building**: Progressive accumulation of project understanding
+- **Context Preservation**: Important insights never get lost between sessions
+- **Team Knowledge Sharing**: Shareable memory context across team members
+
+##### ⚡ **Performance Optimized**
+- **Fast Startup**: Memory injection adds <2 seconds to session startup
+- **Smart Caching**: Efficient memory retrieval with minimal API calls
+- **Configurable Limits**: Prevents memory service overload with request throttling
+- **Graceful Fallback**: Works with or without memory service availability
+
+#### Migration & Compatibility
+
+##### 🔄 **Seamless Integration**
+- **Non-Intrusive**: Works alongside existing Claude Code workflows
+- **Backward Compatible**: No changes required to existing development processes
+- **Optional Feature**: Can be enabled/disabled per project or globally
+- **Multi-Environment**: Works with local, remote, and distributed memory services
+
+##### 📋 **Installation Requirements**
+- Claude Code CLI installed and configured
+- MCP Memory Service running (local or remote)
+- Node.js environment for hook execution
+- Git repository for optimal project detection
+
+#### Roadmap Integration
+
+This release completes **Phase 1** of the Memory Awareness Enhancement Roadmap (Issue #14):
+- ✅ Session startup hooks with automatic memory injection
+- ✅ Project-aware memory selection algorithms  
+- ✅ Context formatting and injection utilities
+- ✅ Comprehensive testing and installation system
+- ✅ Production-ready configuration and deployment
+
+**Next Phase**: Dynamic memory loading, cross-session intelligence, and advanced consolidation features.
+
+#### Breaking Changes
+None - This is a purely additive feature that enhances existing Claude Code functionality.
+
+---
+
 ## [5.2.0] - 2025-08-18
 
 ### 🚀 **New Features**

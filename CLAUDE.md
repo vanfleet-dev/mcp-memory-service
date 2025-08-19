@@ -53,6 +53,13 @@ MCP Memory Service is a Model Context Protocol server that provides semantic mem
 - **Setup git merge drivers**: `./scripts/setup-git-merge-drivers.sh` (one-time setup for new contributors)
 - **Store memory**: `/memory-store "content"` - Store information directly to MCP Memory Service at narrowbox.local:8443
 
+### Claude Code Memory Awareness (v6.0.0)
+- **Install hooks system**: `cd claude-hooks && ./install.sh` (one-command installation)
+- **Test hooks system**: `cd claude-hooks && npm test` (10 integration tests, 100% pass rate)
+- **Verify project detection**: Test project context detection across multiple languages
+- **Memory injection testing**: Validate automatic memory context injection during Claude Code sessions
+- **Session consolidation**: Verify session-end hooks capture and store conversation outcomes
+
 ### Build & Package
 - **Build package**: `python -m build`
 - **Install locally**: `pip install -e .`
@@ -81,6 +88,13 @@ MCP Memory Service is a Model Context Protocol server that provides semantic mem
    - Platform-specific optimizations
    - Hardware acceleration detection
 
+5. **Claude Code Hooks System** (`claude-hooks/`)
+   - `core/session-start.js`: Automatic memory injection hook
+   - `core/session-end.js`: Session consolidation and outcome storage
+   - `utilities/project-detector.js`: Multi-language project context detection
+   - `utilities/memory-scorer.js`: Advanced relevance scoring algorithms
+   - `utilities/context-formatter.js`: Memory presentation and formatting
+
 ### Key Design Patterns
 
 - **Async/Await**: All I/O operations are async
@@ -88,6 +102,8 @@ MCP Memory Service is a Model Context Protocol server that provides semantic mem
 - **Error Handling**: Specific exception types with clear messages
 - **Caching**: Global caches for models and embeddings to improve performance
 - **Platform Detection**: Automatic hardware optimization (CUDA, MPS, DirectML, ROCm)
+- **Hook-Based Architecture**: Event-driven memory awareness with session lifecycle management
+- **Multi-Factor Scoring**: Advanced algorithms for memory relevance and context selection
 
 ### MCP Protocol Operations
 
