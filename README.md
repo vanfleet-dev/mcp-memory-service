@@ -377,24 +377,44 @@ python install.py --storage-backend chromadb      # Use legacy ChromaDB (not rec
 
 #### Docker Hub (Recommended)
 
-The easiest way to run the Memory Service is using our pre-built Docker images:
+The easiest way to run the Memory Service is using our pre-built Docker images. We provide **two variants** optimized for different use cases:
 
+##### Standard Image (Full Features)
 ```bash
-# Pull the latest image
+# Pull the standard image (includes PyTorch + CUDA support)
 docker pull doobidoo/mcp-memory-service:latest
 
 # Run with default settings (for MCP clients)
 docker run -d -p 8000:8000 \
-  -v $(pwd)/data/chroma_db:/app/chroma_db \
+  -v $(pwd)/data/sqlite_db:/app/sqlite_db \
   -v $(pwd)/data/backups:/app/backups \
   doobidoo/mcp-memory-service:latest
+```
 
+##### Slim Image (90% Smaller - Recommended for CPU-only deployments)
+```bash
+# Pull the slim image (ONNX + sqlite-vec only, ~300MB vs 3GB+)
+docker pull doobidoo/mcp-memory-service:slim
+
+# Run optimized for CPU-only performance
+docker run -d -p 8000:8000 \
+  -v $(pwd)/data/sqlite_db:/app/sqlite_db \
+  -v $(pwd)/data/backups:/app/backups \
+  doobidoo/mcp-memory-service:slim
+```
+
+**Image Comparison:**
+- **Standard**: ~3.4GB (PyTorch + CUDA libraries) - Best for GPU acceleration
+- **Slim**: ~300MB (ONNX + sqlite-vec only) - Best for CPU-only deployments, faster pulls
+
+##### Advanced Usage
+```bash
 # Run in standalone mode (for testing/development)
 docker run -d -p 8000:8000 \
   -e MCP_STANDALONE_MODE=1 \
-  -v $(pwd)/data/chroma_db:/app/chroma_db \
+  -v $(pwd)/data/sqlite_db:/app/sqlite_db \
   -v $(pwd)/data/backups:/app/backups \
-  doobidoo/mcp-memory-service:latest
+  doobidoo/mcp-memory-service:slim
 ```
 
 #### Docker Compose

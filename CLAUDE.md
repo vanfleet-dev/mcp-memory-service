@@ -269,3 +269,4 @@ Files involved:
 3. **ChromaDB Persistence**: Ensure write permissions for storage paths
 4. **Memory Usage**: Model loading is deferred until first use to reduce startup time
 5. **uv.lock Conflicts**: Should resolve automatically; if not, ensure git merge drivers are set up
+- add the fact that we can add discussion content via github graphql to memory

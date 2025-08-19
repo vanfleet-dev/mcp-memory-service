@@ -101,7 +101,8 @@
       "Bash(git branch:*)",
       "Bash(git stash:*)",
       "Bash(sed:*)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:hub.docker.com)"
     ],
     "deny": [],
     "additionalDirectories": [
