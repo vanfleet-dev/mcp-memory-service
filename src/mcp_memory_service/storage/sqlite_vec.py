@@ -699,6 +699,47 @@ class SqliteVecMemoryStorage(MemoryStorage):
             logger.error(error_msg)
             return False, error_msg
     
+    async def get_by_hash(self, content_hash: str) -> Optional[Memory]:
+        """Get a memory by its content hash."""
+        try:
+            if not self.conn:
+                return None
+            
+            cursor = self.conn.execute('''
+                SELECT content_hash, content, tags, memory_type, metadata,
+                       created_at, updated_at, created_at_iso, updated_at_iso
+                FROM memories WHERE content_hash = ?
+            ''', (content_hash,))
+            
+            row = cursor.fetchone()
+            if not row:
+                return None
+            
+            content_hash, content, tags_str, memory_type, metadata_str = row[:5]
+            created_at, updated_at, created_at_iso, updated_at_iso = row[5:]
+            
+            # Parse tags and metadata
+            tags = [tag.strip() for tag in tags_str.split(",") if tag.strip()] if tags_str else []
+            metadata = json.loads(metadata_str) if metadata_str else {}
+            
+            memory = Memory(
+                content=content,
+                content_hash=content_hash,
+                tags=tags,
+                memory_type=memory_type,
+                metadata=metadata,
+                created_at=created_at,
+                updated_at=updated_at,
+                created_at_iso=created_at_iso,
+                updated_at_iso=updated_at_iso
+            )
+            
+            return memory
+            
+        except Exception as e:
+            logger.error(f"Failed to get memory by hash {content_hash}: {str(e)}")
+            return None
+    
     async def delete_by_tag(self, tag: str) -> Tuple[int, str]:
         """Delete memories by tag."""
         try:

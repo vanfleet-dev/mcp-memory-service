@@ -243,16 +243,10 @@ async def get_memory(
     Retrieves a single memory entry using its unique content hash identifier.
     """
     try:
-        # Since we don't have a direct get_by_hash method, we'll search by hash
-        # This is inefficient but works for now - TODO: add get_by_hash to storage
-        results = await storage.retrieve(content_hash, n_results=1)
+        # Use the new get_by_hash method for direct hash lookup
+        memory = await storage.get_by_hash(content_hash)
         
-        if not results:
-            raise HTTPException(status_code=404, detail="Memory not found")
-        
-        # Check if the result actually matches the hash
-        memory = results[0].memory
-        if memory.content_hash != content_hash:
+        if not memory:
             raise HTTPException(status_code=404, detail="Memory not found")
         
         return memory_to_response(memory)
