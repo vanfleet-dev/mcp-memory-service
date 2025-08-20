@@ -1,6 +1,9 @@
 # Aider files
 .aider.*
 
+# Private/sensitive documents
+docs/saas-monetization-strategy.md
+
 # Python
 __pycache__/
 *.py[cod]
