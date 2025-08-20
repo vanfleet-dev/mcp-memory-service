@@ -1274,6 +1274,47 @@ class SqliteVecMemoryStorage(MemoryStorage):
             logger.error(f"Error getting access patterns: {str(e)}")
             return {}
 
+    def _row_to_memory(self, row) -> Optional[Memory]:
+        """Convert database row to Memory object."""
+        try:
+            content_hash, content, tags_str, memory_type, metadata_str, created_at, updated_at, created_at_iso, updated_at_iso = row
+            
+            # Parse tags
+            tags = []
+            if tags_str:
+                try:
+                    tags = json.loads(tags_str)
+                    if not isinstance(tags, list):
+                        tags = []
+                except json.JSONDecodeError:
+                    tags = []
+            
+            # Parse metadata
+            metadata = {}
+            if metadata_str:
+                try:
+                    metadata = json.loads(metadata_str)
+                    if not isinstance(metadata, dict):
+                        metadata = {}
+                except json.JSONDecodeError:
+                    metadata = {}
+            
+            return Memory(
+                content=content,
+                content_hash=content_hash,
+                tags=tags,
+                memory_type=memory_type,
+                metadata=metadata,
+                created_at=created_at,
+                updated_at=updated_at,
+                created_at_iso=created_at_iso,
+                updated_at_iso=updated_at_iso
+            )
+            
+        except Exception as e:
+            logger.error(f"Error converting row to memory: {str(e)}")
+            return None
+
     async def get_all_memories(self, limit: int = None, offset: int = 0) -> List[Memory]:
         """
         Get all memories in storage ordered by creation time (newest first).
