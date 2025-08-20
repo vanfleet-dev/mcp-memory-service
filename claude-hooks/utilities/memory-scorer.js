@@ -1,6 +1,7 @@
 /**
  * Memory Relevance Scoring Utility
  * Implements intelligent algorithms to score memories by relevance to current project context
+ * Phase 2: Enhanced with conversation context awareness for dynamic memory loading
  */
 
 /**
@@ -161,16 +162,115 @@ function calculateTypeBonus(memoryType) {
 }
 
 /**
- * Calculate final relevance score for a memory
+ * Calculate conversation context relevance score (Phase 2)
+ * Matches memory content with current conversation topics and intent
  */
-function calculateRelevanceScore(memory, projectContext, weights = {}) {
+function calculateConversationRelevance(memory, conversationAnalysis) {
     try {
+        if (!conversationAnalysis || !memory.content) {
+            return 0.3; // Default score when no conversation context
+        }
+
+        const memoryContent = memory.content.toLowerCase();
+        let relevanceScore = 0;
+        let factorCount = 0;
+
+        // Score based on topic matching
+        if (conversationAnalysis.topics && conversationAnalysis.topics.length > 0) {
+            conversationAnalysis.topics.forEach(topic => {
+                const topicMatches = (memoryContent.match(new RegExp(topic.name, 'gi')) || []).length;
+                if (topicMatches > 0) {
+                    relevanceScore += topic.confidence * Math.min(topicMatches * 0.2, 0.8);
+                    factorCount++;
+                }
+            });
+        }
+
+        // Score based on entity matching
+        if (conversationAnalysis.entities && conversationAnalysis.entities.length > 0) {
+            conversationAnalysis.entities.forEach(entity => {
+                const entityMatches = (memoryContent.match(new RegExp(entity.name, 'gi')) || []).length;
+                if (entityMatches > 0) {
+                    relevanceScore += entity.confidence * 0.3;
+                    factorCount++;
+                }
+            });
+        }
+
+        // Score based on intent alignment
+        if (conversationAnalysis.intent) {
+            const intentKeywords = {
+                'learning': ['learn', 'understand', 'explain', 'how', 'tutorial', 'guide'],
+                'problem-solving': ['fix', 'error', 'debug', 'issue', 'problem', 'solve'],
+                'development': ['build', 'create', 'implement', 'develop', 'code', 'feature'],
+                'optimization': ['optimize', 'improve', 'performance', 'faster', 'better'],
+                'review': ['review', 'check', 'analyze', 'audit', 'validate'],
+                'planning': ['plan', 'design', 'architecture', 'approach', 'strategy']
+            };
+
+            const intentWords = intentKeywords[conversationAnalysis.intent.name] || [];
+            let intentMatches = 0;
+            intentWords.forEach(word => {
+                if (memoryContent.includes(word)) {
+                    intentMatches++;
+                }
+            });
+
+            if (intentMatches > 0) {
+                relevanceScore += conversationAnalysis.intent.confidence * (intentMatches / intentWords.length);
+                factorCount++;
+            }
+        }
+
+        // Score based on code context if present
+        if (conversationAnalysis.codeContext && conversationAnalysis.codeContext.isCodeRelated) {
+            const codeIndicators = ['code', 'function', 'class', 'method', 'variable', 'api', 'library'];
+            let codeMatches = 0;
+            codeIndicators.forEach(indicator => {
+                if (memoryContent.includes(indicator)) {
+                    codeMatches++;
+                }
+            });
+
+            if (codeMatches > 0) {
+                relevanceScore += 0.4 * (codeMatches / codeIndicators.length);
+                factorCount++;
+            }
+        }
+
+        // Normalize score
+        const normalizedScore = factorCount > 0 ? relevanceScore / factorCount : 0.3;
+        return Math.max(0.1, Math.min(1.0, normalizedScore));
+
+    } catch (error) {
+        console.warn('[Memory Scorer] Conversation relevance calculation error:', error.message);
+        return 0.3;
+    }
+}
+
+/**
+ * Calculate final relevance score for a memory (Enhanced for Phase 2)
+ */
+function calculateRelevanceScore(memory, projectContext, options = {}) {
+    try {
+        const {
+            weights = {},
+            includeConversationContext = false,
+            conversationAnalysis = null
+        } = options;
+
         // Default weights for different scoring factors
-        const defaultWeights = {
-            timeDecay: 0.3,      // Recent memories are more relevant
-            tagRelevance: 0.4,   // Tag matching is most important
-            contentRelevance: 0.2, // Content matching is secondary
-            typeBonus: 0.1       // Memory type provides minor adjustment
+        const defaultWeights = includeConversationContext ? {
+            timeDecay: 0.25,           // Reduced weight for time when conversation context available
+            tagRelevance: 0.35,        // Tag matching remains important
+            contentRelevance: 0.15,    // Content matching reduced
+            conversationRelevance: 0.25, // New conversation context factor
+            typeBonus: 0.1             // Memory type provides minor adjustment
+        } : {
+            timeDecay: 0.3,            // Original Phase 1 weights
+            tagRelevance: 0.4,
+            contentRelevance: 0.2,
+            typeBonus: 0.1
         };
         
         const w = { ...defaultWeights, ...weights };
@@ -181,26 +281,35 @@ function calculateRelevanceScore(memory, projectContext, weights = {}) {
         const contentScore = calculateContentRelevance(memory.content, projectContext);
         const typeBonus = calculateTypeBonus(memory.memory_type);
         
-        // Calculate weighted final score
-        const finalScore = (
+        let finalScore = (
             (timeScore * w.timeDecay) +
             (tagScore * w.tagRelevance) +
             (contentScore * w.contentRelevance) +
             typeBonus // Type bonus is not weighted, acts as adjustment
         );
+
+        const breakdown = {
+            timeDecay: timeScore,
+            tagRelevance: tagScore,
+            contentRelevance: contentScore,
+            typeBonus: typeBonus
+        };
+
+        // Add conversation context scoring if enabled (Phase 2)
+        if (includeConversationContext && conversationAnalysis) {
+            const conversationScore = calculateConversationRelevance(memory, conversationAnalysis);
+            finalScore += (conversationScore * (w.conversationRelevance || 0));
+            breakdown.conversationRelevance = conversationScore;
+        }
         
         // Ensure score is between 0 and 1
         const normalizedScore = Math.max(0, Math.min(1, finalScore));
         
         return {
             finalScore: normalizedScore,
-            breakdown: {
-                timeDecay: timeScore,
-                tagRelevance: tagScore,
-                contentRelevance: contentScore,
-                typeBonus: typeBonus
-            },
-            weights: w
+            breakdown: breakdown,
+            weights: w,
+            hasConversationContext: includeConversationContext
         };
         
     } catch (error) {
@@ -208,7 +317,8 @@ function calculateRelevanceScore(memory, projectContext, weights = {}) {
         return {
             finalScore: 0.1,
             breakdown: { error: error.message },
-            weights: {}
+            weights: {},
+            hasConversationContext: false
         };
     }
 }
@@ -227,12 +337,13 @@ function scoreMemoryRelevance(memories, projectContext, options = {}) {
         
         // Score each memory
         const scoredMemories = memories.map(memory => {
-            const scoreResult = calculateRelevanceScore(memory, projectContext, options.weights);
+            const scoreResult = calculateRelevanceScore(memory, projectContext, options);
             
             return {
                 ...memory,
                 relevanceScore: scoreResult.finalScore,
-                scoreBreakdown: scoreResult.breakdown
+                scoreBreakdown: scoreResult.breakdown,
+                hasConversationContext: scoreResult.hasConversationContext
             };
         });
         

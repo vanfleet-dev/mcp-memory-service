@@ -112,7 +112,8 @@
     ],
     "deny": [],
     "additionalDirectories": [
-      "/home/hkr/Repositories"
+      "/home/hkr/Repositories",
+      "/home/hkr/.claude-code/hooks"
     ]
   },
   "enableAllProjectMcpServers": true,

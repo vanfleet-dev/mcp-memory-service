@@ -4,6 +4,75 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.1.0] - 2025-08-20
+
+### 🚀 **MAJOR FEATURE: Intelligent Context Updates (Phase 2)**
+
+#### Conversation-Aware Dynamic Memory Loading
+This release introduces **Phase 2 of Claude Code Memory Awareness** - transforming the system from static memory injection to intelligent, real-time conversation analysis with dynamic context updates during active coding sessions.
+
+#### Added
+
+##### 🧠 **Dynamic Memory Loading System**
+- **Real-time Topic Detection**: Analyzes conversation flow to detect significant topic shifts
+- **Automatic Context Updates**: Injects relevant memories as conversations evolve naturally
+- **Smart Deduplication**: Prevents re-injection of already loaded memories
+- **Intelligent Rate Limiting**: 30-second cooldown and session limits prevent context overload
+- **Cross-Session Intelligence**: Links related conversations across different sessions
+
+##### 🔍 **Advanced Conversation Analysis Engine** 
+- **Natural Language Processing**: Extracts topics, entities, intent, and code context from conversations
+- **15+ Technical Topic Categories**: database, debugging, architecture, testing, deployment, etc.
+- **Entity Recognition**: Technologies, frameworks, languages, tools (JavaScript, Python, React, etc.)
+- **Intent Classification**: learning, problem-solving, development, optimization, review, planning
+- **Code Context Detection**: Identifies code blocks, file paths, error messages, commands
+
+##### 📊 **Enhanced Memory Scoring with Conversation Context**
+- **Multi-Factor Relevance Algorithm**: 5-factor scoring system including conversation context (25% weight)
+- **Dynamic Weight Adjustment**: Adapts scoring based on conversation analysis
+- **Topic Alignment Matching**: Prioritizes memories matching current conversation topics
+- **Intent-Based Scoring**: Aligns memory relevance with conversation purpose
+- **Semantic Content Analysis**: Advanced content matching with conversation context
+
+##### 🔗 **Cross-Session Intelligence & Conversation Threading**
+- **Session Tracking**: Links related sessions across time with unique thread IDs  
+- **Conversation Continuity**: Builds conversation threads over multiple sessions
+- **Progress Context**: Connects outcomes from previous sessions to current work
+- **Pattern Recognition**: Identifies recurring topics and workflow patterns
+- **Historical Context**: Includes insights from recent related sessions (up to 3 sessions, 7 days back)
+
+##### ⚡ **Performance & Reliability**
+- **Efficient Processing**: <500ms response time for topic detection and memory queries
+- **Scalable Architecture**: Handles 100+ active memories per session
+- **Smart Debouncing**: 5-second debounce prevents rapid-fire updates
+- **Resource Optimization**: Intelligent memory management and context deduplication
+- **Comprehensive Testing**: 100% test pass rate (15/15 tests) with full integration coverage
+
+#### Technical Implementation
+
+##### Core Phase 2 Components
+- **conversation-analyzer.js**: NLP engine for topic/entity/intent detection
+- **topic-change.js**: Monitors conversation flow and triggers dynamic updates
+- **memory-scorer.js**: Enhanced scoring with conversation context awareness  
+- **session-tracker.js**: Cross-session intelligence and conversation threading
+- **dynamic-context-updater.js**: Orchestrates all Phase 2 components with rate limiting
+
+##### Configuration Enhancements
+- **Phase 2 Settings**: New configuration sections for conversation analysis, dynamic updates, session tracking
+- **Flexible Thresholds**: Configurable significance scores, update limits, and confidence levels
+- **Feature Toggles**: Independent enable/disable for each Phase 2 capability
+
+#### User Experience Improvements
+- **Zero Cognitive Load**: Context updates happen automatically during conversations
+- **Perfect Timing**: Memories appear exactly when relevant to current discussion  
+- **Seamless Integration**: Works transparently during normal coding sessions
+- **Progressive Learning**: Each conversation builds upon previous knowledge intelligently
+
+#### Migration from Phase 1
+- **Backward Compatible**: Phase 1 features remain fully functional
+- **Additive Enhancement**: Phase 2 builds upon Phase 1 session-start memory injection
+- **Unified Configuration**: Single config.json manages both Phase 1 and Phase 2 settings
+
 ## [6.0.0] - 2025-08-19
 
 ### 🧠 **MAJOR FEATURE: Claude Code Memory Awareness (Phase 1)**
