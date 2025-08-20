@@ -278,6 +278,97 @@ Files involved:
 - `scripts/uv-lock-merge.sh`: Custom merge driver script
 - `scripts/setup-git-merge-drivers.sh`: One-time setup for contributors
 
+#### Feature Branch Lifecycle and Cleanup
+
+Follow this complete workflow for feature development to maintain repository cleanliness:
+
+**1. Feature Development**
+```bash
+# Create feature branch
+git checkout -b feature/your-feature-name
+
+# Develop and commit changes
+git add .
+git commit -m "feat: implement your feature"
+```
+
+**2. Integration Process**
+```bash
+# Update to latest main before integration
+git fetch origin
+git rebase origin/main
+
+# Resolve any conflicts during rebase
+# Test thoroughly after rebase
+```
+
+**3. Pull Request Workflow**
+```bash
+# Push feature branch
+git push -u origin feature/your-feature-name
+
+# Create PR via GitHub or gh CLI
+gh pr create --title "feat: your feature" --body "Description"
+
+# Address code review feedback
+# Push additional commits if needed
+```
+
+**4. Post-Merge Cleanup (Essential)**
+```bash
+# After PR is merged to main, clean up immediately:
+
+# 1. Switch back to main
+git checkout main
+git pull origin main
+
+# 2. Delete local feature branch
+git branch -d feature/your-feature-name
+
+# 3. Delete remote feature branch
+git push origin --delete feature/your-feature-name
+
+# 4. Verify cleanup complete
+git branch -a  # Should not show deleted feature branch
+```
+
+**5. Release Management**
+```bash
+# For version releases, follow semantic versioning:
+
+# Update version files
+# pyproject.toml: version = "x.y.z" 
+# src/mcp_memory_service/__init__.py: __version__ = "x.y.z"
+
+# Update CHANGELOG.md with release notes
+# Commit version changes
+git add pyproject.toml src/mcp_memory_service/__init__.py CHANGELOG.md
+git commit -m "chore: bump version to vx.y.z"
+
+# Create annotated release tag
+git tag -a vx.y.z -m "Release vx.y.z: Brief description"
+
+# Push commits and tags
+git push origin main
+git push origin vx.y.z
+
+# Create GitHub release (optional)
+gh release create vx.y.z --title "vx.y.z" --notes "Release notes"
+```
+
+**Branch Cleanup Best Practices:**
+- Always delete feature branches after successful merge
+- Never leave stale feature branches in the repository
+- Use `git branch -a` regularly to check for cleanup opportunities
+- Feature branches should be short-lived (days to weeks, not months)
+- Clean up both local and remote branches to avoid confusion
+
+This workflow ensures:
+- Clean git history without stale branches
+- Clear feature development lifecycle
+- Proper release management with semantic versioning
+- Team coordination through standardized practices
+
 ### Common Issues
 
 1. **MPS Fallback**: On macOS, if MPS fails, set `PYTORCH_ENABLE_MPS_FALLBACK=1`

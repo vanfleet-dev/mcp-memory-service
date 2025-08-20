@@ -197,28 +197,39 @@ async def list_memories(
     Results are paginated for better performance.
     """
     try:
-        # For now, we'll implement a basic listing
-        # TODO: Implement proper pagination and filtering in storage layer
+        # Calculate offset for pagination
+        offset = (page - 1) * page_size
         
         if tag:
-            # Filter by tag
-            memories = await storage.search_by_tag([tag])
+            # Filter by tag - get all matching memories then paginate
+            all_tag_memories = await storage.search_by_tag([tag])
+            
+            # Apply memory_type filter if specified
+            if memory_type:
+                all_tag_memories = [m for m in all_tag_memories if m.memory_type == memory_type]
+            
+            # Calculate pagination for tag results
+            total = len(all_tag_memories)
+            page_memories = all_tag_memories[offset:offset + page_size]
+            has_more = offset + page_size < total
         else:
-            # Get all memories (this is a placeholder - we need a proper list method)
-            # For now, let's retrieve with a generic query to get recent memories
-            results = await storage.retrieve("", n_results=100)  # Get more results for pagination
-            memories = [result.memory for result in results]
-        
-        # Apply memory_type filter if specified
-        if memory_type:
-            memories = [m for m in memories if m.memory_type == memory_type]
-        
-        # Calculate pagination
-        total = len(memories)
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        page_memories = memories[start_idx:end_idx]
-        has_more = end_idx < total
+            # Get total count for accurate pagination
+            total = await storage.count_all_memories()
+            
+            # Get page of memories using proper pagination
+            all_memories = await storage.get_all_memories(limit=page_size, offset=offset)
+            
+            # Apply memory_type filter if specified
+            if memory_type:
+                all_memories = [m for m in all_memories if m.memory_type == memory_type]
+                # If filtering by memory_type, we need to adjust total count
+                # This is less efficient but necessary for accurate pagination with filters
+                if memory_type:
+                    all_type_memories = await storage.get_all_memories()
+                    total = len([m for m in all_type_memories if m.memory_type == memory_type])
+            
+            page_memories = all_memories
+            has_more = offset + len(page_memories) < total
         
         return MemoryListResponse(
             memories=[memory_to_response(m) for m in page_memories],

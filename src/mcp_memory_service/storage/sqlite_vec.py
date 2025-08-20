@@ -1274,6 +1274,81 @@ class SqliteVecMemoryStorage(MemoryStorage):
             logger.error(f"Error getting access patterns: {str(e)}")
             return {}
 
+    async def get_all_memories(self, limit: int = None, offset: int = 0) -> List[Memory]:
+        """
+        Get all memories in storage ordered by creation time (newest first).
+        
+        Args:
+            limit: Maximum number of memories to return (None for all)
+            offset: Number of memories to skip (for pagination)
+            
+        Returns:
+            List of Memory objects ordered by created_at DESC
+        """
+        try:
+            await self.initialize()
+            
+            # Build query with optional limit and offset
+            query = '''
+                SELECT content_hash, content, tags, memory_type, metadata,
+                       created_at, updated_at, created_at_iso, updated_at_iso
+                FROM memories
+                ORDER BY created_at DESC
+            '''
+            
+            params = []
+            if limit is not None:
+                query += ' LIMIT ?'
+                params.append(limit)
+                
+            if offset > 0:
+                query += ' OFFSET ?'
+                params.append(offset)
+            
+            cursor = self.conn.execute(query, params)
+            memories = []
+            
+            for row in cursor.fetchall():
+                memory = self._row_to_memory(row)
+                if memory:
+                    memories.append(memory)
+            
+            return memories
+            
+        except Exception as e:
+            logger.error(f"Error getting all memories: {str(e)}")
+            return []
+
+    async def get_recent_memories(self, n: int = 10) -> List[Memory]:
+        """
+        Get n most recent memories.
+        
+        Args:
+            n: Number of recent memories to return
+            
+        Returns:
+            List of the n most recent Memory objects
+        """
+        return await self.get_all_memories(limit=n, offset=0)
+
+    async def count_all_memories(self) -> int:
+        """
+        Get total count of memories in storage.
+        
+        Returns:
+            Total number of memories
+        """
+        try:
+            await self.initialize()
+            
+            cursor = self.conn.execute('SELECT COUNT(*) FROM memories')
+            result = cursor.fetchone()
+            return result[0] if result else 0
+            
+        except Exception as e:
+            logger.error(f"Error counting memories: {str(e)}")
+            return 0
+
     def close(self):
         """Close the database connection."""
         if self.conn:
