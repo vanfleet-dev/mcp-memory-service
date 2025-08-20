@@ -4,6 +4,27 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.1.1] - 2025-08-20
+
+### 🐛 **CRITICAL BUG FIX: Memory Retrieval by Hash**
+
+#### Fixed
+- **Memory Retrieval 404 Issue**: Fixed HTTP API returning 404 errors for valid memory hashes
+- **Direct Hash Lookup**: Added `get_by_hash()` method to `SqliteVecMemoryStorage` for proper content hash retrieval
+- **API Endpoint Correction**: Updated `/api/memories/{content_hash}` to use direct hash lookup instead of semantic search
+- **Production Deployment**: Successfully deployed fix to production servers and verified functionality
+
+#### Technical Details
+- **Root Cause**: HTTP API was incorrectly using `storage.retrieve()` (semantic search) instead of direct hash-based lookup
+- **Solution**: Implemented dedicated hash lookup method that queries database directly using content hash as primary key
+- **Impact**: Web dashboard memory retrieval by hash now works correctly without SSL certificate issues or false 404 responses
+- **Testing**: Verified with multiple memory hashes including previously failing hash `812d361cbfd1b79a49737e6ea34e24459b4d064908e222d98af6a504aa09ff19`
+
+#### Deployment
+- Version 6.1.1 deployed to production server `10.0.1.30:8443`
+- Service restart completed successfully
+- Health check confirmed: Version 6.1.1 running with full functionality
+
 ## [6.1.0] - 2025-08-20
 
 ### 🚀 **MAJOR FEATURE: Intelligent Context Updates (Phase 2)**
