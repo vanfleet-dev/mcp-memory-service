@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Table of Contents
+- [Quick Reference](#quick-reference) - Essential commands and endpoints
+- [Overview](#overview) - Project description and purpose
+- [Key Commands](#key-commands) - Development, testing, and build commands
+- [Architecture](#architecture) - Core components and design patterns
+- [Environment Variables](#environment-variables) - Configuration options
+- [Memory Storage Commands](#memory-storage-commands) - Claude Code integration
+- [Development Tips](#development-tips) - Best practices and workflows
+- [Deployment & Debugging](#deployment--debugging) - Production deployment
+- [Git Configuration](#git-configuration) - Automated workflows and cleanup
+- [Production Deployment](#production-deployment) - Cloudflare backend setup
+- [API Reference](#api-reference) - REST endpoints and MCP operations
+- [Performance Tuning](#performance-tuning) - Optimization strategies
+- [Monitoring & Observability](#monitoring--observability) - Health checks and logging
+
 ## Memory Context Reference (Optional)
 
 This project supports enhanced context through MCP Memory Service integration. If you have a local MCP Memory Service instance running, you can store and retrieve project context to reduce token usage in Claude Code sessions.
@@ -53,7 +68,7 @@ MCP Memory Service is a Model Context Protocol server that provides semantic mem
 - **Setup git merge drivers**: `./scripts/setup-git-merge-drivers.sh` (one-time setup for new contributors)
 - **Store memory**: `claude /memory-store "content"` - Store information via Claude Code commands (requires command installation)
 
-### Claude Code Memory Awareness (v6.0.0)
+### Claude Code Memory Awareness (v6.2.3)
 - **Install hooks system**: `cd claude-hooks && ./install.sh` (one-command installation)
 - **Test hooks system**: `cd claude-hooks && npm test` (10 integration tests, 100% pass rate)
 - **Verify project detection**: Test project context detection across multiple languages
@@ -75,8 +90,11 @@ MCP Memory Service is a Model Context Protocol server that provides semantic mem
 
 2. **Storage Abstraction** (`src/mcp_memory_service/storage/`)
    - `base.py`: Abstract interface for storage backends
-   - `chroma.py`: ChromaDB implementation
-   - `chroma_enhanced.py`: Extended features (time parsing, advanced search)
+   - `chroma.py`: ChromaDB implementation (local/multi-client)
+   - `chroma_enhanced.py`: Extended ChromaDB features (time parsing, advanced search)
+   - `sqlite_vec.py`: SQLite-Vec implementation (fast, single-client)
+   - `cloudflare.py`: Cloudflare backend (Vectorize + D1, production-ready)
+   - `http_client.py`: HTTP client abstraction for remote backends
 
 3. **Models** (`src/mcp_memory_service/models/memory.py`)
    - `Memory`: Core dataclass for memory entries
@@ -88,7 +106,13 @@ MCP Memory Service is a Model Context Protocol server that provides semantic mem
    - Platform-specific optimizations
    - Hardware acceleration detection
 
-5. **Claude Code Hooks System** (`claude-hooks/`)
+5. **Web Interface** (`src/mcp_memory_service/web/`)
+   - `app.py`: FastAPI web application with dashboard
+   - `api/`: REST API endpoints (memories, search, health)
+   - `sse.py`: Server-sent events for real-time updates
+   - Web UI at `https://localhost:8443/` for memory management
+
+6. **Claude Code Hooks System** (`claude-hooks/`)
    - `core/session-start.js`: Automatic memory injection hook
    - `core/session-end.js`: Session consolidation and outcome storage
    - `utilities/project-detector.js`: Multi-language project context detection
@@ -129,16 +153,44 @@ Run tests with coverage: `pytest --cov=src/mcp_memory_service tests/`
 
 ### Environment Variables
 
-Key configuration:
+#### Core Configuration
+- `MCP_MEMORY_STORAGE_BACKEND`: Storage backend (`sqlite_vec`, `chroma`, `cloudflare`) (default: `sqlite_vec`)
 - `MCP_MEMORY_CHROMA_PATH`: ChromaDB storage location (default: `~/.mcp_memory_chroma`)
 - `MCP_MEMORY_BACKUPS_PATH`: Backup location (default: `~/.mcp_memory_backups`)
+- `LOG_LEVEL`: Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) (default: `INFO`)
+
+#### Web Interface & HTTP
+- `MCP_HTTP_ENABLED`: Enable HTTP server (default: `true`)
+- `MCP_HTTP_PORT`: HTTP server port (default: `8443`)
+- `MCP_HTTPS_ENABLED`: Enable HTTPS with self-signed cert (default: `true`)
+- `MCP_API_KEY`: API key for HTTP authentication (optional, generates if unset)
+- `MCP_HTTP_AUTO_START`: Auto-start HTTP server with MCP server (default: `true`)
+
+#### Client & Discovery
 - `MCP_MEMORY_INCLUDE_HOSTNAME`: Enable automatic machine identification (default: `false`)
   - When enabled, adds client hostname as `source:hostname` tag to stored memories
   - Clients can specify hostname via `client_hostname` parameter or `X-Client-Hostname` header
   - Fallback to server hostname if client doesn't provide one
-- `MCP_API_KEY`: API key for HTTP authentication (optional, no default)
-- `LOG_LEVEL`: Logging verbosity (DEBUG, INFO, WARNING, ERROR)
-- Platform-specific: `PYTORCH_ENABLE_MPS_FALLBACK`, `MCP_MEMORY_USE_ONNX`
+- `MCP_MDNS_ENABLED`: Enable mDNS service discovery (default: `true`)
+- `MCP_MDNS_SERVICE_NAME`: mDNS service name (default: `"MCP Memory Service"`)
+
+#### Cloudflare Backend
+- `CLOUDFLARE_API_TOKEN`: Cloudflare API token with Workers and D1 permissions
+- `CLOUDFLARE_ACCOUNT_ID`: Cloudflare account ID
+- `CLOUDFLARE_VECTORIZE_INDEX`: Vectorize index name (default: `mcp-memory-index`)
+- `CLOUDFLARE_D1_DATABASE`: D1 database name (default: `mcp-memory-metadata`)
+- `CLOUDFLARE_R2_BUCKET`: Optional R2 bucket for large content storage
+
+#### Memory Consolidation
+- `MCP_CONSOLIDATION_ENABLED`: Enable automatic memory consolidation (default: `false`)
+- `MCP_CONSOLIDATION_INTERVAL`: Consolidation interval in hours (default: `24`)
+- `MCP_CONSOLIDATION_MIN_MEMORIES`: Minimum memories to trigger consolidation (default: `100`)
+
+#### Platform-Specific
+- `PYTORCH_ENABLE_MPS_FALLBACK`: Enable MPS fallback on macOS (default: `1`)
+- `MCP_MEMORY_USE_ONNX`: Use ONNX runtime for embeddings (default: `false`)
+- `HF_HUB_OFFLINE`: Prevent HuggingFace model downloads (default: `1`)
+- `TRANSFORMERS_OFFLINE`: Prevent transformer model downloads (default: `1`)
 
 #### API Key Configuration
 
@@ -464,6 +516,306 @@ This workflow ensures:
 - **Use direct API**: Always available as fallback method
 - **Check service logs**: `journalctl -u mcp-memory-service -f`
 
+## Production Deployment
+
+### Cloudflare Backend Setup
+
+The Cloudflare backend provides enterprise-grade scalability with global edge distribution:
+
+#### Prerequisites
+1. **Cloudflare Account**: Workers, D1, and Vectorize enabled
+2. **API Token**: Create with permissions for Workers, D1, and Vectorize
+3. **Resources**: Pre-create D1 database and Vectorize index
+
+#### Configuration
+```bash
+# Required environment variables
+export CLOUDFLARE_API_TOKEN="your-api-token"
+export CLOUDFLARE_ACCOUNT_ID="your-account-id"
+export CLOUDFLARE_VECTORIZE_INDEX="mcp-memory-index"
+export CLOUDFLARE_D1_DATABASE="mcp-memory-metadata"
+
+# Optional: Large content storage
+export CLOUDFLARE_R2_BUCKET="mcp-memory-content"
+
+# Enable Cloudflare backend
+export MCP_MEMORY_STORAGE_BACKEND="cloudflare"
+```
+
+#### Resource Creation
+```bash
+# Create required Cloudflare resources
+python scripts/setup_cloudflare_resources.py
+
+# Or manually:
+# wrangler d1 create mcp-memory-metadata
+# wrangler vectorize create mcp-memory-index --dimensions=384
+```
+
+#### Deployment Checklist
+- [ ] API token configured with correct permissions
+- [ ] D1 database created and accessible
+- [ ] Vectorize index created with 384 dimensions
+- [ ] R2 bucket created (optional, for large content)
+- [ ] Service deployed with environment variables
+- [ ] Health endpoint accessible: `/api/health`
+- [ ] Performance baseline established
+
+### Multi-Client Production Setup
+
+For production environments with multiple clients:
+
+```bash
+# Enable production features
+export MCP_HTTP_ENABLED=true
+export MCP_HTTPS_ENABLED=true
+export MCP_API_KEY="$(openssl rand -base64 32)"
+export MCP_MDNS_ENABLED=true
+export MCP_CONSOLIDATION_ENABLED=true
+
+# Start production server
+uv run memory --production
+```
+
+#### Load Balancing
+- Use nginx/HAProxy for SSL termination and load balancing
+- Configure health checks against `/api/health`
+- Enable sticky sessions for WebSocket connections
+- Monitor memory usage and response times
+
+#### Security Best Practices
+- Always use HTTPS in production (`MCP_HTTPS_ENABLED=true`)
+- Generate strong API keys (`openssl rand -base64 32`)
+- Use Cloudflare Access for additional authentication layers
+- Enable request rate limiting
+- Monitor API usage and implement quotas
+
+## API Reference
+
+### REST API Endpoints
+
+#### Memory Operations
+```http
+POST /api/memories
+Content-Type: application/json
+Authorization: Bearer <api_key>
+
+{
+  "content": "Memory content",
+  "tags": ["tag1", "tag2"],
+  "metadata": {
+    "type": "note",
+    "project": "my-project"
+  }
+}
+```
+
+```http
+GET /api/memories/search?query=text&limit=10&tags=tag1,tag2
+Authorization: Bearer <api_key>
+```
+
+```http
+DELETE /api/memories/<hash>
+Authorization: Bearer <api_key>
+```
+
+#### Health & Status
+```http
+GET /api/health
+# Response: {"status": "healthy", "version": "6.2.3", "backend": "cloudflare"}
+
+GET /api/status
+Authorization: Bearer <api_key>
+# Response: {"memories_count": 1234, "tags_count": 56, "disk_usage": "1.2GB"}
+```
+
+### Server-Sent Events (SSE)
+
+Real-time memory updates:
+```javascript
+const eventSource = new EventSource('/api/events', {
+  headers: { 'Authorization': 'Bearer ' + apiKey }
+});
+
+eventSource.addEventListener('memory_stored', (event) => {
+  const memory = JSON.parse(event.data);
+  console.log('New memory:', memory);
+});
+
+eventSource.addEventListener('memory_deleted', (event) => {
+  const { hash } = JSON.parse(event.data);
+  console.log('Deleted memory:', hash);
+});
+```
+
+### MCP Protocol Operations
+
+Standard MCP operations for desktop clients:
+- `store_memory(content, tags, metadata)`: Store new memory
+- `retrieve_memory(query, limit)`: Basic semantic search
+- `recall_memory(query, time_filter)`: Time-aware retrieval  
+- `search_by_tag(tags)`: Tag-based filtering
+- `delete_memory(hash)`: Remove specific memory
+- `check_database_health()`: Health diagnostics
+- `optimize_db()`: Database maintenance
+
+## Performance Tuning
+
+### Backend Performance Characteristics
+
+| Backend | Read Latency | Write Latency | Memory Usage | Scalability | Best For |
+|---------|--------------|---------------|--------------|-------------|----------|
+| SQLite-Vec | ~5ms | ~10ms | Low (50MB) | Single-client | Development, personal use |
+| ChromaDB | ~15ms | ~25ms | Medium (200MB) | Multi-client | Team collaboration |
+| Cloudflare | ~50ms* | ~100ms* | Minimal | Global | Production, enterprise |
+
+*Network dependent, includes global edge caching benefits
+
+### Optimization Strategies
+
+#### Memory Caching
+```bash
+# Enable model caching (default: true)
+export MCP_MEMORY_CACHE_MODELS=true
+
+# Increase embedding cache size
+export MCP_MEMORY_EMBEDDING_CACHE_SIZE=1000
+
+# Enable query result caching
+export MCP_MEMORY_QUERY_CACHE_TTL=3600
+```
+
+#### Database Optimization
+```bash
+# Run periodic optimization
+claude /memory-optimize
+
+# Or via script
+python scripts/cleanup_memories.py --optimize
+
+# SQLite-Vec specific tuning
+export SQLITE_VEC_BATCH_SIZE=100
+export SQLITE_VEC_CACHE_SIZE=2000
+```
+
+#### Hardware Acceleration
+```bash
+# GPU acceleration (NVIDIA)
+export CUDA_VISIBLE_DEVICES=0
+
+# Apple Silicon (MPS)
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+
+# CPU optimization
+export OMP_NUM_THREADS=4
+export TORCH_NUM_THREADS=4
+```
+
+### Load Testing
+
+Performance benchmarking:
+```bash
+# Run comprehensive performance tests
+pytest tests/performance/ -v
+
+# Memory operation benchmarks
+python scripts/run_complete_test.py --benchmark
+
+# Concurrent client testing
+python tests/integration/test_concurrent_clients.py
+```
+
+## Monitoring & Observability
+
+### Health Monitoring
+
+#### Health Check Endpoints
+```bash
+# Basic health check
+curl https://localhost:8443/api/health
+
+# Detailed system status  
+curl -H "Authorization: Bearer $MCP_API_KEY" \
+     https://localhost:8443/api/status
+
+# Database health diagnostics
+claude /memory-health
+```
+
+#### System Metrics
+Monitor these key metrics:
+- **Response Time**: API endpoint latency (target: <100ms)
+- **Memory Usage**: Process RAM consumption
+- **Database Size**: Storage growth rate
+- **Error Rate**: Failed operations percentage
+- **Active Connections**: Concurrent client count
+
+#### Logging Configuration
+```bash
+# Enable detailed logging
+export LOG_LEVEL=DEBUG
+
+# Log to file
+export MCP_LOG_FILE="/var/log/mcp-memory.log"
+
+# Structured logging for monitoring systems
+export MCP_LOG_FORMAT=json
+```
+
+### Production Monitoring
+
+#### Systemd Service Monitoring
+```bash
+# Check service status
+systemctl status mcp-memory-service
+
+# View real-time logs
+journalctl -u mcp-memory-service -f
+
+# Check for errors
+journalctl -u mcp-memory-service --since "1 hour ago" | grep ERROR
+```
+
+#### Automated Health Checks
+```bash
+# Setup cron-based health monitoring
+# Add to crontab:
+*/5 * * * * curl -f https://localhost:8443/api/health || systemctl restart mcp-memory-service
+```
+
+#### Performance Alerts
+Set up monitoring alerts for:
+- Response time > 500ms
+- Memory usage > 1GB
+- Disk usage > 80%
+- Error rate > 1%
+- Service downtime
+
+### Backup & Recovery
+
+#### Automated Backups
+```bash
+# Setup backup cron job
+python scripts/setup_backup_cron.sh
+
+# Manual backup
+python scripts/backup_memories.py --compress
+
+# Restore from backup
+python scripts/restore_memories.py backup_2024-01-01.tar.gz
+```
+
+#### Database Synchronization
+```bash
+# Export memories for distribution
+python scripts/export_distributable_memories.sh
+
+# Sync between environments
+python scripts/sync/export_memories.py --target production
+python scripts/sync/import_memories.py --source production
+```
+
 ### Common Issues
 
 1. **MPS Fallback**: On macOS, if MPS fails, set `PYTORCH_ENABLE_MPS_FALLBACK=1`
@@ -471,4 +823,46 @@ This workflow ensures:
 3. **ChromaDB Persistence**: Ensure write permissions for storage paths
 4. **Memory Usage**: Model loading is deferred until first use to reduce startup time
 5. **uv.lock Conflicts**: Should resolve automatically; if not, ensure git merge drivers are set up
-- add the fact that we can add discussion content via github graphql to memory
+
+### GitHub Integration
+
+6. **GitHub Discussion Content**: Can import GitHub discussions, issues, and PR content via GraphQL API into memory for project context
+7. **Content Classification**: Marketing content and strategic decisions should be stored in MEMORY (not committed to git) using `claude /memory-store` commands
+
+## Storage Backend Comparison
+
+| Backend | Performance | Scalability | Features | Use Case |
+|---------|------------|-------------|----------|----------|
+| **SQLite-Vec** | Fast | Medium | Full-text, vector search | Single-client, development |
+| **ChromaDB** | Fast | Medium | Advanced metadata | Multi-client, research |
+| **Cloudflare** | Very Fast | High | Global distribution, analytics | Production, enterprise |
+
+### Backend Selection Guidelines
+- **Development**: SQLite-Vec (default, fastest setup)
+- **Multi-client**: ChromaDB (best local sharing)
+- **Production**: Cloudflare (scalable, distributed)
+
+## Quick Reference
+
+### Essential Commands
+```bash
+# Setup
+python install.py
+uv run memory
+
+# Memory Operations
+claude /memory-store "content"
+claude /memory-recall "query"
+claude /memory-health
+
+# Testing
+pytest tests/
+
+# Development
+python scripts/run_memory_server.py
+```
+
+### Key Endpoints
+- **Health**: `https://localhost:8443/api/health`
+- **Web UI**: `https://localhost:8443/`
+- **API**: `https://localhost:8443/api/memories`
