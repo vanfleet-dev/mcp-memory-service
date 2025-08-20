@@ -22,7 +22,7 @@
 [![SQLite-vec](https://img.shields.io/badge/Storage-SQLite--vec-336791?style=flat&logo=sqlite&logoColor=white)](https://github.com/doobidoo/mcp-memory-service#storage-backends)
 [![Cloudflare](https://img.shields.io/badge/Storage-Cloudflare-f38020?style=flat&logo=cloudflare&logoColor=white)](https://github.com/doobidoo/mcp-memory-service#storage-backends)
 
-A **universal MCP memory service** providing **semantic memory search**, persistent storage, and **autonomous memory consolidation** for **AI assistants** and development environments. This **Model Context Protocol server** works with **Claude Desktop, VS Code, Cursor, Continue, WindSurf, LM Studio, Zed, and 13+ AI applications**, featuring **vector database storage** with SQLite-vec for **fast semantic search** and a revolutionary **dream-inspired consolidation system** that automatically organizes, compresses, and manages your **AI conversation history** over time, creating a **self-evolving knowledge base** for enhanced **AI productivity**.
+A **universal MCP memory service** providing **semantic memory search**, persistent storage, and **autonomous memory consolidation** for **AI assistants** and development environments. This **Model Context Protocol server** works with **Claude Desktop, VS Code, Cursor, Continue, WindSurf, LM Studio, Zed, and 13+ AI applications**, featuring **multiple storage backends** including **SQLite-vec** for **fast local search**, **Cloudflare** for **global edge distribution**, and a revolutionary **dream-inspired consolidation system** that automatically organizes, compresses, and manages your **AI conversation history** over time, creating a **self-evolving knowledge base** for enhanced **AI productivity**.
 
 <img width="240" alt="grafik" src="https://github.com/user-attachments/assets/eab1f341-ca54-445c-905e-273cd9e89555" />
 <a href="https://glama.ai/mcp/servers/bzvl3lz34o"><img width="380" height="200" src="https://glama.ai/mcp/servers/bzvl3lz34o/badge" alt="Memory Service MCP server" /></a>
@@ -37,6 +37,7 @@ A **universal MCP memory service** providing **semantic memory search**, persist
 
 ### 🚀 Getting Started
 - [⚡ Quick Start](#-quick-start)
+- [🌍 Cloudflare Backend (v6.2.0)](#cloudflare-v620---cloud-native-)
 - [🧠 Claude Code Memory Awareness (v6.0.0)](#-new-claude-code-memory-awareness-v600)
 - [🎯 Claude Code Commands (v2.2.0)](#-new-claude-code-commands-v220)
 - [🚀 Remote MCP Memory Service (v4.0.0)](#-new-remote-mcp-memory-service-v400)
@@ -340,12 +341,12 @@ curl -X POST http://your-server:8000/mcp \
 ### Recent Highlights
 
 #### 🚀 Latest Features
+- **v6.2.0**: 🌍 **Native Cloudflare Backend Integration** - Global edge distribution, serverless scaling, Vectorize + D1 + R2 storage
+- **v6.1.0**: 🧠 **Intelligent Context Updates (Phase 2)** - Real-time conversation analysis with dynamic memory loading
+- **v6.0.0**: 🧠 **Claude Code Memory Awareness (Phase 1)** - Automatic memory injection for coding sessions
 - **v5.0.2**: ONNX Runtime support for PyTorch-free embeddings and SQLite-vec consolidation fixes
 - **v5.0.0**: SQLite-vec is now the default backend - 10x faster startup, 75% less memory
-- **v4.5.0**: Database synchronization for distributed memory access across multiple machines  
-- **v4.1.0**: Enhanced MCP resources, guided prompts, and progress tracking
-- **v3.0.0**: Dream-inspired autonomous memory consolidation with exponential decay
-- **v2.2.0**: Claude Code Commands for direct conversational memory operations
+- **v4.5.0**: Database synchronization for distributed memory access across multiple machines
 
 ➡️ **[View Full Changelog](CHANGELOG.md)** for complete version history and detailed release notes
 
@@ -790,7 +791,7 @@ The MCP Memory Service supports multiple storage backends to suit different use 
 - **Memory usage**: Minimal (~50MB for 1K memories)
 - **Setup**: Automatically configured, works offline immediately
 
-### Cloudflare (NEW - Cloud-Native) 🚀
+### Cloudflare (v6.2.0 - Cloud-Native) 🚀
 - **Best for**: Production deployments, global scale, multi-user applications
 - **Features**: Global edge network, serverless scaling, zero infrastructure management
 - **Storage**: Vectorize + D1 + R2, Workers AI embeddings
@@ -798,7 +799,7 @@ The MCP Memory Service supports multiple storage backends to suit different use 
 - **Setup**: [Cloudflare Setup Guide](docs/cloudflare-setup.md)
 
 ### ChromaDB (Legacy - Deprecated)
-⚠️ **DEPRECATED**: Will be removed in v6.0.0. Please migrate to SQLite-vec or Cloudflare.
+⚠️ **DEPRECATED**: Will be removed in v7.0.0. Please migrate to SQLite-vec or Cloudflare.
 - **Previous use cases**: Large memory collections, advanced vector metrics
 - **Issues**: Network dependencies, Hugging Face download failures, high resource usage
 - **Memory usage**: Higher (~200MB for 1K memories)
