@@ -4,6 +4,48 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.2.1] - 2025-08-20
+
+### 🐛 **CRITICAL BUG FIXES: Memory Listing and Search Index**
+
+This patch release resolves critical issues with memory pagination and search functionality that were preventing users from accessing the full dataset.
+
+#### Fixed
+- **Memory API Pagination**: Fixed `/api/memories` endpoint returning only 82 of 904 total memories
+  - **Root Cause**: API was using semantic search fallback instead of proper chronological listing
+  - **Solution**: Implemented dedicated `get_all_memories()` method with SQL-based LIMIT/OFFSET pagination
+  - **Impact**: Web dashboard and API clients now see accurate memory counts and can access complete dataset
+
+- **Missing Storage Backend Methods**: Added missing pagination methods in SqliteVecMemoryStorage
+  - `get_all_memories(limit, offset)` - Chronological memory listing with pagination support
+  - `get_recent_memories(n)` - Get n most recent memories efficiently
+  - `count_all_memories()` - Accurate total count for pagination calculations
+  - `_row_to_memory(row)` - Proper database row to Memory object conversion with JSON parsing
+
+- **Search Index Issues**: Resolved problems with recently stored memories not appearing in searches
+  - **Tag Search**: Newly stored memories now immediately appear in tag-based filtering
+  - **Semantic Search**: MCP protocol semantic search verified working with similarity scoring
+  - **Memory Context**: `/memory-context` command functionality confirmed end-to-end
+
+#### Technical Details
+- **Files Modified**: 
+  - `src/mcp_memory_service/storage/sqlite_vec.py` - Added 75+ lines of pagination methods
+  - `src/mcp_memory_service/web/api/memories.py` - Fixed pagination logic to use proper SQL queries
+- **Database Access**: Replaced unreliable semantic search with direct SQL `ORDER BY created_at DESC`
+- **Error Handling**: Added comprehensive JSON parsing for tags and metadata with graceful fallbacks
+- **Verification**: All 904 memories now accessible via REST API with proper page navigation
+
+#### Verification Results
+- ✅ **API Pagination**: Returns accurate 904 total count (was showing 82)
+- ✅ **Search Functionality**: Tag searches work immediately after storage
+- ✅ **Memory Context**: Session storage and retrieval verified end-to-end
+- ✅ **Semantic Search**: MCP protocol search confirmed functional with similarity scoring
+- ✅ **Performance**: No performance degradation despite handling full dataset
+
+This release ensures reliable access to the complete memory dataset with proper pagination and search capabilities.
+
+---
+
 ## [6.2.0] - 2025-08-20
 
 ### 🚀 **MAJOR FEATURE: Native Cloudflare Backend Integration**
