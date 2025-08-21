@@ -4,6 +4,9 @@
 # Private/sensitive documents
 docs/saas-monetization-strategy.md
 
+# Local memory exports (contain sensitive data)
+local_export*.json
+
 # Python
 __pycache__/
 *.py[cod]

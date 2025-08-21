@@ -4,6 +4,42 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.2.4] - 2025-08-21
+
+### 🐛 **CRITICAL BUG FIXES: Claude Code Hooks Compatibility**
+
+This release fixes critical compatibility issues with Claude Code hooks that prevented automatic memory injection at session start.
+
+#### Fixed
+- **Claude Code Hooks API Parameters**: Fixed incorrect API parameters in `claude-hooks/core/session-start.js`
+  - Replaced invalid `tags`, `limit`, `time_filter` parameters with correct `n_results` for `retrieve_memory` API
+  - Hooks now work correctly with MCP Memory Service API without parameter errors
+  
+- **Python Dict Response Parsing**: Fixed critical parsing bug where hooks couldn't process MCP service responses
+  - Added proper Python dictionary format to JavaScript object conversion 
+  - Implemented fallback parsing for different response formats
+  - Hooks now successfully parse memory service responses and inject context
+
+- **Memory Export Security**: Enhanced security for memory export files
+  - Added `local_export*.json` to .gitignore to prevent accidental commits of sensitive data
+  - Created safe template files in `examples/` directory for documentation and testing
+
+#### Added
+- **Memory Export Templates**: New example files showing export format structure
+  - `examples/memory_export_template.json`: Basic example with 3 sample memories
+  - Clean, sanitized examples safe for sharing and documentation
+
+#### Technical Details
+- **Response Format Handling**: Hooks now handle Python dict format responses with proper conversion to JavaScript objects
+- **Error Handling**: Added multiple fallback mechanisms for response parsing
+- **API Compatibility**: Updated to use correct MCP protocol parameters for memory retrieval
+
+#### Impact
+- Claude Code hooks will now work out-of-the-box without manual fixes
+- Memory context injection at session start now functions correctly
+- Users can install hooks directly from repository without encountering parsing errors
+- Enhanced security prevents accidental exposure of sensitive data in exports
+
 ## [6.2.3] - 2025-08-20
 
 ### 🛠️ **Cross-Platform Path Detection & Claude Code Integration**

@@ -53,9 +53,7 @@ async function queryMemoryService(endpoint, apiKey, query) {
                 name: 'retrieve_memory',
                 arguments: {
                     query: query.semanticQuery || '',
-                    tags: query.tags || [],
-                    limit: query.limit || 10,
-                    time_filter: query.timeFilter || 'last-2-weeks'
+                    n_results: query.limit || 10
                 }
             }
         });
@@ -82,8 +80,30 @@ async function queryMemoryService(endpoint, apiKey, query) {
                 try {
                     const response = JSON.parse(data);
                     if (response.result && response.result.content) {
-                        const memories = JSON.parse(response.result.content[0].text);
-                        resolve(memories.memories || []);
+                        // The response.result.content[0].text contains a Python dict format string
+                        let textData = response.result.content[0].text;
+                        
+                        try {
+                            // Replace Python literals with JS equivalents 
+                            const jsCode = textData
+                                .replace(/True/g, 'true')
+                                .replace(/False/g, 'false')
+                                .replace(/None/g, 'null');
+                            
+                            // Use Function constructor for safe evaluation
+                            const memoriesData = new Function('return ' + jsCode)();
+                            resolve(memoriesData.results || []);
+                        } catch (conversionError) {
+                            console.warn('[Memory Hook] Response format conversion error:', conversionError.message);
+                            // Fallback: try direct JSON parsing
+                            try {
+                                const memoriesData = JSON.parse(textData);
+                                resolve(memoriesData.results || memoriesData.memories || []);
+                            } catch (jsonError) {
+                                console.warn('[Memory Hook] JSON fallback failed:', jsonError.message);
+                                resolve([]);
+                            }
+                        }
                     } else {
                         resolve([]);
                     }
