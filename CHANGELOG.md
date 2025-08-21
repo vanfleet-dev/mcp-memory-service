@@ -4,6 +4,29 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.2.5] - 2025-08-21
+
+### 🐛 **Bug Fix: SQLite-Vec Backend Debug Utilities**
+
+This release fixes a critical AttributeError in debug utilities when using the SQLite-Vec storage backend.
+
+#### Fixed
+- **Debug Utilities Compatibility** ([#89](https://github.com/doobidoo/mcp-memory-service/issues/89)): Fixed `'SqliteVecMemoryStorage' object has no attribute 'model'` error
+  - Added compatibility helper `_get_embedding_model()` to handle different attribute names between storage backends
+  - ChromaDB backend uses `storage.model` while SQLite-Vec uses `storage.embedding_model`
+  - Updated all debug functions (`get_raw_embedding`, `check_embedding_model`, `debug_retrieve_memory`) to use the compatibility helper
+  
+#### Technical Details
+- **Affected Functions**: 
+  - `get_raw_embedding()` - Now works with both backends
+  - `check_embedding_model()` - Properly detects model regardless of backend
+  - `debug_retrieve_memory()` - Semantic search debugging works for SQLite-Vec users
+  
+#### Impact
+- Users with SQLite-Vec backend can now use all MCP debug operations
+- Semantic search and embedding inspection features work correctly
+- No breaking changes for ChromaDB backend users
+
 ## [6.2.4] - 2025-08-21
 
 ### 🐛 **CRITICAL BUG FIXES: Claude Code Hooks Compatibility**
