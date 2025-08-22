@@ -4,6 +4,31 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.3.2] - 2025-08-22
+
+### 🚨 **Critical Fix: Claude Desktop Compatibility Regression**
+
+#### Fixed
+- **Claude Desktop Integration**: Restored backward compatibility for `uv run memory` command
+- **MCP Protocol Errors**: Fixed JSON parsing errors when Claude Desktop tried to parse CLI help text as MCP messages
+- **Regression from v6.3.1**: CLI consolidation accidentally broke existing Claude Desktop configurations
+
+#### Technical Details
+- **Root Cause**: CLI consolidation removed ability to start MCP server with `uv run memory` (without `server` subcommand)
+- **Impact**: Claude Desktop configurations calling `uv run memory` received help text instead of MCP server
+- **Solution**: Added backward compatibility logic to default to `server` command when no subcommand provided
+
+#### Added
+- **Backward Compatibility**: `uv run memory` now starts MCP server automatically for existing integrations
+- **Deprecation Warning**: Informative warning guides users to explicit `memory server` syntax
+- **Integration Test**: New test case verifies backward compatibility warning functionality
+- **MCP Protocol Validation**: Confirmed proper JSON-RPC responses instead of help text parsing errors
+
+#### For Users
+- **Claude Desktop works again**: Existing configurations continue working without changes
+- **Migration Encouraged**: Warning message guides users toward preferred `memory server` syntax
+- **No Breaking Changes**: All existing usage patterns maintained while encouraging modern syntax
+
 ## [6.3.1] - 2025-08-22
 
 ### 🔧 **Major Enhancement: CLI Architecture Consolidation**

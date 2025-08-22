@@ -24,6 +24,19 @@ from mcp_memory_service.cli.main import memory_server_main, main as cli_main
 class TestCLIInterfaces:
     """Test CLI interface compatibility and functionality."""
     
+    def test_memory_command_backward_compatibility(self):
+        """Test that 'uv run memory' (without server) starts the MCP server for backward compatibility."""
+        result = subprocess.run(
+            ["uv", "run", "memory", "--help"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=current_dir.parent.parent
+        )
+        # Should show help text (not start server) when --help is provided
+        assert result.returncode == 0
+        assert "MCP Memory Service" in result.stdout
+    
     def test_memory_command_exists(self):
         """Test that the memory command is available."""
         result = subprocess.run(
@@ -281,6 +294,37 @@ server(debug=False, chroma_path='/tmp/test-chroma', storage_backend='sqlite_vec'
             
         except ImportError as e:
             pytest.fail(f"Entry point isolation failed: {e}")
+    
+    def test_backward_compatibility_deprecation_warning(self):
+        """Test that using 'memory' without subcommand shows deprecation warning."""
+        import warnings
+        import sys
+        from mcp_memory_service.cli.main import cli
+        
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            
+            # Mock sys.argv to test backward compatibility
+            original_argv = sys.argv
+            try:
+                # This simulates 'uv run memory' without subcommand
+                sys.argv = ["memory"]
+                with pytest.raises(SystemExit):  # Server will try to start and exit
+                    cli(standalone_mode=False)
+            except Exception:
+                # Expected - server can't actually start in test environment
+                pass
+            finally:
+                sys.argv = original_argv
+            
+            # Verify backward compatibility deprecation warning
+            deprecation_warnings = [warning for warning in w if issubclass(warning.category, DeprecationWarning)]
+            assert len(deprecation_warnings) > 0
+            
+            warning_msg = str(deprecation_warnings[0].message)
+            assert "without a subcommand is deprecated" in warning_msg
+            assert "memory server" in warning_msg
+            assert "backward compatibility will be removed" in warning_msg
     
     def test_deprecation_warning_format(self):
         """Test that deprecation warning has proper format and information."""

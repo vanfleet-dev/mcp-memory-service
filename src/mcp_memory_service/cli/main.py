@@ -24,7 +24,7 @@ from .. import __version__
 from .ingestion import add_ingestion_commands
 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @click.version_option(version=__version__, prog_name="MCP Memory Service")
 @click.pass_context
 def cli(ctx):
@@ -34,6 +34,19 @@ def cli(ctx):
     Provides document ingestion, memory management, and MCP server functionality.
     """
     ctx.ensure_object(dict)
+    
+    # Backward compatibility: if no subcommand provided, default to server
+    if ctx.invoked_subcommand is None:
+        import warnings
+        warnings.warn(
+            "Running 'memory' without a subcommand is deprecated. "
+            "Please use 'memory server' explicitly. "
+            "This backward compatibility will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        # Default to server command with default options for backward compatibility
+        ctx.invoke(server, debug=False, chroma_path=None, storage_backend='sqlite_vec')
 
 
 @cli.command()
