@@ -16,6 +16,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [Deployment & Debugging](#deployment--debugging) - Production deployment
 - [Git Configuration](#git-configuration) - Automated workflows and cleanup
 - [Production Deployment](#production-deployment) - Cloudflare backend setup
+- [Wiki Management](#wiki-management) - Repository wiki guidelines and procedures
+- [Troubleshooting Methodology](#troubleshooting-methodology) - Systematic approach to complex issues
 - [API Reference](#api-reference) - REST endpoints and MCP operations
 - [Performance Tuning](#performance-tuning) - Optimization strategies
 - [Monitoring & Observability](#monitoring--observability) - Health checks and logging
@@ -1007,6 +1009,166 @@ python scripts/sync/import_memories.py --source production
 6. **GitHub Discussion Content**: Can import GitHub discussions, issues, and PR content via GraphQL API into memory for project context
 7. **Content Classification**: Marketing content and strategic decisions should be stored in MEMORY (not committed to git) using `claude /memory-store` commands
 
+## Wiki Management
+
+### Repository Wiki Guidelines
+The project maintains a comprehensive GitHub wiki at `https://github.com/doobidoo/mcp-memory-service/wiki`
+
+**Wiki Repository Setup:**
+```bash
+# Clone wiki as sibling directory (one-time setup)
+cd /Users/hkr/Documents/GitHub
+git clone https://github.com/doobidoo/mcp-memory-service.wiki.git
+
+# Wiki working directory
+cd mcp-memory-service.wiki
+```
+
+**Adding New Wiki Pages:**
+1. **Create page** in wiki directory: `/Users/hkr/Documents/GitHub/mcp-memory-service.wiki/`
+2. **Use markdown format** with `.md` extension  
+3. **Follow naming convention**: Use hyphens for spaces (e.g., `Troubleshooting-Guide.md`)
+4. **Link from Home.md**: Always add references to prevent orphaned pages
+
+**Wiki Page Integration Process:**
+```bash
+# 1. Create wiki page
+vim /path/to/wiki/New-Page-Name.md
+
+# 2. Update Home.md with references
+vim /path/to/wiki/Home.md
+# Add to relevant sections (Featured Guides, Technical Deep Dives, etc.)
+
+# 3. Commit to wiki repository
+cd mcp-memory-service.wiki
+git add New-Page-Name.md Home.md
+git commit -m "Add comprehensive guide for [topic]"
+git push origin master
+```
+
+**Wiki vs Repository Content Rules:**
+- **Wiki**: Operational guides, troubleshooting, use cases, community examples
+- **Repository**: Code, core documentation (README, CHANGELOG), technical specs
+- **Never**: Add community-focused guides directly to main repository
+- **Always**: Move wiki content from repo to wiki if accidentally created there
+
+### Wiki Content Categories
+- **Troubleshooting Guides**: Real-world problem solving with step-by-step solutions
+- **Integration Patterns**: How to connect with other tools and workflows  
+- **Performance Guides**: Optimization techniques and benchmarking
+- **Community Examples**: User-contributed use cases and workflows
+- **Development Deep-Dives**: Technical implementation details and case studies
+
+## Troubleshooting Methodology
+
+### Systematic Approach for Complex Issues
+When encountering deployment, database, or service issues:
+
+**1. Issue Classification:**
+- **Version Sync Issues**: Hardcoded versions, API docs showing wrong version
+- **Database Problems**: Memory count discrepancies, corruption errors, path conflicts  
+- **Service Management**: Port conflicts, multiple processes, systemd configuration
+- **Deployment Issues**: Remote server problems, SSH access, service restarts
+
+**2. Diagnostic Commands Sequence:**
+```bash
+# Health Status Check
+curl -k https://server:8443/api/health
+curl -k https://server:8443/openapi.json | grep version
+
+# Database Integrity
+sqlite3 "/path/to/db" "PRAGMA integrity_check;"
+sqlite3 "/path/to/db" "SELECT COUNT(*) FROM memories;"
+
+# Service Status  
+systemctl status mcp-memory.service
+ss -tulpn | grep :8443
+ps aux | grep -E '(run_server|memory)' | grep -v grep
+
+# Git/Version Status
+git describe --tags
+git log --oneline -3
+```
+
+**3. Common Resolution Patterns:**
+- **Version Conflicts**: Update hardcoded versions to use `__version__` imports
+- **Database Issues**: Verify database paths, check Claude Desktop config vs MCP tools
+- **Port Conflicts**: Kill conflicting processes, restart single service instance  
+- **Service Problems**: Update systemd config, check API keys, restart cleanly
+
+**4. Documentation Protocol:**
+- **Capture the Issue**: Store problem description and symptoms
+- **Document Solution**: Record exact steps taken to resolve  
+- **Update Wiki**: Add to TROUBLESHOOTING.md if pattern applies to community
+- **Share Knowledge**: Update CLAUDE.md with new diagnostic procedures
+
+### Database Troubleshooting Priorities
+
+**Memory Count Discrepancies (High Priority):**
+```bash
+# 1. Check all database instances
+sqlite3 "/Users/username/Library/Application Support/mcp-memory/sqlite_vec.db" "SELECT COUNT(*) FROM memories;"
+
+# 2. Verify Claude Desktop configuration
+grep -A5 -B5 "MCP_MEMORY_SQLITE_PATH" ~/.config/claude/claude_desktop_config.json
+
+# 3. Check MCP tools default path  
+python -c "from src.mcp_memory_service.config import SQLITE_VEC_PATH; print('Default:', SQLITE_VEC_PATH)"
+
+# 4. Test direct database access
+sqlite3 "/correct/path/sqlite_vec.db" "PRAGMA integrity_check;"
+```
+
+**Service Configuration Issues (Medium Priority):**
+```bash
+# 1. Identify service name and status
+systemctl list-units --type=service | grep -i mcp
+
+# 2. Check service configuration
+sudo systemctl cat mcp-memory.service
+
+# 3. Verify API key consistency
+sudo systemctl cat mcp-memory.service | grep MCP_API_KEY
+curl -k -H "Authorization: Bearer key" https://server:8443/api/health
+
+# 4. Process conflict detection
+ss -tulpn | grep :8443
+```
+
+### Version Synchronization Protocol
+
+**When API docs show wrong version:**
+1. **Identify hardcoded versions:**
+   ```bash
+   grep -r "version.*=.*[0-9]" src/mcp_memory_service/
+   ```
+
+2. **Update to dynamic imports:**
+   ```python
+   # Replace hardcoded: version="1.0.0"
+   # With dynamic: version=__version__
+   from .. import __version__
+   ```
+
+3. **Version bump process:**
+   ```bash
+   # Update both files
+   # pyproject.toml: version = "x.y.z"
+   # src/mcp_memory_service/__init__.py: __version__ = "x.y.z"
+   
+   # Tag and push
+   git tag -a vx.y.z -m "Release vx.y.z: Version Synchronization Fix"
+   git push origin main && git push origin vx.y.z
+   ```
+
+4. **Remote deployment:**
+   ```bash
+   ssh user@server
+   cd /path/to/repo  
+   git checkout vx.y.z
+   sudo systemctl restart mcp-memory.service
+   ```
+
 ## Storage Backend Comparison
 
 | Backend | Performance | Scalability | Features | Use Case |
@@ -1043,9 +1205,15 @@ uv run memory server
 df -h /                                    # Check disk space (>95% breaks sync)
 sudo rm /var/log/syslog.*                  # Emergency cleanup
 litestream snapshots -config /etc/litestream.yml /path/to/db  # Check snapshot health
+
+# Wiki Management
+cd /Users/hkr/Documents/GitHub/mcp-memory-service.wiki  # Wiki repository
+git add New-Page.md Home.md && git commit -m "Add guide" && git push origin master
 ```
 
 ### Key Endpoints
 - **Health**: `https://localhost:8443/api/health`
 - **Web UI**: `https://localhost:8443/`
 - **API**: `https://localhost:8443/api/memories`
+- **Wiki**: `https://github.com/doobidoo/mcp-memory-service/wiki`
+- **Troubleshooting**: `https://github.com/doobidoo/mcp-memory-service/wiki/TROUBLESHOOTING`
