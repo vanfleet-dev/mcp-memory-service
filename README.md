@@ -992,7 +992,7 @@ export CLOUDFLARE_D1_DATABASE_ID="your-d1-database-id"
 export CLOUDFLARE_R2_BUCKET="mcp-memory-content"
 
 # Start the service
-python -m src.mcp_memory_service.server
+uv run memory server
 ```
 
 📖 **[Complete Cloudflare Setup Guide](docs/cloudflare-setup.md)**

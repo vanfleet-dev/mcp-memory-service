@@ -106,6 +106,65 @@ def status():
 add_ingestion_commands(cli)
 
 
+def memory_server_main():
+    """
+    Compatibility entry point for memory-server command.
+    
+    This function provides backward compatibility for the old memory-server
+    entry point by parsing argparse-style arguments and routing them to 
+    the Click-based CLI.
+    """
+    import argparse
+    import warnings
+    
+    # Issue deprecation warning
+    warnings.warn(
+        "The 'memory-server' command is deprecated. Please use 'memory server' instead. "
+        "This compatibility wrapper will be removed in a future version.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    
+    # Parse arguments using the same structure as the old argparse CLI
+    parser = argparse.ArgumentParser(
+        description="MCP Memory Service - A semantic memory service using the Model Context Protocol"
+    )
+    parser.add_argument(
+        "--version",
+        action="version", 
+        version=f"MCP Memory Service {__version__}",
+        help="Show version information"
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging"
+    )
+    parser.add_argument(
+        "--chroma-path",
+        type=str,
+        help="Path to ChromaDB storage"
+    )
+    
+    args = parser.parse_args()
+    
+    # Convert to Click CLI arguments and call server command
+    click_args = ['server']
+    if args.debug:
+        click_args.append('--debug')
+    if args.chroma_path:
+        click_args.extend(['--chroma-path', args.chroma_path])
+    
+    # Call the Click CLI with the converted arguments
+    try:
+        # Temporarily replace sys.argv to pass arguments to Click
+        original_argv = sys.argv
+        sys.argv = ['memory'] + click_args
+        cli()
+    finally:
+        sys.argv = original_argv
+
+
 def main():
     """Main entry point for the CLI."""
     try:

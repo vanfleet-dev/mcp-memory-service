@@ -99,7 +99,8 @@
       "Bash(ssh-keygen:*)",
       "Bash(ssh-copy-id:*)",
       "Bash(litestream:*)",
-      "Bash(./manual_sync.sh:*)"
+      "Bash(./manual_sync.sh:*)",
+      "Bash(claude /memory-context)"
     ],
     "deny": []
   },

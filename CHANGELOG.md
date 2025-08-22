@@ -4,6 +4,40 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.3.1] - 2025-08-22
+
+### 🔧 **Major Enhancement: CLI Architecture Consolidation**
+
+#### Fixed
+- **CLI Conflicts Eliminated**: Resolved installation conflicts between argparse and Click CLI implementations
+- **Command Consistency**: Established `uv run memory server` as the single, reliable server start pattern
+- **Installation Issues**: Fixed stale entry point problems that caused "command not found" errors
+
+#### Enhanced  
+- **Unified CLI Interface**: All server commands now route through Click-based CLI for consistency
+- **Deprecation Warnings**: Added graceful migration path with informative deprecation warnings for `memory-server`
+- **Error Handling**: Improved error messages and graceful failure handling across all CLI commands
+- **Documentation**: Added comprehensive CLI Migration Guide with clear upgrade paths
+
+#### Added
+- **CLI Integration Tests**: 16 comprehensive test cases covering all CLI interfaces and edge cases
+- **Performance Testing**: CLI startup time validation and version command performance monitoring
+- **Backward Compatibility**: `memory-server` command maintained with deprecation warnings
+- **Migration Guide**: Complete documentation for transitioning from legacy commands
+
+#### Technical Improvements
+- **Environment Variable Integration**: Seamless config passing via MCP_MEMORY_CHROMA_PATH
+- **Code Cleanup**: Removed duplicate argparse implementation from server.py
+- **Entry Point Simplification**: Streamlined from 3 conflicting implementations to 1 clear interface
+- **Robustness Testing**: Added error handling, argument parity, and isolation testing
+
+#### Benefits for Users
+- **Eliminates MCP startup failures** that were caused by CLI conflicts
+- **Clear command interface**: `uv run memory server` works reliably every time
+- **Better error messages** when something goes wrong
+- **Smooth migration path** from legacy patterns
+- **Full Claude Code compatibility** confirmed and tested
+
 ## [6.3.0] - 2025-08-22
 
 ### 🚀 **Major Feature: Distributed Memory Synchronization**
