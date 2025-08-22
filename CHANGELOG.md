@@ -4,6 +4,26 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.3.3] - 2025-08-22
+
+### 🔧 **Enhancement: Version Synchronization**
+
+#### Fixed
+- **API Documentation Version**: Fixed API docs dashboard showing outdated version `1.0.0` instead of current version
+- **Version Inconsistencies**: Synchronized hardcoded versions across FastAPI app, web module, and server configuration
+- **Maintenance Overhead**: Established single source of truth for version management
+
+#### Enhanced
+- **Dynamic Version Management**: All version references now import from main `__version__` variable
+- **Future-Proofing**: Version updates now only require changes in 2 files (pyproject.toml + __init__.py)
+- **Developer Experience**: Consistent version display across all interfaces and documentation
+
+#### Technical Details
+- **FastAPI App**: Changed from hardcoded `version="1.0.0"` to dynamic `version=__version__`
+- **Web Module**: Removed separate version `0.2.0`, now imports from parent package
+- **Server Config**: Updated `SERVER_VERSION` from `0.2.2` to use main version import
+- **Impact**: All dashboards, API docs, and mDNS advertisements now show consistent version
+
 ## [6.3.2] - 2025-08-22
 
 ### 🚨 **Critical Fix: Claude Desktop Compatibility Regression**
