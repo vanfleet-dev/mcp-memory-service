@@ -399,7 +399,7 @@ brew install curl sqlite jq       # macOS
 #### Network Issues
 ```bash
 # Test with IP address instead of hostname
-export REMOTE_MEMORY_HOST="10.0.1.30"
+export REMOTE_MEMORY_HOST="your-server-ip"
 ./scripts/memory_sync.sh status
 
 # Test without HTTPS (if server supports HTTP)

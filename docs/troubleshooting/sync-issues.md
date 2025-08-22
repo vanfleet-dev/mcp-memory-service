@@ -58,13 +58,13 @@ export SYNC_VERBOSE=1
 **Diagnostic Steps:**
 ```bash
 # Test basic network connectivity
-ping narrowbox.local
+ping your-remote-server
 
 # Test specific port
-telnet narrowbox.local 8443
+telnet your-remote-server 8443
 
 # Test HTTP/HTTPS endpoint
-curl -v -k https://narrowbox.local:8443/api/health
+curl -v -k https://your-remote-server:8443/api/health
 ```
 
 **Solutions:**
@@ -72,17 +72,17 @@ curl -v -k https://narrowbox.local:8443/api/health
 #### DNS Resolution Issues
 ```bash
 # Try with IP address instead of hostname
-export REMOTE_MEMORY_HOST="10.0.1.30"
+export REMOTE_MEMORY_HOST="your-server-ip"
 ./scripts/memory_sync.sh status
 
 # Add to /etc/hosts if DNS fails
-echo "10.0.1.30 narrowbox.local" | sudo tee -a /etc/hosts
+echo "your-server-ip your-remote-server" | sudo tee -a /etc/hosts
 ```
 
 #### Firewall/Port Issues
 ```bash
 # Check if port is open
-nmap -p 8443 narrowbox.local
+nmap -p 8443 your-remote-server
 
 # Test alternative ports
 export REMOTE_MEMORY_PORT="8000"  # Try HTTP port
@@ -92,10 +92,10 @@ export REMOTE_MEMORY_PROTOCOL="http"
 #### SSL/TLS Certificate Issues
 ```bash
 # Bypass SSL verification (testing only)
-curl -k https://narrowbox.local:8443/api/health
+curl -k https://your-remote-server:8443/api/health
 
 # Check certificate details
-openssl s_client -connect narrowbox.local:8443 -servername narrowbox.local
+openssl s_client -connect your-remote-server:8443 -servername your-remote-server
 ```
 
 ### Problem: API Authentication Failures
@@ -108,14 +108,14 @@ openssl s_client -connect narrowbox.local:8443 -servername narrowbox.local
 **Solutions:**
 ```bash
 # Check if API key is required
-curl -k https://narrowbox.local:8443/api/health
+curl -k https://your-remote-server:8443/api/health
 
 # Set API key if required
 export REMOTE_MEMORY_API_KEY="your-api-key"
 
 # Test with API key
 curl -k -H "Authorization: Bearer your-api-key" \
-  https://narrowbox.local:8443/api/health
+  https://your-remote-server:8443/api/health
 ```
 
 ### Problem: Slow Network Performance

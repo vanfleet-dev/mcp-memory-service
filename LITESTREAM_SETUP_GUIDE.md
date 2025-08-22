@@ -1,10 +1,10 @@
 # Litestream Synchronization Setup Guide
 
-This guide will help you set up real-time database synchronization between your local macOS machine and your remote server at `narrowbox.local:8443`.
+This guide will help you set up real-time database synchronization between your local macOS machine and your remote server at `your-remote-server:8443`.
 
 ## Overview
 
-- **Master**: `narrowbox.local` (serves replica data via HTTP on port 8080)
+- **Master**: `your-remote-server` (serves replica data via HTTP on port 8080)
 - **Replica**: Local macOS machine (syncs from master every 10 seconds)
 - **HTTP Server**: Python built-in server (lightweight, no additional dependencies)
 
@@ -25,15 +25,15 @@ The following configuration files have been generated:
 - `setup_remote_litestream.sh` - Automated setup for remote server
 - `setup_local_litestream.sh` - Automated setup for local machine
 
-## Step 1: Remote Server Setup (narrowbox.local)
+## Step 1: Remote Server Setup (your-remote-server)
 
 ### Option A: Automated Setup
 ```bash
 # Copy files to remote server
-scp litestream_master_config.yml litestream.service litestream-http.service setup_remote_litestream.sh user@narrowbox.local:/tmp/
+scp litestream_master_config.yml litestream.service litestream-http.service setup_remote_litestream.sh user@your-remote-server:/tmp/
 
 # SSH to remote server and run setup
-ssh user@narrowbox.local
+ssh user@your-remote-server
 cd /tmp
 sudo ./setup_remote_litestream.sh
 ```
@@ -105,7 +105,7 @@ sudo chmod 644 /Library/LaunchDaemons/io.litestream.replication.plist
 # launchctl unload ~/Library/LaunchAgents/mcp-memory.plist  # if you have it
 
 # Restore database from master (only needed if local DB is empty/outdated)
-litestream restore -config /usr/local/etc/litestream.yml "http://narrowbox.local:8080/mcp-memory" "/Users/hkr/Library/Application Support/mcp-memory/sqlite_vec.db"
+litestream restore -config /usr/local/etc/litestream.yml "http://your-remote-server:8080/mcp-memory" "$HOME/Library/Application Support/mcp-memory/sqlite_vec.db"
 ```
 
 ### Start Replica Service
@@ -122,7 +122,7 @@ litestream replicas -config /usr/local/etc/litestream.yml
 
 ### Check Remote Server
 ```bash
-# On narrowbox.local
+# On your-remote-server
 sudo systemctl status litestream litestream-http
 journalctl -u litestream -f
 curl http://localhost:8080/mcp-memory/
@@ -143,7 +143,7 @@ sudo launchctl list | grep litestream
 ### Test Synchronization
 ```bash
 # Add a test memory to the remote database (via MCP service)
-curl -k -H "Content-Type: application/json" -d '{"content": "Test sync memory", "tags": ["test", "sync"]}' https://narrowbox.local:8443/api/memories
+curl -k -H "Content-Type: application/json" -d '{"content": "Test sync memory", "tags": ["test", "sync"]}' https://your-remote-server:8443/api/memories
 
 # Wait 10-15 seconds, then check if it appears locally
 # (You'll need to query your local database or MCP service)
@@ -159,13 +159,13 @@ Create a monitoring script to check sync status:
 # health_check.sh
 echo "=== Litestream Health Check ==="
 echo "Remote server status:"
-ssh user@narrowbox.local "sudo systemctl is-active litestream litestream-http"
+ssh user@your-remote-server "sudo systemctl is-active litestream litestream-http"
 
 echo "Local replica status:"
 litestream replicas -config /usr/local/etc/litestream.yml
 
 echo "HTTP endpoint test:"
-curl -s -o /dev/null -w "HTTP %{http_code}\n" http://narrowbox.local:8080/mcp-memory/
+curl -s -o /dev/null -w "HTTP %{http_code}\n" http://your-remote-server:8080/mcp-memory/
 ```
 
 ### Troubleshooting
@@ -173,10 +173,10 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" http://narrowbox.local:8080/mcp-me
 **Sync lag issues:**
 ```bash
 # Check network connectivity
-ping narrowbox.local
+ping your-remote-server
 
 # Verify HTTP endpoint
-curl http://narrowbox.local:8080/mcp-memory/
+curl http://your-remote-server:8080/mcp-memory/
 
 # Check Litestream logs
 journalctl -u litestream -f  # Remote
@@ -186,7 +186,7 @@ tail -f /var/log/litestream.log  # Local
 **Permission errors:**
 ```bash
 # Fix database permissions
-chmod 644 "/Users/hkr/Library/Application Support/mcp-memory/sqlite_vec.db"
+chmod 644 "$HOME/Library/Application Support/mcp-memory/sqlite_vec.db"
 ```
 
 **Service issues:**
@@ -200,7 +200,7 @@ sudo launchctl stop io.litestream.replication && sudo launchctl start io.litestr
 
 1. **Database Path**: Make sure the database path in the master config matches your actual SQLite-vec database location on the remote server.
 
-2. **Network**: The local machine needs to reach `narrowbox.local:8080`. Ensure firewall rules allow this.
+2. **Network**: The local machine needs to reach `your-remote-server:8080`. Ensure firewall rules allow this.
 
 3. **SSL/TLS**: The HTTP server runs on plain HTTP (port 8080) for simplicity. For production, consider HTTPS.
 

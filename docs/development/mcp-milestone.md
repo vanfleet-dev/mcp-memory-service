@@ -26,7 +26,7 @@ Applied critical refactorings from fellow AI Coder:
 - **Content Hash Generation**: Proper `generate_content_hash()` implementation
 
 ### 4. Infrastructure Deployment ✅
-- **Remote Server**: Successfully deployed at `10.0.1.30:8000`
+- **Remote Server**: Successfully deployed at `your-server-ip:8000`
 - **Backend**: SQLite-vec (1.7MB database, 384-dimensional embeddings)
 - **Model**: all-MiniLM-L6-v2 loaded and operational
 - **Existing Data**: 65 memories already stored
@@ -49,7 +49,7 @@ This represents the **successful completion of architectural evolution** from:
 **MCP Protocol Test Results**:
 ```bash
 # Health check successful
-curl -X POST http://10.0.1.30:8000/mcp \
+curl -X POST http://your-server-ip:8000/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"check_database_health"}}'
 
@@ -57,9 +57,9 @@ curl -X POST http://10.0.1.30:8000/mcp \
 ```
 
 **Available Endpoints**:
-- 🔧 **MCP Protocol**: `http://10.0.1.30:8000/mcp`
-- 📊 **Dashboard**: `http://10.0.1.30:8000/`  
-- 📚 **API Docs**: `http://10.0.1.30:8000/api/docs`
+- 🔧 **MCP Protocol**: `http://your-server-ip:8000/mcp`
+- 📊 **Dashboard**: `http://your-server-ip:8000/`  
+- 📚 **API Docs**: `http://your-server-ip:8000/api/docs`
 
 ## Next Steps
 

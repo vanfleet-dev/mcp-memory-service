@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Note**: Examples in this guide use placeholder values like `your-server-ip` and `your-api-key`. Replace these with your actual server configuration when setting up distributed deployment.
+
 ## Table of Contents
 - [Quick Reference](#quick-reference) - Essential commands and endpoints
 - [Overview](#overview) - Project description and purpose
@@ -288,15 +290,15 @@ claude /memory-store --type "note" --project "my-app" "Important reminder"
 - Automatic project context detection and smart tagging
 - Git repository information and recent commits capture
 - Client hostname tracking for multi-machine usage
-- Integrated with MCP Memory Service at `https://narrowbox.local:8443`
+- Integrated with MCP Memory Service at `https://your-remote-server:8443`
 - No setup required after command installation
 
 #### Direct API Usage (Alternative)
 For direct API access without Claude Code commands:
 ```bash
-curl -k -s -X POST https://narrowbox.local:8443/api/memories \
+curl -k -s -X POST https://your-remote-server:8443/api/memories \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer mcp-test-key" \
+  -H "Authorization: Bearer your-api-key" \
   -d '{"content": "your content", "tags": ["tag1", "tag2"]}'
 ```
 
@@ -325,7 +327,7 @@ To install Claude Code commands:
 ### Deployment & Debugging
 
 #### Remote Server Deployment Process
-When deploying changes to production servers (e.g., 10.0.1.30:8443):
+When deploying changes to production servers (e.g., your-server-ip:8443):
 
 1. **Pre-deployment**: Test changes locally first
 2. **Deploy**: SSH to server, `git pull`, restart service
@@ -379,6 +381,87 @@ When persistent issues occur:
 - **Example**: API calls `search_by_tags` but backend only has `search_by_tag`
 - **Solution**: Implement missing methods with backward compatibility
 - **Check**: Verify API endpoints match storage backend method names
+
+#### Litestream Synchronization Issues
+**Disk Space Exhaustion (Critical)**:
+- **Problem**: Litestream stops creating snapshots when disk space runs low
+- **Symptoms**: Manual sync pulls stale data, snapshots stopped at a specific time
+- **Detection**: Check `df -h /` on server, look for >95% usage
+- **Resolution**: 
+  ```bash
+  # Free space by cleaning logs
+  sudo rm -f /var/log/syslog.* /var/log/*.1 /var/log/*.gz
+  sudo truncate -s 50M /var/log/syslog
+  sudo apt-get clean && sudo apt-get autoremove -y
+  
+  # Restart Litestream service
+  sudo systemctl restart litestream
+  ```
+- **Prevention**: Monitor disk usage, set alerts at 85%
+
+**Log Directory Permissions**:
+- **Problem**: Logrotate fails with "insecure permissions" errors
+- **Symptoms**: Logs grow unchecked, disk fills up
+- **Solution**: Fix directory permissions
+  ```bash
+  sudo chmod 755 /var/log
+  sudo chown root:root /var/log
+  sudo chmod 640 /var/log/syslog* /var/log/auth.log*
+  ```
+
+**Litestream Health Check**:
+```bash
+# Check snapshots are current
+litestream snapshots -config /etc/litestream.yml /path/to/database.db
+
+# Check WAL replication
+ls -la /path/to/.database.db-litestream/generations/*/wal/
+
+# Force manual checkpoint if needed
+python3 -c "
+import sqlite3
+conn = sqlite3.connect('/path/to/database.db')
+conn.execute('PRAGMA wal_checkpoint(FULL)')
+conn.close()
+"
+```
+
+**Manual Sync Fallback**:
+When Litestream snapshots are stale, use direct database export/import:
+```bash
+# Step 1: Export recent memories from remote server
+ssh user@remote "cd /path/to/repo && python3 -c \"
+import sqlite3, json
+conn = sqlite3.connect('/path/to/database.db')
+cursor = conn.cursor()
+cursor.execute('SELECT * FROM memories ORDER BY created_at DESC LIMIT N')
+columns = [desc[0] for desc in cursor.description]
+memories = [dict(zip(columns, row)) for row in cursor.fetchall()]
+with open('recent_export.json', 'w') as f: json.dump(memories, f)
+conn.close()
+\""
+
+# Step 2: Download and import locally
+scp user@remote:/path/to/repo/recent_export.json .
+python3 -c "
+import json, sqlite3
+with open('recent_export.json') as f: memories = json.load(f)
+conn = sqlite3.connect('local/database.db')
+# Import each memory, check for duplicates by content_hash
+# ... import logic with duplicate detection
+"
+
+# Step 3: Clean up WAL files to prevent corruption
+rm local/database.db-shm local/database.db-wal 2>/dev/null || true
+```
+
+**Database Count Verification**:
+```bash
+# Always verify sync results by comparing counts
+sqlite3 remote/db "SELECT COUNT(*) FROM memories;"  # Should match
+sqlite3 local/db "SELECT COUNT(*) FROM memories;"   # Should match
+# If MCP service shows different count, restart Claude Desktop
+```
 
 ### Git Configuration
 
@@ -522,19 +605,19 @@ This workflow ensures:
 1. **Commands timeout or hang**:
    - Use direct API calls as fallback:
      ```bash
-     curl -k -s -X POST https://narrowbox.local:8443/api/memories \
+     curl -k -s -X POST https://your-remote-server:8443/api/memories \
        -H "Content-Type: application/json" \
-       -H "Authorization: Bearer mcp-test-key" \
+       -H "Authorization: Bearer your-api-key" \
        -d '{"content": "your content", "tags": ["tag1"]}'
      ```
 
 2. **Path detection errors** (e.g., "Path /home/user/Repositories not found"):
    - Commands auto-detect repository location
    - Ensure you're in a valid git repository
-   - Check that MCP Memory Service is running at `https://narrowbox.local:8443`
+   - Check that MCP Memory Service is running at `https://your-remote-server:8443`
 
 3. **Authentication failures**:
-   - Verify MCP Memory Service is accessible: `curl -k https://narrowbox.local:8443/api/health`
+   - Verify MCP Memory Service is accessible: `curl -k https://your-remote-server:8443/api/health`
    - Check API key configuration in service
    - Test with `claude /memory-health` command
 
@@ -546,7 +629,7 @@ This workflow ensures:
    ps aux | grep memory-service         # Process check
    
    # Test direct connectivity
-   curl -k https://narrowbox.local:8443/api/health
+   curl -k https://your-remote-server:8443/api/health
    ```
 
 2. **SSL/TLS errors**:
@@ -555,9 +638,9 @@ This workflow ensures:
    - Check firewall settings for port access
 
 3. **Wrong endpoint**:
-   - Default endpoint: `https://narrowbox.local:8443`
+   - Default endpoint: `https://your-remote-server:8443`
    - Update commands if using different hostname/port
-   - Check MDNS resolution: `avahi-resolve-host-name narrowbox.local`
+   - Check MDNS resolution: `avahi-resolve-host-name your-remote-server`
 
 #### Quick Fixes
 - **Reset command installation**: `python scripts/claude_commands_utils.py --uninstall && python scripts/claude_commands_utils.py`
@@ -837,9 +920,30 @@ journalctl -u mcp-memory-service --since "1 hour ago" | grep ERROR
 Set up monitoring alerts for:
 - Response time > 500ms
 - Memory usage > 1GB
-- Disk usage > 80%
+- **Disk usage > 85%** (Critical for Litestream functionality)
 - Error rate > 1%
 - Service downtime
+- Litestream snapshot staleness > 1 hour
+
+#### Disk Space Monitoring
+**Critical for Litestream operations**:
+```bash
+# Check current disk usage
+df -h /
+
+# Monitor large log files
+du -sh /var/log/* | sort -hr | head -10
+
+# Set up disk usage alert
+# Add to crontab for hourly monitoring:
+0 * * * * [ $(df / | tail -1 | awk '{print $5}' | sed 's/%//') -gt 85 ] && echo "Disk usage critical: $(df -h /)" | mail -s "Disk Alert" admin@domain.com
+```
+
+**Automated Log Cleanup**:
+```bash
+# Set up daily log cleanup (add to crontab)
+0 2 * * * find /var/log -name "*.log.1" -o -name "*.gz" -mtime +7 -delete
+```
 
 ### Backup & Recovery
 
@@ -872,6 +976,31 @@ python scripts/sync/import_memories.py --source production
 3. **ChromaDB Persistence**: Ensure write permissions for storage paths
 4. **Memory Usage**: Model loading is deferred until first use to reduce startup time
 5. **uv.lock Conflicts**: Should resolve automatically; if not, ensure git merge drivers are set up
+
+#### Litestream Synchronization Issues
+6. **Disk Space Exhaustion**: Litestream silently fails when disk >95% full
+   - **Solution**: Monitor disk usage, clean logs regularly
+   - **Emergency**: `sudo rm /var/log/syslog.* && sudo systemctl restart litestream`
+
+7. **Stale Snapshots**: Manual sync pulls old data when snapshots aren't updated
+   - **Detection**: Check `litestream snapshots` output for recent timestamps
+   - **Workaround**: Direct database export/import bypasses snapshot system
+
+8. **Log Directory Permissions**: Logrotate fails with "insecure permissions"
+   - **Solution**: `sudo chmod 755 /var/log && sudo chown root:root /var/log`
+   - **Prevention**: Include in server setup automation
+
+#### MCP Service Database Connection Issues
+9. **Multiple Database Instances**: Local MCP service may cache old database state
+   - **Symptoms**: Health checks show wrong memory counts, search fails for recent data
+   - **Cause**: Multiple databases (local vs remote), WAL file conflicts, service caching
+   - **Solution**: Restart Claude Desktop to refresh MCP service connections
+   - **Detection**: Compare direct SQLite count vs MCP health check results
+
+10. **Database Corruption Warnings**: "database disk image is malformed" during writes
+    - **Cause**: WAL files from different database states conflicting
+    - **Solution**: Remove WAL files after database replacement: `rm *.db-shm *.db-wal`
+    - **Prevention**: Always clean WAL files when manually replacing database files
 
 ### GitHub Integration
 
@@ -909,6 +1038,11 @@ pytest tests/
 
 # Development
 uv run memory server
+
+# Litestream Troubleshooting (Critical)
+df -h /                                    # Check disk space (>95% breaks sync)
+sudo rm /var/log/syslog.*                  # Emergency cleanup
+litestream snapshots -config /etc/litestream.yml /path/to/db  # Check snapshot health
 ```
 
 ### Key Endpoints
