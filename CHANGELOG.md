@@ -4,6 +4,69 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.3.0] - 2025-08-22
+
+### 🚀 **Major Feature: Distributed Memory Synchronization**
+
+#### Added
+- **Git-like Sync Workflow**: Complete distributed synchronization system with offline capabilities
+  - `memory_sync.sh` - Main orchestrator for sync operations with colored output and status reporting
+  - **Stash → Pull → Apply → Push** workflow similar to Git's distributed version control
+  - Intelligent conflict detection and resolution with user control
+  - Remote-first architecture with automatic fallback to local staging
+
+- **Enhanced Memory Store**: `enhanced_memory_store.sh` with hybrid remote-first approach
+  - **Primary**: Direct storage to remote API (`https://narrowbox.local:8443/api/memories`)
+  - **Fallback**: Automatic local staging when remote is unavailable
+  - Smart context detection (project, git branch, hostname, tags)
+  - Seamless offline-to-online transition with automatic sync
+
+- **Real-time Database Replication**: Litestream-based synchronization infrastructure
+  - **Master/Replica Setup**: Remote server as master with HTTP-served replica data
+  - **Automatic Replication**: 10-second sync intervals for near real-time updates
+  - **Lightweight HTTP Server**: Python built-in server for serving replica files
+  - **Cross-platform Compatibility**: macOS LaunchDaemon and Linux systemd services
+
+- **Staging Database System**: SQLite-based local change tracking
+  - `staging_db_init.sql` - Complete schema with triggers and status tracking
+  - **Conflict Detection**: Content hash-based duplicate detection
+  - **Operation Tracking**: INSERT/UPDATE/DELETE operation logging
+  - **Source Attribution**: Machine hostname and timestamp tracking
+
+- **Comprehensive Sync Scripts**: Complete workflow automation
+  - `stash_local_changes.sh` - Capture local changes before remote sync
+  - `pull_remote_changes.sh` - Download remote changes with conflict awareness  
+  - `apply_local_changes.sh` - Intelligent merge of staged changes
+  - `push_to_remote.sh` - Upload changes via HTTPS API with retry logic
+  - `resolve_conflicts.sh` - Interactive conflict resolution helper
+
+- **Litestream Integration**: Production-ready replication setup
+  - **Automated Setup Scripts**: `setup_remote_litestream.sh` and `setup_local_litestream.sh`
+  - **Service Configurations**: systemd and LaunchDaemon service files
+  - **Master/Replica Configs**: Complete Litestream YAML configurations
+  - **Comprehensive Documentation**: `LITESTREAM_SETUP_GUIDE.md` with troubleshooting
+
+#### Enhanced
+- **Claude Commands**: Updated `memory-store.md` to document remote-first approach
+  - **Hybrid Strategy**: Remote API primary, local staging fallback
+  - **Sync Status**: Integration with `./memory_sync.sh status` for pending changes
+  - **Automatic Context**: Git branch, project, and hostname detection
+
+#### Architecture
+- **Remote-first Design**: Single source of truth on remote server with local caching
+- **Conflict Resolution**: Last-write-wins with comprehensive logging and user notification
+- **Network Resilience**: Graceful degradation from online → staging → read-only local
+- **Git-like Workflow**: Familiar distributed workflow for developers
+
+#### Technical Details
+- **Database Schema**: New staging database with triggers for change counting
+- **HTTP Integration**: Secure HTTPS API communication with bearer token auth
+- **Platform Support**: Cross-platform service management (systemd/LaunchDaemon)
+- **Performance**: Lz4 compression for efficient snapshot transfers
+- **Security**: Content hash verification and source machine tracking
+
+This release transforms MCP Memory Service from a local-only system into a fully distributed memory platform, enabling seamless synchronization across multiple devices while maintaining robust offline capabilities.
+
 ## [6.2.5] - 2025-08-21
 
 ### 🐛 **Bug Fix: SQLite-Vec Backend Debug Utilities**
