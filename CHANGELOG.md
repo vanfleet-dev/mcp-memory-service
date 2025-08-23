@@ -205,7 +205,7 @@ This release transforms MCP Memory Service from having overwhelming documentatio
 #### Enhanced
 - **Claude Commands**: Updated `memory-store.md` to document remote-first approach
   - **Hybrid Strategy**: Remote API primary, local staging fallback
-  - **Sync Status**: Integration with `./memory_sync.sh status` for pending changes
+  - **Sync Status**: Integration with `./sync/memory_sync.sh status` for pending changes
   - **Automatic Context**: Git branch, project, and hostname detection
 
 #### Architecture
