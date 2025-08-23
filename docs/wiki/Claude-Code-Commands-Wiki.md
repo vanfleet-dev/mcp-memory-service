@@ -23,8 +23,9 @@ claude /memory-health  # Test it works!
 #### 📚 Wiki Contents
 - **[Installation Guide](#installation-guide)** - Complete setup instructions
 - **[Command Reference](#command-reference)** - All 5 commands with examples
+- **[Memory Awareness Hooks](#memory-awareness-hooks)** - Automatic background memory system
 - **[Usage Examples](#usage-examples)** - Real-world workflows
-- **[Commands vs MCP Server](#commands-vs-mcp-server)** - Which approach to choose
+- **[Commands vs MCP Server vs Hooks](#commands-vs-mcp-server-vs-hooks)** - Which approach to choose
 - **[Troubleshooting](#troubleshooting)** - Common issues and solutions
 - **[Advanced Features](#advanced-features)** - Power user capabilities
 
@@ -286,6 +287,387 @@ claude /memory-health --fix-issues
 
 ---
 
+## Memory Awareness Hooks
+
+### Overview - Automatic Background Memory System
+
+**Memory Awareness Hooks** transform Claude Code into a **memory-aware development assistant** that automatically maintains perfect context across all interactions without any manual intervention.
+
+Unlike commands that require explicit user actions, hooks work **transparently in the background** during your Claude Code sessions:
+
+- 🚀 **Session Start**: Automatically loads relevant project memories when Claude Code starts
+- 🧠 **Dynamic Context**: Real-time memory injection based on conversation evolution  
+- 📝 **Session End**: Automatically consolidates and stores conversation outcomes
+- 🎯 **Project Awareness**: Intelligent project context detection and memory relevance scoring
+
+#### How It Works
+1. **You start Claude Code** → Hook detects project, loads relevant memories, injects as context
+2. **You have conversations** → Claude Code operates with full historical context
+3. **You end the session** → Hook analyzes outcomes, stores insights with smart tags
+4. **Next session** → Previous insights are available automatically
+
+**Result**: Every Claude Code session builds upon all previous work with zero manual effort.
+
+---
+
+### Hooks Installation Guide
+
+#### Prerequisites
+- ✅ Claude Code CLI installed and working
+- ✅ MCP Memory Service running (any backend)
+- ✅ Node.js for hook script execution
+
+#### Installation Methods
+
+**Method 1: Automatic Installation (Recommended)**
+```bash
+cd /path/to/mcp-memory-service
+cd claude-hooks
+./install.sh
+```
+
+**Method 2: Manual Installation**  
+```bash
+# Copy hooks to Claude Code directory
+cp -r claude-hooks/* ~/.claude-code/hooks/
+
+# Configure memory service endpoint
+cd ~/.claude-code/hooks
+cp config.template.json config.json
+# Edit config.json with your memory service details
+```
+
+**Method 3: During MCP Memory Service Installation**
+```bash
+python install.py --install-claude-hooks
+```
+
+#### Post-Installation Verification
+```bash
+# Check hooks are installed
+ls ~/.claude-code/hooks/core/
+
+# Test hook functionality
+cd ~/.claude-code/hooks
+npm test
+
+# Verify project detection
+node -e "
+const { detectProjectContext } = require('./utilities/project-detector');
+detectProjectContext('.').then(console.log).catch(console.error);
+"
+```
+
+---
+
+### Hooks Configuration Reference
+
+#### Core Configuration (`~/.claude-code/hooks/config.json`)
+
+```json
+{
+  "memoryService": {
+    "endpoint": "https://your-memory-service:8443",
+    "apiKey": "your-api-key",
+    "defaultTags": ["claude-code", "auto-generated"],
+    "maxMemoriesPerSession": 8,
+    "enableSessionConsolidation": true
+  },
+  "hooks": {
+    "sessionStart": {
+      "enabled": true,
+      "timeout": 10000,
+      "priority": "high"
+    },
+    "sessionEnd": {
+      "enabled": true, 
+      "timeout": 15000,
+      "priority": "normal"
+    },
+    "topicChange": {
+      "enabled": false,
+      "timeout": 5000, 
+      "priority": "low"
+    }
+  }
+}
+```
+
+#### Project Detection Settings
+```json
+{
+  "projectDetection": {
+    "gitRepository": true,
+    "packageFiles": ["package.json", "pyproject.toml", "Cargo.toml", "go.mod"],
+    "frameworkDetection": true,
+    "languageDetection": true,
+    "confidenceThreshold": 0.3
+  }
+}
+```
+
+#### Memory Scoring Configuration  
+```json
+{
+  "memoryScoring": {
+    "weights": {
+      "timeDecay": 0.3,
+      "tagRelevance": 0.4, 
+      "contentRelevance": 0.2,
+      "typeBonus": 0.1
+    },
+    "minRelevanceScore": 0.3,
+    "timeDecayRate": 0.1
+  }
+}
+```
+
+#### Session Analysis Settings
+```json
+{
+  "sessionAnalysis": {
+    "extractTopics": true,
+    "extractDecisions": true,
+    "extractInsights": true,
+    "extractCodeChanges": true,
+    "extractNextSteps": true,
+    "minSessionLength": 100,
+    "minConfidence": 0.1
+  }
+}
+```
+
+---
+
+### Hook Components Architecture
+
+#### Core Hooks
+- **`session-start.js`**: Automatic memory injection at Claude Code initialization
+- **`session-end.js`**: Memory consolidation and outcome storage at session completion  
+- **`topic-change.js`**: Dynamic memory loading based on conversation evolution (optional)
+
+#### Utilities
+- **`project-detector.js`**: Multi-language project context detection and analysis
+- **`memory-scorer.js`**: AI-powered relevance scoring algorithms for memory selection
+- **`context-formatter.js`**: Memory formatting and presentation for Claude Code injection
+- **`session-tracker.js`**: Session state management and conversation analysis
+- **`conversation-analyzer.js`**: Natural language processing for session insights
+
+#### Advanced Features
+- **Cross-Session Continuity**: Links conversations across different Claude Code sessions
+- **Intelligent Memory Selection**: Relevance scoring based on project context and time decay
+- **Auto-Tagging**: Automatic categorization based on project type and content analysis
+- **Knowledge Building**: Progressive memory organization and cross-linking
+
+---
+
+### Automatic Features in Detail
+
+#### Session Startup Memory Injection
+
+When you start Claude Code, the session-start hook:
+
+1. **Detects Current Project**: Analyzes directory, git repo, package files
+2. **Queries Memory Service**: Searches for relevant memories using project context
+3. **Scores Memory Relevance**: Uses AI algorithms to rank memory importance
+4. **Formats Context**: Prepares memories for injection into Claude Code session
+5. **Injects Seamlessly**: Adds context without user awareness
+
+**Example Auto-Generated Context**:
+```
+# Project Context: mcp-memory-service
+Recent memories relevant to your current work:
+
+## Architecture Decisions (2 days ago)
+- Chose SQLite-vec backend for performance reasons
+- Cloudflare backend ready for production deployment
+
+## Development Notes (1 week ago)  
+- Memory consolidation hooks working correctly
+- Session analysis extracting topics and decisions
+
+## Configuration (3 days ago)
+- Updated config.json with new scoring weights
+- Enabled session consolidation by default
+```
+
+#### Project Detection Examples
+
+**Python Project**:
+```json
+{
+  "name": "mcp-memory-service",
+  "language": "Python",
+  "frameworks": ["FastAPI"],  
+  "tools": ["uv", "pytest"],
+  "git": {
+    "branch": "main",
+    "remoteUrl": "https://github.com/user/mcp-memory-service.git"
+  },
+  "confidence": 0.95
+}
+```
+
+**JavaScript Project**:
+```json
+{
+  "name": "my-react-app",
+  "language": "JavaScript", 
+  "frameworks": ["React", "Next.js"],
+  "tools": ["npm", "webpack"],
+  "git": {
+    "branch": "feature/auth-system"
+  },
+  "confidence": 0.87
+}
+```
+
+#### Session End Consolidation
+
+When Claude Code sessions end, the session-end hook:
+
+1. **Analyzes Conversation**: Extracts topics, decisions, insights, next steps
+2. **Identifies Key Information**: Uses NLP to find important outcomes  
+3. **Generates Smart Tags**: Based on content, project type, and conversation topics
+4. **Stores Automatically**: Creates memories without user intervention
+5. **Links Context**: Connects to previous related memories
+
+**Example Auto-Stored Memory**:
+```json
+{
+  "content": "Session focused on implementing OAuth authentication. Decided to use Auth0 with JWT tokens. Next steps: configure environment variables and test authentication flow.",
+  "tags": ["claude-code", "oauth", "auth0", "jwt", "authentication", "session-outcome"],
+  "metadata": {
+    "type": "session-consolidation",
+    "project": "my-web-app", 
+    "session_duration": "45 minutes",
+    "topics": ["authentication", "oauth", "jwt"],
+    "decisions": ["use Auth0", "JWT tokens"],
+    "next_steps": ["configure env vars", "test auth flow"]
+  }
+}
+```
+
+---
+
+### Hooks Troubleshooting
+
+#### Hooks Not Working
+
+**Issue**: No automatic memory injection or consolidation
+
+```bash
+# Check if hooks are installed
+ls ~/.claude-code/hooks/core/
+
+# Check configuration
+cat ~/.claude-code/hooks/config.json
+
+# Test memory service connectivity  
+curl -k https://your-memory-service:8443/api/health
+
+# Test project detection
+cd ~/.claude-code/hooks
+node -e "
+const { detectProjectContext } = require('./utilities/project-detector');
+detectProjectContext('.').then(console.log).catch(console.error);
+"
+```
+
+**Common Solutions**:
+- Ensure Claude Code hooks directory exists: `mkdir -p ~/.claude-code/hooks`
+- Verify config.json has correct memory service endpoint
+- Check memory service is running and accessible
+- Ensure Node.js is available for hook execution
+
+#### Memory Service Connection Issues
+
+**Issue**: Hooks can't connect to memory service
+
+```bash
+# Test direct connection
+curl -k -X POST https://your-service:8443/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "check_database_health", "arguments": {}}}'
+
+# Update config with correct endpoint
+nano ~/.claude-code/hooks/config.json
+
+# Test with debug logging
+export CLAUDE_HOOKS_DEBUG=true
+# Start Claude Code to see debug output
+```
+
+#### Hook Execution Issues
+
+**Issue**: Hooks installed but not executing
+
+```bash
+# Check hook permissions
+ls -la ~/.claude-code/hooks/core/
+
+# Test hook loading
+cd ~/.claude-code/hooks
+node -e "
+try {
+  const hook = require('./core/session-start.js');
+  console.log('Hook loaded:', hook.name);
+} catch (err) {
+  console.error('Error loading hook:', err.message);
+}
+"
+
+# Check for Node.js issues
+node --version  # Should be v14+
+npm --version   # Should be available
+```
+
+#### Performance Issues
+
+**Issue**: Hooks causing slow Claude Code startup
+
+```bash
+# Enable performance debugging
+export CLAUDE_HOOKS_DEBUG=true
+export CLAUDE_HOOKS_TIMING=true
+
+# Reduce memory injection
+# Edit ~/.claude-code/hooks/config.json:
+"maxMemoriesPerSession": 3,  # Reduce from default 8
+
+# Increase timeouts if needed
+"sessionStart": {
+  "timeout": 15000  # Increase from 10000
+}
+
+# Disable topic-change hook if enabled
+"topicChange": {
+  "enabled": false
+}
+```
+
+#### Configuration Issues
+
+**Issue**: Hooks using wrong configuration
+
+```bash
+# Reset to default configuration
+cd ~/.claude-code/hooks
+cp config.template.json config.json
+
+# Validate JSON configuration
+cat config.json | python -m json.tool
+
+# Check for common config errors:
+# - Wrong memory service endpoint URL
+# - Invalid API key format
+# - Malformed JSON syntax
+# - Missing required configuration sections
+```
+
+---
+
 ## Usage Examples
 
 ### Individual Developer Workflow
@@ -346,17 +728,83 @@ claude /memory-search "React hooks best practices"
 claude /memory-recall "what did I learn about Docker last month?"
 ```
 
+### Memory Awareness Hooks Workflows
+
+#### Seamless Development Continuity
+
+**With Hooks Enabled** (Zero Manual Effort):
+```bash
+# Day 1: Start Claude Code in project directory
+# → Hook automatically injects: "No previous memories found for this project"
+# → You work on authentication feature, make decisions
+# → End session: Hook automatically stores outcomes with tags
+
+# Day 2: Start Claude Code in same project
+# → Hook automatically injects: "Yesterday you worked on authentication, decided to use JWT..."
+# → You continue work with full context
+# → Make new decisions about database schema
+# → End session: Hook consolidates and links to previous work
+
+# Day 3: Start Claude Code
+# → Hook automatically injects: "Project progress: auth complete, working on DB schema..."
+# → Perfect continuity, no manual memory management needed
+```
+
+#### Cross-Project Intelligence
+
+**Hooks Learn Across Projects**:
+```bash
+# Working on Project A (React app)
+# → Hooks learn your React patterns and preferences
+# → Decisions about state management stored automatically
+
+# Switch to Project B (React app)  
+# → Hooks detect similar project type
+# → Automatically inject relevant React knowledge from Project A
+# → "You previously chose Redux for state management because..."
+```
+
+#### Team Collaboration with Hooks
+
+**Individual + Team Memory**:
+```bash
+# Your personal hooks capture individual work patterns
+# Team uses shared memory service for collaborative decisions
+# Result: Personal context + team knowledge in every session
+
+# Example auto-injected context:
+# "Personal: You prefer TypeScript for type safety
+#  Team: Architecture meeting decided on microservices approach  
+#  Project: Authentication module 90% complete"
+```
+
+#### Automatic Learning Progression
+
+**Hooks Build Knowledge Over Time**:
+```bash
+# Month 1: Basic project setup decisions stored
+# Month 2: Hooks identify patterns, inject relevant past learnings
+# Month 3: Hooks provide increasingly sophisticated context
+# Month 6: Claude Code becomes project-specific expert assistant
+
+# Example progression:
+# Week 1: "Starting new React project"
+# Week 4: "Based on your React patterns, consider using..."  
+# Month 3: "Your established architecture suggests..."
+# Month 6: "Consistent with your advanced React practices..."
+```
+
 ---
 
-## Commands vs MCP Server
+## Commands vs MCP Server vs Hooks
 
 ### When to Choose Commands
 
 **✅ Perfect For**:
-- Individual developers
+- Individual developers who want manual control
 - Quick setup (2 minutes to working)
 - Direct command-line interface preference
-- Automatic context detection needs
+- Explicit memory operations
 - Zero configuration requirements
 
 **✅ Benefits**:
@@ -365,6 +813,12 @@ claude /memory-recall "what did I learn about Docker last month?"
 - Context-aware project detection
 - Auto-discovery of memory service
 - Professional conversational interface
+- **Manual control** - you decide when to store/retrieve
+
+**❌ Limitations**:
+- Requires explicit user action for every operation
+- No automatic session continuity
+- Manual memory injection needed
 
 ### When to Choose MCP Server
 
@@ -382,11 +836,85 @@ claude /memory-recall "what did I learn about Docker last month?"
 - Advanced server configuration options
 - Standard MCP debugging and monitoring
 
-### Can I Use Both?
-**✅ Yes!** Commands and MCP Server are fully compatible:
+**❌ Limitations**:
+- Requires MCP server configuration
+- No automatic session lifecycle management
+- Manual memory operations through MCP protocol
+
+### When to Choose Memory Awareness Hooks
+
+**✅ Perfect For**:
+- Developers who want seamless, automatic memory integration
+- Long-term project continuity across sessions
+- Zero-effort memory management
+- Automatic context preservation
+- Transparent background operation
+
+**✅ Benefits**:
+- **Fully automatic** - zero manual intervention required
+- **Session continuity** - every session builds on previous work
+- **Intelligent context** - automatic project-aware memory injection
+- **Background consolidation** - outcomes stored automatically
+- **Cross-session learning** - Claude Code gets smarter over time
+- **Perfect memory** - never lose important decisions or insights
+
+**❌ Limitations**:
+- Requires Node.js for hook execution
+- Less manual control over memory operations
+- Background processing may add slight startup delay
+
+### Comparison Matrix
+
+| Feature | Commands | MCP Server | **Memory Hooks** |
+|---------|----------|------------|------------------|
+| **Setup Complexity** | Minimal | Medium | Minimal |
+| **Manual Control** | High | High | **Low** |
+| **Automatic Operation** | None | None | **Complete** |
+| **Session Continuity** | None | None | **Perfect** |
+| **Project Awareness** | Manual | Manual | **Automatic** |
+| **Context Injection** | Manual | Manual | **Automatic** |
+| **Memory Consolidation** | Manual | Manual | **Automatic** |
+| **Learning Over Time** | No | No | **Yes** |
+| **Background Processing** | No | No | **Yes** |
+| **User Intervention** | Required | Required | **Optional** |
+
+### Recommended Approach: **Hybrid Usage**
+
+**🎯 Optimal Setup**: Use **Memory Hooks + Commands** together
+
+```bash
+# Install both systems
+python install.py --install-claude-commands --install-claude-hooks
+
+# Result:
+# ✅ Automatic session continuity (hooks)  
+# ✅ Manual control when needed (commands)
+# ✅ Best of both worlds
+```
+
+**How They Work Together**:
+1. **Hooks handle automatic background work**: Session startup, consolidation, context injection
+2. **Commands handle explicit operations**: Specific searches, manual storage, health checks
+3. **No conflicts**: They use the same memory service and enhance each other
+
+**Example Workflow**:
+```bash
+# Hooks automatically inject context when Claude Code starts
+# → You have full project history without doing anything
+
+# During development, use commands for specific needs:
+claude /memory-store "Important architectural decision about microservices"
+claude /memory-search --tags "database,performance" 
+
+# Hooks automatically consolidate session when Claude Code ends
+# → Your insights are preserved for next time
+```
+
+### Can I Use All Three?
+**✅ Yes!** Commands, MCP Server, and Hooks are fully compatible:
 - Same underlying memory service and database
 - Switch between methods as needed
-- Commands for quick operations, MCP server for deep integration
+- Each approach serves different use cases
 - No conflicts or data compatibility issues
 
 See the complete [Commands vs MCP Server Guide](../guides/commands-vs-mcp-server.md) for detailed comparison.
@@ -473,12 +1001,67 @@ python install.py --install-claude-commands
 cp claude_commands/*.md ~/.claude/commands/
 ```
 
+### Memory Awareness Hooks Issues
+
+#### Hooks Not Executing
+
+**Issue**: No automatic memory injection during Claude Code sessions
+```bash
+# Verify hooks installation
+ls ~/.claude-code/hooks/core/session-*.js
+
+# Test project detection manually
+cd ~/.claude-code/hooks
+node utilities/project-detector.js
+
+# Check Claude Code can find hooks
+export CLAUDE_HOOKS_DEBUG=true
+claude  # Start with debug output
+
+# Verify memory service connectivity
+curl -k https://your-service:8443/api/health
+```
+
+#### Session Context Not Persisting  
+
+**Issue**: Each Claude Code session starts fresh, no memory injection
+```bash
+# Check session-start hook is enabled
+grep -A 5 "sessionStart" ~/.claude-code/hooks/config.json
+
+# Test memory service has data
+curl -k "https://your-service:8443/api/memories/search?tags=claude-code"
+
+# Verify hook execution timing
+export CLAUDE_HOOKS_TIMING=true
+claude  # Check startup timing logs
+```
+
+#### Session Outcomes Not Being Stored
+
+**Issue**: Session-end hook not consolidating conversations
+```bash
+# Check session-end hook is enabled  
+grep -A 5 "sessionEnd" ~/.claude-code/hooks/config.json
+
+# Test session analysis manually
+cd ~/.claude-code/hooks
+node -e "
+const { analyzeSession } = require('./utilities/conversation-analyzer');
+console.log('Session analyzer available:', typeof analyzeSession);
+"
+
+# Verify minimum session length requirements
+# Edit config.json: "minSessionLength": 10  # Lower threshold for testing
+```
+
 ### Getting Help
 
 - 📖 [Full Documentation](../README.md)
 - 🐛 [Report Issues](https://github.com/doobidoo/mcp-memory-service/issues)
 - 💬 [Discussions](https://github.com/doobidoo/mcp-memory-service/discussions)
 - 🔍 [Search Existing Issues](https://github.com/doobidoo/mcp-memory-service/issues?q=is%3Aissue)
+- 🔧 [Hooks Troubleshooting Guide](../guides/hooks-troubleshooting.md)
 
 ---
 
@@ -523,8 +1106,112 @@ Commands provide full access to:
 - **Semantic Search**: Using sentence transformers and embeddings
 - **Time-based Recall**: Natural language time expression parsing
 - **Tag Management**: Flexible tagging and organization system
-- **Multiple Storage Backends**: ChromaDB and SQLite-vec support
+- **Multiple Storage Backends**: ChromaDB, SQLite-vec, and Cloudflare support
 - **Cross-platform Compatibility**: Windows, macOS, and Linux support
+
+### Memory Awareness Hooks Advanced Features
+
+#### Intelligent Memory Selection Algorithms
+
+**Multi-Factor Relevance Scoring**:
+```javascript
+relevanceScore = (
+  timeDecay * 0.3 +           // Recent memories weighted higher
+  tagRelevance * 0.4 +        // Project tags match current context  
+  contentRelevance * 0.2 +    // Semantic similarity to current work
+  typeBonus * 0.1             // Memory type relevance (decisions > notes)
+)
+```
+
+**Adaptive Time Decay**:
+- Recent memories (< 1 week): Full relevance score
+- Medium age (1 week - 1 month): 70% relevance  
+- Older memories (> 1 month): 30% relevance, but never fully discarded
+- Critical decisions: Never decay below 50% relevance
+
+#### Session Analysis and Consolidation
+
+**Natural Language Processing Pipeline**:
+1. **Topic Extraction**: Identifies main conversation themes
+2. **Decision Detection**: Finds architectural and implementation decisions
+3. **Insight Mining**: Extracts learning outcomes and discoveries  
+4. **Next Steps Identification**: Captures action items and follow-up tasks
+5. **Code Change Analysis**: Links discussions to actual code modifications
+
+**Auto-Generated Memory Examples**:
+```json
+{
+  "content": "Implemented OAuth2 authentication using Auth0. Chose JWT tokens over sessions for stateless API design. Next: Configure production environment variables.",
+  "auto_tags": ["oauth2", "auth0", "jwt", "authentication", "api-design", "session-outcome"],
+  "extracted_data": {
+    "decisions": ["OAuth2 with Auth0", "JWT over sessions", "stateless API"],
+    "technologies": ["Auth0", "JWT", "OAuth2"],
+    "next_steps": ["configure production env vars"],
+    "session_type": "implementation",
+    "confidence": 0.89
+  }
+}
+```
+
+#### Cross-Project Pattern Recognition
+
+**Framework Detection and Learning**:
+- Recognizes when you start similar project types
+- Injects relevant patterns from previous projects
+- Learns your personal preferences and coding styles
+- Builds project-type-specific knowledge bases
+
+**Example Cross-Project Intelligence**:
+```bash
+# Previously worked on React App A: chose Redux + TypeScript
+# Starting React App B: Hook automatically injects:
+# "Based on your React experience: You consistently choose Redux for state management and TypeScript for type safety. Previous performance optimizations included..."
+```
+
+#### Professional Development Features
+
+**Knowledge Graph Building**:
+- Links related memories across different projects
+- Identifies recurring themes and decision patterns
+- Builds personal development methodology over time
+- Creates searchable knowledge base of your expertise
+
+**Competency Tracking**:
+```json
+{
+  "technologies": {
+    "React": {"experience_level": "advanced", "last_used": "2024-08-23", "key_patterns": ["hooks", "context", "performance"]},
+    "Python": {"experience_level": "expert", "last_used": "2024-08-23", "key_patterns": ["fastapi", "async", "testing"]},
+    "Docker": {"experience_level": "intermediate", "last_used": "2024-08-20", "learning_areas": ["multi-stage builds"]}
+  }
+}
+```
+
+#### Team Synchronization (Enterprise Feature)
+
+**Shared Knowledge Integration**:
+- Personal hooks work alongside team memory service
+- Separates individual patterns from team decisions
+- Provides context about both personal preferences and team standards
+- Maintains privacy while enabling collaboration
+
+**Example Team + Personal Context**:
+```markdown
+# Personal Development Context
+- You prefer functional programming patterns
+- Your testing approach emphasizes integration tests
+- You typically choose PostgreSQL for relational data
+
+# Team Architecture Context  
+- Team standard: microservices with Docker containers
+- Agreed database: MongoDB for this project
+- Testing strategy: TDD with 80% coverage requirement
+
+# Project-Specific Context
+- Authentication service 90% complete
+- User service next priority  
+- Performance requirements: <200ms API response time
+```
 
 ---
 
