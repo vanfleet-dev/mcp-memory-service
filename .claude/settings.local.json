@@ -99,7 +99,7 @@
       "Bash(ssh-keygen:*)",
       "Bash(ssh-copy-id:*)",
       "Bash(litestream:*)",
-      "Bash(./manual_sync.sh:*)",
+      "Bash(./sync/manual_sync.sh:*)",
       "Bash(claude /memory-context)",
       "Bash(claude:*)",
       "mcp__memory__recall_memory",

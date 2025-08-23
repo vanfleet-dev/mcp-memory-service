@@ -4,6 +4,44 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.0] - 2025-08-23
+
+### 🗂️ **Repository Structure: Root Directory Cleanup**
+
+#### Added
+- **`deployment/` Directory** - Centralized location for service and configuration files
+- **`sync/` Directory** - Organized synchronization scripts in dedicated folder
+- **Dependency-Safe Reorganization** - All file references properly updated
+
+#### Changed
+- **Root Directory Cleanup** - Reduced clutter from 80+ files to ~65 files (19% reduction)
+- **File Organization** - Moved deployment configs and sync scripts to logical subdirectories
+- **Path References Updated** - All scripts and configurations point to new file locations
+- **Claude Code Settings** - Updated paths in `.claude/settings.local.json` for moved scripts
+
+#### Moved Files
+**To `deployment/`:**
+- `mcp-memory.service` - Systemd service configuration
+- `smithery.yaml` - Smithery package configuration  
+- `io.litestream.replication.plist` - macOS LaunchDaemon configuration
+- `staging_db_init.sql` - Database initialization schema
+- `empty_config.yml` - Template configuration file
+
+**To `sync/`:**
+- `manual_sync.sh`, `memory_sync.sh` - Core synchronization scripts
+- `pull_remote_changes.sh`, `push_to_remote.sh` - Remote sync operations
+- `sync_from_remote.sh`, `sync_from_remote_noconfig.sh` - Remote pull variants
+- `apply_local_changes.sh`, `stash_local_changes.sh`, `resolve_conflicts.sh` - Local sync operations
+
+#### Fixed
+- **Broken References** - Updated all hardcoded paths in scripts and configurations
+- **Claude Code Integration** - Fixed manual_sync.sh path reference
+- **Installation Scripts** - Updated service file and SQL schema paths
+- **Litestream Setup** - Fixed LaunchDaemon plist file reference
+
+#### Repository Impact
+This release significantly improves repository navigation and organization while maintaining full backward compatibility through proper reference updates. Users benefit from cleaner root directory structure, while developers gain logical file organization that reflects functional groupings.
+
 ## [6.4.0] - 2025-08-23
 
 ### 📚 **Documentation Revolution: Major UX Transformation**
