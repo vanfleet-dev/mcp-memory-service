@@ -76,7 +76,7 @@
       "Bash(export MCP_HTTP_ENABLED=true)",
       "Bash(export:*)",
       "Bash(export MCP_HTTP_PORT=8000)",
-      "Bash(export MCP_API_KEY=\"test-key-123\")",
+      "Bash(export MCP_API_KEY=\"KuvMXcxidrXJ/jgArX9iItljIfNke62GQCkdYUetg5w=\")",
       "Bash(sudo ufw:*)",
       "Bash(./install_service.sh:*)",
       "Bash(sudo systemctl status:*)",
@@ -101,9 +101,37 @@
       "Bash(litestream:*)",
       "Bash(./manual_sync.sh:*)",
       "Bash(claude /memory-context)",
-      "Bash(claude:*)"
+      "Bash(claude:*)",
+      "mcp__memory__recall_memory",
+      "mcp__memory__store_memory",
+      "mcp__memory__retrieve_memory",
+      "mcp__memory__search_by_tag",
+      "Bash(env)",
+      "Bash(printenv)",
+      "WebFetch(domain:narrowbox.local)",
+      "Bash(sqlite3:*)",
+      "Bash(command:*)",
+      "Bash(lz4:*)",
+      "mcp__memory__check_database_health",
+      "Bash(brew services:*)",
+      "Bash(scp:*)",
+      "Bash(openssl rand:*)",
+      "Bash(MCP_MEMORY_SQLITE_PATH=\"/Users/hkr/Library/Application Support/mcp-memory/sqlite_vec.db\" uv run memory server --help)",
+      "Bash(env MCP_MEMORY_SQLITE_PATH=\"/Users/hkr/Library/Application Support/mcp-memory/sqlite_vec.db\" uv run memory server --help)",
+      "Bash(env MCP_MEMORY_SQLITE_PATH=\"/Users/hkr/Library/Application Support/mcp-memory/sqlite_vec.db\" python -c \"from src.mcp_memory_service.config import SQLITE_VEC_PATH; print(''Default path:'', SQLITE_VEC_PATH)\")",
+      "Bash(env MCP_MEMORY_SQLITE_PATH=\"/Users/hkr/Library/Application Support/mcp-memory/sqlite_vec.db\" uv run python -c \"\nimport asyncio\nimport os\nimport sqlite3\n\n# First check direct SQLite access\ndb_path = ''/Users/hkr/Library/Application Support/mcp-memory/sqlite_vec.db''\nprint(f''Testing direct SQLite access to: {db_path}'')\n\ntry:\n    conn = sqlite3.connect(db_path)\n    cursor = conn.cursor()\n    cursor.execute(''SELECT COUNT(*) FROM memories'')\n    count = cursor.fetchone()[0]\n    print(f''Direct SQLite: {count} memories found'')\n    conn.close()\nexcept Exception as e:\n    print(f''Direct SQLite error: {e}'')\n\")",
+      "Bash(npm test)",
+      "Bash(./install.sh)",
+      "mcp__context-crystallizer__init_crystallization",
+      "mcp__context-crystallizer__get_crystallization_guidance",
+      "mcp__context-crystallizer__get_next_file_to_crystallize",
+      "mcp__context-crystallizer__store_crystallized_context",
+      "mcp__context-crystallizer__get_crystallization_progress"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "/Users/hkr/Documents/GitHub/mcp-memory-service.wiki"
+    ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": []

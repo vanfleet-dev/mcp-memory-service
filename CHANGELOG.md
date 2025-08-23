@@ -4,6 +4,45 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.4.0] - 2025-08-23
+
+### 📚 **Documentation Revolution: Major UX Transformation**
+
+#### Added
+- **Comprehensive Installation Guide** in wiki consolidating 6+ previous scattered guides
+- **Platform-Specific Setup Guide** with optimizations for Windows, macOS, and Linux
+- **Complete Integration Guide** covering Claude Desktop, Claude Code, VS Code, and 13+ tools
+- **Streamlined README.md** with clear quick start and wiki navigation (56KB → 8KB)
+- **Safe Documentation Archive** preserving all removed files for reference
+
+#### Changed
+- **Major Documentation Restructuring** for improved user experience and maintainability
+- **Single Source of Truth** established for installation, platform setup, and integrations
+- **Wiki Home Page** updated with organized navigation to consolidated guides
+- **User Onboarding Journey** simplified from overwhelming choice to clear path
+
+#### Removed
+- **26+ Redundant Documentation Files** safely archived while preserving git history
+- **Choice Paralysis** from 6 installation guides, 5 integration guides, 4 platform guides
+- **Maintenance Burden** of updating multiple files for single concept changes
+- **Inconsistent Information** across overlapping documentation
+
+#### Fixed
+- **User Confusion** from overwhelming documentation choices and unclear paths
+- **Maintenance Complexity** requiring updates to 6+ files for installation changes
+- **Professional Image** with organized structure reflecting code quality
+- **Information Discovery** through logical wiki organization vs scattered files
+
+#### Documentation Impact
+This release transforms MCP Memory Service from having overwhelming documentation chaos to organized, professional, maintainable structure. Users now have clear paths from discovery to success (README → Quick Start → Wiki → Success), while maintainers benefit from single-source-of-truth updates. **90% reduction in repository documentation files** while **improving comprehensiveness** through organized wiki structure.
+
+**Key Achievements:**
+- Installation guides: 6 → 1 comprehensive wiki page
+- Integration guides: 5 → 1 complete reference  
+- Platform guides: 4 → 1 optimized guide
+- User experience: Confusion → Clarity
+- Maintenance: 6+ places → 1 place per topic
+
 ## [6.3.3] - 2025-08-22
 
 ### 🔧 **Enhancement: Version Synchronization**
