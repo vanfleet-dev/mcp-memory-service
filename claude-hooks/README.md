@@ -39,21 +39,70 @@ The memory awareness system consists of three main components:
 
 ## Installation
 
-1. Copy hooks to Claude Code hooks directory:
+### Automated Installation (Recommended)
+
+1. Run the installation script:
 ```bash
-cp claude-hooks/* ~/.claude-code/hooks/
+cd claude-hooks
+./install.sh
 ```
 
-2. Configure memory service endpoint:
+The installer will automatically:
+- Install hooks to the correct Claude Code directory (`~/.claude/hooks/`)
+- Configure Claude Code settings for hook integration (`~/.claude/settings.json`)
+- Backup any existing hooks configuration
+- Run integration tests to verify installation
+- Test memory service connectivity
+
+### Manual Installation (Advanced)
+
+1. Copy hooks to Claude Code hooks directory:
 ```bash
-cd ~/.claude-code/hooks
+cp -r claude-hooks/* ~/.claude/hooks/
+```
+
+2. Configure Claude Code settings:
+```bash
+# Add to ~/.claude/settings.json
+{
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "node ~/.claude/hooks/core/session-start.js", "timeout": 10}]}],
+    "SessionEnd": [{"hooks": [{"type": "command", "command": "node ~/.claude/hooks/core/session-end.js", "timeout": 15}]}]
+  }
+}
+```
+
+3. Configure memory service endpoint:
+```bash
+cd ~/.claude/hooks
 cp config.template.json config.json
 # Edit config.json with your memory service details
 ```
 
-3. Test hook installation:
+4. Test installation:
 ```bash
-claude-hooks test memory-awareness
+cd ~/.claude/hooks
+node tests/integration-test.js
+```
+
+## Verification
+
+After installation, verify hooks are working:
+
+1. **Check Claude Code settings**:
+```bash
+cat ~/.claude/settings.json | grep -A10 hooks
+```
+
+2. **Test hook detection**:
+```bash
+claude --debug hooks  # Should show hook matchers found
+```
+
+3. **Test memory service connectivity**:
+```bash
+cd ~/.claude/hooks
+node -e "require('./tests/integration-test').runTests()" 
 ```
 
 ## Configuration
@@ -108,6 +157,64 @@ Set environment variable for verbose logging:
 ```bash
 export CLAUDE_HOOKS_DEBUG=true
 claude
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### Hooks Not Detected
+**Problem**: Claude Code shows "Found 0 hook matchers in settings"
+**Solutions**:
+1. Verify settings file location: `ls ~/.claude/settings.json`
+2. Check settings format: `cat ~/.claude/settings.json | jq .hooks`
+3. Reinstall: `cd claude-hooks && ./install.sh`
+
+#### JSON Parsing Errors  
+**Problem**: "Parse error: Expected property name or '}' in JSON"
+**Cause**: Memory service returns Python dict format
+**Solution**: This is fixed in the latest version. Update session-start.js:
+```bash
+cd ~/.claude/hooks/core
+# Latest version includes Python->JSON conversion
+```
+
+#### Memory Service Connection Failed
+**Problem**: "Network error" or "ENOTFOUND" in hook output
+**Solutions**:
+1. Verify service is running: `curl -k https://your-endpoint:8443/api/health`
+2. Check endpoint in config.json: `cat ~/.claude/hooks/config.json`
+3. Update API key: Edit `~/.claude/hooks/config.json`
+
+#### Wrong Installation Directory
+**Problem**: Hooks installed but Claude Code can't find them
+**Solution**: 
+- Old location: `~/.claude-code/hooks/` (incorrect)
+- Correct location: `~/.claude/hooks/`
+- Move files: `mv ~/.claude-code/hooks/* ~/.claude/hooks/`
+
+### Verification Commands
+
+```bash
+# Check hook installation
+ls -la ~/.claude/hooks/core/
+
+# Test Claude Code hook detection
+claude --debug hooks
+
+# Test memory service
+cd ~/.claude/hooks && node tests/integration-test.js
+
+# Test individual hooks
+node ~/.claude/hooks/core/session-start.js
+```
+
+### Logs and Debugging
+
+Hook output appears in Claude Code debug mode:
+```bash
+claude --debug hooks
+# Look for: "[Memory Hook]" messages
 ```
 
 ## Architecture Diagrams
