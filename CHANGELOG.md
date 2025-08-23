@@ -4,6 +4,45 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.6.0] - 2025-08-23
+
+### 🔧 **Memory Awareness Hooks: Fully Functional Installation**
+
+#### Major Improvements
+- **Installation Scripts Fixed** - Memory Awareness Hooks now install and work end-to-end without manual intervention
+- **Claude Code Integration** - Automatic `~/.claude/settings.json` configuration for seamless hook detection
+- **JSON Parsing Fixed** - Resolved Python dict conversion errors that caused runtime failures
+- **Enhanced Testing** - Added 4 new integration tests (total: 14 tests, 100% pass rate)
+
+#### Added
+- **Automated Claude Code Settings Integration** - Installation script now configures `~/.claude/settings.json` automatically
+- **Comprehensive Troubleshooting Guide** - Complete wiki documentation with diagnosis commands and solutions
+- **Installation Verification** - Post-install connectivity tests and hook detection validation
+- **GitHub Wiki Documentation** - Detailed 500+ line guide for advanced users and developers
+
+#### Fixed  
+- **Installation Directory** - Changed from `~/.claude-code/hooks/` to correct `~/.claude/hooks/` location
+- **JSON Parsing Errors** - Added Python dict to JSON conversion (single quotes, True/False/None handling)
+- **Hook Detection** - Claude Code now properly detects installed hooks via settings configuration
+- **Memory Service Connectivity** - Enhanced error handling and connection testing
+
+#### Enhanced
+- **Integration Tests** - Expanded test suite from 10 to 14 tests (40% increase):
+  - Claude Code settings validation
+  - Hook files location verification  
+  - Claude Code CLI availability check
+  - Memory service connectivity testing
+- **Documentation Structure** - README streamlined (47% size reduction), detailed content moved to wiki
+- **Error Messages** - Improved debugging output and user-friendly error reporting
+
+#### Developer Experience
+- **Quick Start** - Single command installation: `./install.sh`
+- **Verification Commands** - Easy testing with `claude --debug hooks`
+- **Troubleshooting** - Comprehensive guide covers all common issues
+- **Custom Development** - Examples for extending hooks and memory integration
+
+**Impact**: Memory Awareness Hooks are now publicly usable without the manual debugging sessions that were previously required. Users can run `./install.sh` and get fully functional automatic memory awareness in Claude Code.
+
 ## [6.5.0] - 2025-08-23
 
 ### 🗂️ **Repository Structure: Root Directory Cleanup**
