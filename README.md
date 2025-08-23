@@ -43,19 +43,19 @@ npx -y @smithery/cli install @doobidoo/mcp-memory-service --client claude
 **👉 Visit our comprehensive [Wiki](https://github.com/doobidoo/mcp-memory-service/wiki) for detailed guides:**
 
 ### 🚀 Setup & Installation
-- **[📋 Installation Guide](https://github.com/doobidoo/mcp-memory-service/wiki/Installation-Guide)** - Complete installation for all platforms and use cases
-- **[🖥️ Platform Setup Guide](https://github.com/doobidoo/mcp-memory-service/wiki/Platform-Setup-Guide)** - Windows, macOS, and Linux optimizations  
-- **[🔗 Integration Guide](https://github.com/doobidoo/mcp-memory-service/wiki/Integration-Guide)** - Claude Desktop, Claude Code, VS Code, and more
+- **[📋 Installation Guide](https://github.com/doobidoo/mcp-memory-service/wiki/01-Installation-Guide)** - Complete installation for all platforms and use cases
+- **[🖥️ Platform Setup Guide](https://github.com/doobidoo/mcp-memory-service/wiki/02-Platform-Setup-Guide)** - Windows, macOS, and Linux optimizations  
+- **[🔗 Integration Guide](https://github.com/doobidoo/mcp-memory-service/wiki/03-Integration-Guide)** - Claude Desktop, Claude Code, VS Code, and more
 
-### 🧠 Memory Awareness & Usage
-- **[🧠 Claude Code Memory Awareness Guide](https://github.com/doobidoo/mcp-memory-service/wiki/Claude-Code-Memory-Awareness-Guide)** - Intelligent development workflows
-- **[⚡ Claude Code Quick Reference](https://github.com/doobidoo/mcp-memory-service/wiki/Claude-Code-Quick-Reference)** - Essential commands
-- **[🏷️ Tag System Guide](https://github.com/doobidoo/mcp-memory-service/wiki/Tag-System-Migration-and-Management)** - Memory organization
+### 🧠 Advanced Topics
+- **[🧠 Advanced Configuration](https://github.com/doobidoo/mcp-memory-service/wiki/04-Advanced-Configuration)** - Integration patterns, best practices, workflows
+- **[⚡ Performance Optimization](https://github.com/doobidoo/mcp-memory-service/wiki/05-Performance-Optimization)** - Speed up queries, optimize resources, scaling
+- **[👨‍💻 Development Reference](https://github.com/doobidoo/mcp-memory-service/wiki/06-Development-Reference)** - Claude Code hooks, API reference, debugging
 
-### 🔧 Technical Resources  
-- **[🔧 Troubleshooting Guide](https://github.com/doobidoo/mcp-memory-service/wiki/TROUBLESHOOTING)** - Solutions for common issues
-- **[🚀 Performance Optimization](https://github.com/doobidoo/mcp-memory-service/wiki/Performance-Optimization-‐-From-8‐10s-to-Under-1s)** - Speed improvements
-- **[🏗️ Building a Dashboard](https://github.com/doobidoo/mcp-memory-service/wiki/Building-a-React-Dashboard-for-MCP-Memory-Service)** - Custom interfaces
+### 🔧 Help & Reference
+- **[🔧 Troubleshooting Guide](https://github.com/doobidoo/mcp-memory-service/wiki/07-TROUBLESHOOTING)** - Solutions for common issues
+- **[❓ FAQ](https://github.com/doobidoo/mcp-memory-service/wiki/08-FAQ)** - Frequently asked questions
+- **[📝 Examples](https://github.com/doobidoo/mcp-memory-service/wiki/09-Examples)** - Practical code examples and workflows
 
 ## ✨ Key Features
 
@@ -172,7 +172,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 - **📖 Documentation**: [Wiki](https://github.com/doobidoo/mcp-memory-service/wiki) - Comprehensive guides
 - **🐛 Bug Reports**: [GitHub Issues](https://github.com/doobidoo/mcp-memory-service/issues)
 - **💬 Discussions**: [GitHub Discussions](https://github.com/doobidoo/mcp-memory-service/discussions)
-- **🔧 Troubleshooting**: [Troubleshooting Guide](https://github.com/doobidoo/mcp-memory-service/wiki/TROUBLESHOOTING)
+- **🔧 Troubleshooting**: [Troubleshooting Guide](https://github.com/doobidoo/mcp-memory-service/wiki/07-TROUBLESHOOTING)
 
 ## 📊 In Production
 
@@ -198,6 +198,6 @@ Apache License 2.0 - see [LICENSE](LICENSE) for details.
 
 **Ready to supercharge your AI workflow?** 🚀
 
-👉 **[Start with our Installation Guide](https://github.com/doobidoo/mcp-memory-service/wiki/Installation-Guide)** or explore the **[Wiki](https://github.com/doobidoo/mcp-memory-service/wiki)** for comprehensive documentation.
+👉 **[Start with our Installation Guide](https://github.com/doobidoo/mcp-memory-service/wiki/01-Installation-Guide)** or explore the **[Wiki](https://github.com/doobidoo/mcp-memory-service/wiki)** for comprehensive documentation.
 
 *Transform your AI conversations into persistent, searchable knowledge that grows with you.*
