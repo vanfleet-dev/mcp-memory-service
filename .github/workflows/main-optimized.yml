@@ -283,7 +283,7 @@ jobs:
         driver: docker-container
 
     - name: Log in to Docker Hub
-      if: matrix.registry == 'docker.io' && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != ''
+      if: matrix.registry == 'docker.io' && secrets.DOCKER_USERNAME && secrets.DOCKER_PASSWORD
       uses: docker/login-action@v3
       with:
         registry: docker.io
@@ -310,7 +310,7 @@ jobs:
           type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.tag }}
 
     - name: Build and push Docker image
-      if: matrix.registry == 'ghcr.io' || (matrix.registry == 'docker.io' && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '')
+      if: matrix.registry == 'ghcr.io' || (matrix.registry == 'docker.io' && secrets.DOCKER_USERNAME && secrets.DOCKER_PASSWORD)
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -329,5 +329,5 @@ jobs:
           BUILDKIT_INLINE_CACHE=1
     
     - name: Docker Hub push skipped
-      if: matrix.registry == 'docker.io' && (secrets.DOCKER_USERNAME == '' || secrets.DOCKER_PASSWORD == '')
+      if: matrix.registry == 'docker.io' && (!secrets.DOCKER_USERNAME || !secrets.DOCKER_PASSWORD)
       run: echo "⚠️ Docker Hub push skipped due to missing credentials"
