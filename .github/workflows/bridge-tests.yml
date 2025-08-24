@@ -1,0 +1,144 @@
+name: HTTP-MCP Bridge Tests
+
+on:
+  push:
+    paths:
+      - 'examples/http-mcp-bridge.js'
+      - 'tests/bridge/**'
+      - 'tests/integration/test_bridge_integration.js'
+      - '.github/workflows/bridge-tests.yml'
+  pull_request:
+    paths:
+      - 'examples/http-mcp-bridge.js'
+      - 'tests/bridge/**'
+      - 'tests/integration/test_bridge_integration.js'
+
+jobs:
+  test-bridge:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+    
+    - name: Install test dependencies
+      run: |
+        cd tests/bridge
+        npm init -y
+        npm install mocha sinon assert
+        npm install ../../examples/  # Install local bridge module
+    
+    - name: Run unit tests
+      run: |
+        cd tests/bridge
+        npx mocha test_http_mcp_bridge.js --reporter spec
+    
+    - name: Run integration tests
+      run: |
+        cd tests/integration
+        npx mocha test_bridge_integration.js --reporter spec --timeout 10000
+    
+    - name: Test bridge with mock server
+      run: |
+        # Start a simple mock server
+        node -e "
+        const http = require('http');
+        const server = http.createServer((req, res) => {
+          if (req.url === '/api/health') {
+            res.writeHead(200, {'Content-Type': 'application/json'});
+            res.end(JSON.stringify({status: 'healthy', version: '6.6.1'}));
+          } else {
+            res.writeHead(404);
+            res.end(JSON.stringify({detail: 'Not Found'}));
+          }
+        });
+        server.listen(8000, () => console.log('Mock server running'));
+        " &
+        
+        sleep 2
+        
+        # Test the bridge against mock server
+        node -e "
+        const Bridge = require('./examples/http-mcp-bridge.js');
+        const bridge = new Bridge();
+        bridge.endpoint = 'http://localhost:8000/api';
+        bridge.checkHealth().then(result => {
+          if (result.status !== 'healthy') {
+            console.error('Health check failed:', result);
+            process.exit(1);
+          }
+          console.log('Bridge test passed');
+        }).catch(err => {
+          console.error('Bridge test failed:', err);
+          process.exit(1);
+        });
+        "
+    
+    - name: Check for common bugs
+      run: |
+        # Check for hardcoded status codes
+        if grep -q "statusCode === 201" examples/http-mcp-bridge.js; then
+          echo "WARNING: Found hardcoded 201 status check - server returns 200!"
+        fi
+        
+        # Check for correct health endpoint
+        if ! grep -q "/api/health" examples/http-mcp-bridge.js; then
+          echo "ERROR: Health endpoint should be /api/health"
+          exit 1
+        fi
+        
+        # Check URL construction
+        if grep -q "new URL(path, this.endpoint)" examples/http-mcp-bridge.js; then
+          echo "WARNING: URL construction may have issues with base paths"
+        fi
+
+  contract-validation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Validate API contracts
+      run: |
+        # Check that mock responses match documented API
+        node -e "
+        const mocks = require('./tests/bridge/mock_responses.js');
+        
+        // Validate critical response formats
+        const memorySuccess = mocks.mockResponses.memories.createSuccess;
+        if (memorySuccess.status !== 200) {
+          console.error('ERROR: Memory creation should return 200, not', memorySuccess.status);
+          process.exit(1);
+        }
+        
+        if (!memorySuccess.body.hasOwnProperty('success')) {
+          console.error('ERROR: Memory response must have success field');
+          process.exit(1);
+        }
+        
+        console.log('API contract validation passed');
+        "
+    
+    - name: Generate contract report
+      run: |
+        echo "# API Contract Report" > contract-report.md
+        echo "Generated: $(date)" >> contract-report.md
+        echo "" >> contract-report.md
+        echo "## Critical Endpoints" >> contract-report.md
+        echo "- POST /api/memories: Returns 200 with success field" >> contract-report.md
+        echo "- GET /api/health: Returns 200 with status field" >> contract-report.md
+        echo "- GET /api/search: Returns 200 with results array" >> contract-report.md
+    
+    - name: Upload contract report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: api-contract-report
+        path: contract-report.md
