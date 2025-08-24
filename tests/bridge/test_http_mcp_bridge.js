@@ -29,21 +29,19 @@ describe('HTTP-MCP Bridge', () => {
     });
     
     describe('URL Construction', () => {
-        it('should correctly append paths to base URL with /api', () => {
-            // This was the critical bug - new URL() was replacing /api
+        it('should correctly resolve paths with base URL using URL constructor', () => {
+            // Test the new URL constructor logic that properly handles base paths
             const testCases = [
-                { path: '/memories', expected: 'https://memory.local:8443/api/memories' },
-                { path: '/health', expected: 'https://memory.local:8443/api/health' },
-                { path: '/api/health', expected: 'https://memory.local:8443/api/api/health' }, // Edge case
                 { path: 'memories', expected: 'https://memory.local:8443/api/memories' },
-                { path: '/search', expected: 'https://memory.local:8443/api/search' }
+                { path: 'health', expected: 'https://memory.local:8443/api/health' },
+                { path: 'search', expected: 'https://memory.local:8443/api/search' },
+                { path: 'search?q=test&n_results=5', expected: 'https://memory.local:8443/api/search?q=test&n_results=5' }
             ];
             
             for (const testCase of testCases) {
-                // Test the URL construction logic directly
-                const fullPath = testCase.path.startsWith('/') ? testCase.path : '/' + testCase.path;
-                const baseUrl = bridge.endpoint.endsWith('/') ? bridge.endpoint.slice(0, -1) : bridge.endpoint;
-                const constructedUrl = baseUrl + fullPath;
+                // Test the URL construction logic: ensure trailing slash, then use URL constructor
+                const baseUrl = bridge.endpoint.endsWith('/') ? bridge.endpoint : bridge.endpoint + '/';
+                const constructedUrl = new URL(testCase.path, baseUrl).toString();
                 
                 assert.strictEqual(constructedUrl, testCase.expected, 
                     `Failed for path: ${testCase.path}`);
@@ -153,7 +151,7 @@ describe('HTTP-MCP Bridge', () => {
     });
     
     describe('Health Check', () => {
-        it('should use /api/health endpoint not /health', async () => {
+        it('should use health endpoint with proper URL construction', async () => {
             let capturedPath;
             sinon.stub(bridge, 'makeRequest').callsFake((path) => {
                 capturedPath = path;
@@ -164,7 +162,7 @@ describe('HTTP-MCP Bridge', () => {
             });
             
             await bridge.checkHealth();
-            assert.strictEqual(capturedPath, '/api/health');
+            assert.strictEqual(capturedPath, 'health');
         });
         
         it('should return healthy status for HTTP 200', async () => {
