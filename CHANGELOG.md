@@ -4,6 +4,23 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.6.3] - 2025-08-24
+
+### 🔧 **CI/CD Infrastructure Improvements**
+
+#### GitHub Actions Workflow Fixes
+- **Fixed npm dependency management**: Created proper `package.json` files for test directories
+- **Simplified YAML structure**: Replaced complex multi-line scripts with focused single-step commands
+- **Improved error reporting**: Split validation steps for clearer failure identification
+- **Fixed false positives**: Updated status code validation to avoid flagging legitimate 200/201 handling
+- **Enhanced reliability**: Used `working-directory` instead of embedded `cd` commands
+- **Impact**: GitHub Actions CI/CD now properly installs dependencies and validates bridge fixes
+
+#### Test Infrastructure Enhancements
+- **Added dedicated test packages**: Separate `package.json` for bridge and integration tests
+- **Improved module resolution**: Confirmed correct relative path handling in test files
+- **Better validation coverage**: Enhanced API contract and smoke test verification
+
 ## [6.6.2] - 2025-08-24
 
 ### 🐛 **Critical Bug Fixes**
