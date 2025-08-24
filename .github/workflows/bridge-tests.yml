@@ -132,12 +132,18 @@ jobs:
         "
     
     - name: Test URL construction
-      run: node -e "
+      run: |
+        node -e "
         const Bridge = require('./examples/http-mcp-bridge.js');
         const bridge = new Bridge();
         bridge.endpoint = 'https://test.local:8443/api';
         const fullPath = '/memories';
-        const baseUrl = bridge.endpoint.endsWith('/') ? bridge.endpoint.slice(0, -1) : bridge.endpoint;
+        let baseUrl;
+        if (bridge.endpoint.endsWith('/')) {
+          baseUrl = bridge.endpoint.slice(0, -1);
+        } else {
+          baseUrl = bridge.endpoint;
+        }
         if (baseUrl + fullPath !== 'https://test.local:8443/api/memories') {
           throw new Error('URL construction test failed');
         }
