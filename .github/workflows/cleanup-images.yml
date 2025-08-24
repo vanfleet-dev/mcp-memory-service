@@ -3,7 +3,7 @@ name: Cleanup Old Docker Images
 on:
   # Run after successful releases
   workflow_run:
-    workflows: ["Release (Tags) - Optimized", "Main CI/CD Pipeline - Optimized"]
+    workflows: ["Main CI/CD Pipeline", "Docker Publish (Tags)", "Publish and Test (Tags)"]
     types:
       - completed
   
@@ -49,7 +49,8 @@ jobs:
     
     - name: Delete untagged images from GHCR
       if: github.event.inputs.delete_untagged != 'false'
-      uses: actions/delete-package-versions@v5
+      uses: actions/delete-package-versions@v4
+      continue-on-error: true
       with:
         package-name: 'mcp-memory-service'
         package-type: 'container'
@@ -58,7 +59,8 @@ jobs:
         delete-only-untagged-versions: 'true'
     
     - name: Clean old GHCR versions (keep last N)
-      uses: actions/delete-package-versions@v5
+      uses: actions/delete-package-versions@v4
+      continue-on-error: true
       with:
         package-name: 'mcp-memory-service'
         package-type: 'container'
@@ -68,12 +70,12 @@ jobs:
         delete-only-pre-release-versions: 'false'
     
     - name: Clean buildcache tags older than 7 days
-      uses: snok/container-retention-policy@v2
+      uses: snok/container-retention-policy@v1
+      continue-on-error: true
       with:
         image-names: mcp-memory-service
         cut-off: 7 days ago UTC
-        account-type: org
-        org-name: doobidoo
+        account-type: personal
         token: ${{ secrets.GITHUB_TOKEN }}
         filter-tags: 'buildcache-*'
         filter-include-untagged: false
@@ -99,6 +101,16 @@ jobs:
     - name: Install dependencies
       run: |
         pip install requests python-dateutil
+    
+    - name: Validate Docker Hub credentials
+      run: |
+        if [ -z "${{ secrets.DOCKER_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+          echo "⚠️  Docker Hub credentials not available, skipping Docker Hub cleanup"
+          echo "SKIP_DOCKER_CLEANUP=true" >> $GITHUB_ENV
+        else
+          echo "✓ Docker Hub credentials available"
+          echo "SKIP_DOCKER_CLEANUP=false" >> $GITHUB_ENV
+        fi
     
     - name: Create cleanup script
       run: |
@@ -315,6 +327,7 @@ jobs:
         EOF
     
     - name: Run Docker Hub cleanup
+      if: env.SKIP_DOCKER_CLEANUP != 'true'
       env:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -323,6 +336,10 @@ jobs:
         KEEP_VERSIONS: ${{ github.event.inputs.keep_versions || '5' }}
         DAYS_TO_KEEP: '30'
       run: python cleanup_docker_hub.py
+    
+    - name: Docker Hub cleanup skipped
+      if: env.SKIP_DOCKER_CLEANUP == 'true'
+      run: echo "⚠️ Docker Hub cleanup was skipped due to missing credentials"
 
   # Report cleanup results
   report:

@@ -221,12 +221,21 @@ jobs:
       with:
         driver: docker-container
 
-    - name: Log in to registry
+    - name: Log in to Docker Hub
+      if: matrix.registry == 'docker.io' && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != ''
       uses: docker/login-action@v3
       with:
-        registry: ${{ matrix.registry }}
-        username: ${{ matrix.username_secret == '_github_actor' && github.actor || secrets[matrix.username_secret] }}
-        password: ${{ secrets[matrix.password_secret] }}
+        registry: docker.io
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Log in to GitHub Container Registry
+      if: matrix.registry == 'ghcr.io'
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Extract metadata
       id: meta
@@ -240,6 +249,7 @@ jobs:
           type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.tag }}
 
     - name: Build and push Docker image
+      if: matrix.registry == 'ghcr.io' || (matrix.registry == 'docker.io' && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '')
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -256,3 +266,7 @@ jobs:
         build-args: |
           SKIP_MODEL_DOWNLOAD=true
           BUILDKIT_INLINE_CACHE=1
+    
+    - name: Docker Hub push skipped
+      if: matrix.registry == 'docker.io' && (secrets.DOCKER_USERNAME == '' || secrets.DOCKER_PASSWORD == '')
+      run: echo "⚠️ Docker Hub push skipped due to missing credentials"
