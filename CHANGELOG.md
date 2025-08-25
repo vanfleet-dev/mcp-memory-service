@@ -4,6 +4,26 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.10.0] - 2025-08-25
+
+### ✨ **New Features**
+
+#### Markdown-to-ANSI Conversion for Clean CLI Output
+- **Automatic Markdown Processing**: Memory content with markdown formatting is now automatically converted to ANSI colors
+  - **Headers**: `## Header` → Bold Cyan, `### Subheader` → Bold for visual hierarchy
+  - **Emphasis**: `**bold**` → Bold, `*italic*` → Dim for text emphasis
+  - **Code**: `` `inline code` `` → Gray, code blocks properly formatted with gray text
+  - **Lists**: Markdown bullets (`-`, `*`) → Cyan bullet points (`•`), numbered lists → Cyan arrows (`›`)
+  - **Links**: `[text](url)` → Cyan text without URL clutter
+  - **Blockquotes**: `> quote` → Dimmed with visual indicator (`│`)
+  - **Impact**: Raw markdown syntax no longer appears in CLI output, providing clean and professional display
+
+#### Smart Content Processing
+- **Environment-Aware**: Automatically detects CLI environment and applies appropriate formatting
+- **Configuration Option**: Can be disabled via `CLAUDE_MARKDOWN_TO_ANSI=false` environment variable
+- **Strip-Only Mode**: Option to remove markdown without adding ANSI colors for plain text output
+- **Performance**: Minimal overhead (<5ms) with single-pass regex transformation
+
 ## [6.9.0] - 2025-08-25
 
 ### ✨ **New Features**
