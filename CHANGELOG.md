@@ -4,6 +4,35 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.9.0] - 2025-08-25
+
+### ✨ **New Features**
+
+#### Enhanced Claude Code Hook Visual Output
+- **Professional CLI Formatting**: Completely redesigned hook output with ANSI color coding and clean typography
+  - **ANSI Color Support**: Full color coding with cyan, green, blue, yellow, gray, and red for different components
+  - **Clean Typography**: Removed all markdown syntax (`**`, `#`, `##`) and HTML-like tags from CLI output
+  - **Consistent Visual Pattern**: Standardized `icon component → description` format throughout all hook messages
+  - **Unicode Box Drawing**: Enhanced use of `┌─`, `├─`, `└─`, and `│` characters for better visual structure
+  - **Impact**: Hook output now looks professional and readable in Claude Code terminal sessions
+
+#### Color-Coded Memory Content
+- **Type-Based Coloring**: Different colors for memory types (decisions=yellow, insights=magenta, bugs=green, features=blue)
+- **Visual Hierarchy**: Important information highlighted with bright colors, metadata dimmed with gray
+- **Date Formatting**: Consistent gray coloring for dates and timestamps
+- **Category Icons**: Enhanced category display with colored section headers
+
+#### Improved Console Logging
+- **Structured Messages**: All console output now follows consistent visual patterns
+- **Progress Indicators**: Clear visual feedback for memory search, scoring, and processing steps
+- **Error Handling**: Enhanced error messages with proper color coding and clear descriptions
+- **Success Confirmation**: Prominent success indicators with checkmarks and summary information
+
+#### Enhanced Project Detection
+- **Confidence Visualization**: Color-coded confidence scores (green >80%, yellow >60%, gray <60%)
+- **Clean Project Info**: Streamlined project detection output with proper visual hierarchy
+- **Technology Stack Display**: Clear formatting for detected languages, frameworks, and tools
+
 ## [6.8.0] - 2025-08-25
 
 ### ✨ **New Features**

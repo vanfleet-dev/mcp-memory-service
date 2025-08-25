@@ -238,7 +238,7 @@ async function onSessionStart(context) {
  */
 module.exports = {
     name: 'memory-awareness-session-start',
-    version: '2.0.0',
+    version: '2.1.0',
     description: 'Automatically inject relevant memories at session start',
     trigger: 'session-start',
     handler: onSessionStart,
