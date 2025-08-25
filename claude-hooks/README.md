@@ -17,13 +17,19 @@ This installs hooks that automatically:
 
 ## Components
 
-- **Core Hooks**: `session-start.js` (v2.0), `session-end.js`, `memory-retrieval.js` - Smart memory management
-- **Utilities**: Project detection, quality-aware scoring, intelligent formatting, context shift detection
+- **Core Hooks**: `session-start.js` (Hook v2.2), `session-end.js`, `memory-retrieval.js` - Smart memory management
+- **Utilities**: Project detection, quality-aware scoring, intelligent formatting, context shift detection  
 - **Tests**: Comprehensive integration test suite (14 tests)
 
 ## Features
 
-### ✨ **NEW in v6.7.0**: Smart Memory Context
+### ✨ **NEW in Hook v2.2.0**: Enhanced Output Control
+- **Clean Output Mode**: Configurable verbosity levels for minimal or detailed output
+- **Smart Filtering**: Hide memory scoring details while keeping essential information
+- **Professional UX**: Removed noisy wrapper tags and improved ANSI formatting
+- **Granular Control**: Fine-tune what information is displayed during hook execution
+
+### 🧠 **Previous Features (Project v6.7.0)**: Smart Memory Context  
 - **Quality Content Extraction**: Extracts actual decisions/insights from session summaries instead of "implementation..." fluff
 - **Duplicate Filtering**: Automatically removes repetitive session summaries
 - **Smart Timing**: Only injects memories when contextually appropriate (no more mid-session disruptions)
@@ -79,7 +85,26 @@ Edit `~/.claude/hooks/config.json`:
 }
 ```
 
-### ⚙️ **New Configuration Options (v6.7.0)**
+### ⚙️ **Output Verbosity Control (Hook v2.2.0)**
+```json
+{
+  "output": {
+    "verbose": true,           // Show hook activity messages
+    "showMemoryDetails": false, // Hide detailed memory scoring
+    "showProjectDetails": true, // Show project detection info
+    "showScoringDetails": false,// Hide scoring breakdowns
+    "cleanMode": false         // Ultra-minimal output mode
+  }
+}
+```
+
+**Verbosity Levels**:
+- **Normal** (`verbose: true`, others `false`): Shows essential information only
+- **Detailed** (`showMemoryDetails: true`): Include memory scoring details  
+- **Clean** (`cleanMode: true`): Minimal output, only success/error messages
+- **Silent** (`verbose: false`): Hook works silently in background
+
+### ⚙️ **Previous Configuration Options (Project v6.7.0)**
 - `injectAfterCompacting`: Controls whether to inject memories after compacting events (default: `false`)
 - `contentQuality`: New scoring weight for content quality assessment (filters generic summaries)
 - Enhanced memory filtering automatically removes "implementation..." fluff
@@ -104,6 +129,36 @@ Once installed, hooks work automatically:
 claude --debug hooks  # Shows hook execution details
 node ~/.claude/hooks/core/session-start.js  # Test individual hooks
 ```
+
+## Changelog
+
+### Hook v2.2.0 (2025-01-25) - Enhanced Output Control
+**🎯 Focus**: Professional UX and configurable verbosity
+
+**New Features**:
+- **Output Verbosity Control**: Granular configuration for hook output levels
+- **Clean Mode**: Ultra-minimal output option for distraction-free usage
+- **Smart Filtering**: Hide memory scoring details while preserving essential information
+
+**Improvements**:
+- **Removed Noise**: Eliminated `<session-start-hook>` wrapper tags and verbose logging
+- **Enhanced ANSI**: Improved color consistency and formatting throughout
+- **Better Defaults**: Less verbose output by default while maintaining functionality
+
+**Configuration**:
+- Added `output` section with `verbose`, `showMemoryDetails`, `showProjectDetails`, `cleanMode` options
+- Backwards compatible - existing configurations work without changes
+- Self-documenting configuration with clear field names
+
+### Hook v2.1.0 - Smart Memory Integration
+- Advanced memory scoring and quality assessment
+- Enhanced context injection with deduplication
+- Improved project detection and context awareness
+
+### Project v6.7.0 - Smart Memory Context
+- Quality content extraction and duplicate filtering
+- Smart timing and context shift detection
+- On-demand memory retrieval capabilities
 
 ## Documentation
 

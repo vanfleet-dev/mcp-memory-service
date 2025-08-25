@@ -36,6 +36,13 @@ async function loadConfig() {
                 packageFiles: ['package.json', 'pyproject.toml', 'Cargo.toml'],
                 frameworkDetection: true,
                 languageDetection: true
+            },
+            output: {
+                verbose: true, // Default to verbose for backward compatibility
+                showMemoryDetails: false, // Hide detailed memory scoring by default
+                showProjectDetails: true, // Show project detection by default
+                showScoringDetails: false, // Hide detailed scoring breakdown
+                cleanMode: false // Default to normal output
             }
         };
     }
@@ -120,23 +127,42 @@ async function queryMemoryService(endpoint, apiKey, query) {
     });
 }
 
+// ANSI Colors for console output
+const CONSOLE_COLORS = {
+    RESET: '\x1b[0m',
+    BRIGHT: '\x1b[1m',
+    DIM: '\x1b[2m',
+    CYAN: '\x1b[36m',
+    GREEN: '\x1b[32m',
+    BLUE: '\x1b[34m',
+    YELLOW: '\x1b[33m',
+    GRAY: '\x1b[90m',
+    RED: '\x1b[31m'
+};
+
 /**
- * Main session start hook function with smart timing
+ * Main session start hook function with enhanced visual output
  */
 async function onSessionStart(context) {
     try {
-        console.log('[Memory Hook] Session starting - initializing memory awareness...');
-        
-        // Load configuration
+        // Load configuration first to check verbosity settings
         const config = await loadConfig();
+        const verbose = config.output?.verbose !== false; // Default to true
+        const cleanMode = config.output?.cleanMode === true; // Default to false
+        const showMemoryDetails = config.output?.showMemoryDetails === true;
+        const showProjectDetails = config.output?.showProjectDetails !== false; // Default to true
+        
+        if (verbose && !cleanMode) {
+            console.log(`${CONSOLE_COLORS.CYAN}🧠 Memory Hook${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Initializing session awareness...`);
+        }
         
         // Check if this is triggered by a compacting event and skip if configured to do so
         if (context.trigger === 'compacting' || context.event === 'memory-compacted') {
             if (!config.memoryService.injectAfterCompacting) {
-                console.log('[Memory Hook] Skipping memory injection after compacting (disabled in config)');
+                console.log(`${CONSOLE_COLORS.YELLOW}⏸️  Memory Hook${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Skipping injection after compacting`);
                 return;
             }
-            console.log('[Memory Hook] Proceeding with memory injection after compacting (enabled in config)');
+            console.log(`${CONSOLE_COLORS.GREEN}▶️  Memory Hook${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Proceeding with injection after compacting`);
         }
         
         // For non-session-start events, use smart timing to decide if refresh is needed
@@ -148,17 +174,19 @@ async function onSessionStart(context) {
                 const shiftDetection = detectContextShift(currentContext, previousContext);
                 
                 if (!shiftDetection.shouldRefresh) {
-                    console.log(`[Memory Hook] No significant context shift detected (${shiftDetection.reason}), skipping refresh`);
+                    console.log(`${CONSOLE_COLORS.GRAY}⏸️  Memory Hook${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.GRAY}No context shift detected, skipping${CONSOLE_COLORS.RESET}`);
                     return;
                 }
                 
-                console.log(`[Memory Hook] Context shift detected: ${shiftDetection.description}`);
+                console.log(`${CONSOLE_COLORS.BLUE}🔄 Memory Hook${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Context shift: ${shiftDetection.description}`);
             }
         }
         
         // Detect project context
         const projectContext = await detectProjectContext(context.workingDirectory || process.cwd());
-        console.log(`[Memory Hook] Detected project: ${projectContext.name} (${projectContext.language})`);
+        if (verbose && showProjectDetails && !cleanMode) {
+            console.log(`${CONSOLE_COLORS.BLUE}📂 Project${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.BRIGHT}${projectContext.name}${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.GRAY}(${projectContext.language})${CONSOLE_COLORS.RESET}`);
+        }
         
         // Build query for relevant memories
         const memoryQuery = {
@@ -185,10 +213,18 @@ async function onSessionStart(context) {
         );
         
         if (memories.length > 0) {
-            console.log(`[Memory Hook] Found ${memories.length} relevant memories`);
+            if (verbose && showMemoryDetails && !cleanMode) {
+                console.log(`${CONSOLE_COLORS.GREEN}📚 Memory Search${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Found ${CONSOLE_COLORS.BRIGHT}${memories.length}${CONSOLE_COLORS.RESET} relevant memories`);
+            }
             
             // Score memories for relevance
-            const scoredMemories = scoreMemoryRelevance(memories, projectContext);
+            const scoredMemories = scoreMemoryRelevance(memories, projectContext, { verbose: showMemoryDetails });
+            
+            // Show top scoring memories briefly
+            if (verbose && showMemoryDetails && scoredMemories.length > 0 && !cleanMode) {
+                const topScores = scoredMemories.slice(0, 3).map(m => `${(m.relevanceScore * 100).toFixed(0)}%`).join(', ');
+                console.log(`${CONSOLE_COLORS.CYAN}🎯 Scoring${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Top relevance: ${CONSOLE_COLORS.YELLOW}${topScores}${CONSOLE_COLORS.RESET}`);
+            }
             
             // Determine refresh strategy based on context
             const strategy = context.trigger && context.previousContext ? 
@@ -205,6 +241,11 @@ async function onSessionStart(context) {
             const maxMemories = Math.min(strategy.maxMemories || config.memoryService.maxMemoriesPerSession, scoredMemories.length);
             const topMemories = scoredMemories.slice(0, maxMemories);
             
+            // Show deduplication info
+            if (verbose && showMemoryDetails && !cleanMode) {
+                console.log(`${CONSOLE_COLORS.CYAN}🔄 Processing${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} ${maxMemories} memories selected`);
+            }
+            
             // Format memories for context injection with strategy-based options
             const contextMessage = formatMemoriesForContext(topMemories, projectContext, {
                 includeScore: strategy.includeScore || false,
@@ -216,19 +257,23 @@ async function onSessionStart(context) {
             // Inject context into session
             if (context.injectSystemMessage) {
                 await context.injectSystemMessage(contextMessage);
-                console.log(`[Memory Hook] Successfully injected memory context (${maxMemories} memories)`);
-            } else {
-                // Fallback: log context for manual copying
-                console.log('\n=== MEMORY CONTEXT FOR SESSION ===');
+                if (!cleanMode) {
+                    console.log(`${CONSOLE_COLORS.GREEN}✅ Memory Hook${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Context injected ${CONSOLE_COLORS.GRAY}(${maxMemories} memories)${CONSOLE_COLORS.RESET}`);
+                }
+            } else if (verbose && !cleanMode) {
+                // Fallback: log context for manual copying with styling
+                console.log(`\n${CONSOLE_COLORS.CYAN}╭──────────────────────────────────────────╮${CONSOLE_COLORS.RESET}`);
+                console.log(`${CONSOLE_COLORS.CYAN}│${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.BRIGHT}Memory Context for Manual Copy${CONSOLE_COLORS.RESET}          ${CONSOLE_COLORS.CYAN}│${CONSOLE_COLORS.RESET}`);
+                console.log(`${CONSOLE_COLORS.CYAN}╰──────────────────────────────────────────╯${CONSOLE_COLORS.RESET}`);
                 console.log(contextMessage);
-                console.log('=== END MEMORY CONTEXT ===\n');
+                console.log(`${CONSOLE_COLORS.CYAN}╰──────────────────────────────────────────╯${CONSOLE_COLORS.RESET}\n`);
             }
-        } else {
-            console.log('[Memory Hook] No relevant memories found for this project');
+        } else if (verbose && showMemoryDetails && !cleanMode) {
+            console.log(`${CONSOLE_COLORS.YELLOW}📭 Memory Search${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.GRAY}No relevant memories found${CONSOLE_COLORS.RESET}`);
         }
         
     } catch (error) {
-        console.error('[Memory Hook] Error in session start:', error.message);
+        console.error(`${CONSOLE_COLORS.RED}❌ Memory Hook Error${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} ${error.message}`);
         // Fail gracefully - don't prevent session from starting
     }
 }
@@ -238,8 +283,8 @@ async function onSessionStart(context) {
  */
 module.exports = {
     name: 'memory-awareness-session-start',
-    version: '2.1.0',
-    description: 'Automatically inject relevant memories at session start',
+    version: '2.2.0',
+    description: 'Automatically inject relevant memories at session start with enhanced output control',
     trigger: 'session-start',
     handler: onSessionStart,
     config: {
@@ -256,13 +301,21 @@ if (require.main === module) {
         workingDirectory: process.cwd(),
         sessionId: 'test-session',
         injectSystemMessage: async (message) => {
-            console.log('=== INJECTED MESSAGE ===');
+            const lines = message.split('\n');
+            const maxLength = Math.min(80, Math.max(25, ...lines.map(l => l.length)));
+            const border = '─'.repeat(maxLength - 2);
+            
+            console.log(`\n${CONSOLE_COLORS.CYAN}╭─${border}─╮${CONSOLE_COLORS.RESET}`);
+            console.log(`${CONSOLE_COLORS.CYAN}│${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.BRIGHT}🧠 Injected Memory Context${CONSOLE_COLORS.RESET}${' '.repeat(maxLength - 27)} ${CONSOLE_COLORS.CYAN}│${CONSOLE_COLORS.RESET}`);
+            console.log(`${CONSOLE_COLORS.CYAN}╰─${border}─╯${CONSOLE_COLORS.RESET}`);
             console.log(message);
-            console.log('=== END INJECTION ===');
+            console.log(`${CONSOLE_COLORS.CYAN}╰─${border}─╯${CONSOLE_COLORS.RESET}`);
         }
     };
     
     onSessionStart(mockContext)
-        .then(() => console.log('Hook test completed'))
-        .catch(error => console.error('Hook test failed:', error));
+        .then(() => {
+            // Test completed quietly
+        })
+        .catch(error => console.error(`${CONSOLE_COLORS.RED}❌ Hook test failed:${CONSOLE_COLORS.RESET} ${error.message}`));
 }

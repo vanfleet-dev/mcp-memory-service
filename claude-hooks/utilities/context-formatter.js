@@ -4,12 +4,325 @@
  */
 
 /**
+ * Detect if running in Claude Code CLI environment
+ */
+function isCLIEnvironment() {
+    // Check for Claude Code specific environment indicators
+    return process.env.CLAUDE_CODE_CLI === 'true' || 
+           process.env.TERM_PROGRAM === 'claude-code' ||
+           process.argv.some(arg => arg.includes('claude')) ||
+           (process.stdout.isTTY === false); // Explicitly check for non-TTY contexts
+}
+
+/**
+ * ANSI Color codes for CLI formatting
+ */
+const COLORS = {
+    RESET: '\x1b[0m',
+    BRIGHT: '\x1b[1m',
+    DIM: '\x1b[2m',
+    CYAN: '\x1b[36m',
+    GREEN: '\x1b[32m',
+    BLUE: '\x1b[34m',
+    YELLOW: '\x1b[33m',
+    MAGENTA: '\x1b[35m',
+    GRAY: '\x1b[90m'
+};
+
+/**
+ * Convert markdown formatting to ANSI color codes for terminal display
+ * Provides clean, formatted output without raw markdown syntax
+ */
+function convertMarkdownToANSI(text, options = {}) {
+    const {
+        stripOnly = false,  // If true, only strip markdown without adding ANSI
+        preserveStructure = true  // If true, maintain line breaks and spacing
+    } = options;
+    
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+    
+    // Check if markdown conversion is disabled via environment
+    if (process.env.CLAUDE_MARKDOWN_TO_ANSI === 'false') {
+        return text;
+    }
+    
+    let processed = text;
+    
+    // Process headers (must be done before other replacements)
+    // H1: # Header -> Bold Cyan
+    processed = processed.replace(/^#\s+(.+)$/gm, (match, content) => {
+        return stripOnly ? content : `${COLORS.BRIGHT}${COLORS.CYAN}${content}${COLORS.RESET}`;
+    });
+    
+    // H2: ## Header -> Bold Cyan (slightly different from H1 in real terminal apps)
+    processed = processed.replace(/^##\s+(.+)$/gm, (match, content) => {
+        return stripOnly ? content : `${COLORS.BRIGHT}${COLORS.CYAN}${content}${COLORS.RESET}`;
+    });
+    
+    // H3: ### Header -> Bold
+    processed = processed.replace(/^###\s+(.+)$/gm, (match, content) => {
+        return stripOnly ? content : `${COLORS.BRIGHT}${content}${COLORS.RESET}`;
+    });
+    
+    // H4-H6: #### Header -> Bold (but could be differentiated if needed)
+    processed = processed.replace(/^#{4,6}\s+(.+)$/gm, (match, content) => {
+        return stripOnly ? content : `${COLORS.BRIGHT}${content}${COLORS.RESET}`;
+    });
+    
+    // Bold text: **text** or __text__
+    processed = processed.replace(/\*\*([^*]+)\*\*/g, (match, content) => {
+        return stripOnly ? content : `${COLORS.BRIGHT}${content}${COLORS.RESET}`;
+    });
+    processed = processed.replace(/__([^_]+)__/g, (match, content) => {
+        return stripOnly ? content : `${COLORS.BRIGHT}${content}${COLORS.RESET}`;
+    });
+    
+    // Code blocks MUST be processed before inline code to avoid conflicts
+    // Code blocks: ```language\ncode\n```
+    processed = processed.replace(/```(\w*)\n?([\s\S]*?)```/g, (match, lang, content) => {
+        if (stripOnly) {
+            return content.trim();
+        }
+        const lines = content.trim().split('\n').map(line => 
+            `${COLORS.GRAY}${line}${COLORS.RESET}`
+        );
+        return lines.join('\n');
+    });
+    
+    // Italic text: *text* or _text_ (avoiding URLs and bold syntax)
+    // More conservative pattern to avoid matching within URLs
+    processed = processed.replace(/(?<!\*)\*(?!\*)([^*\n]+)(?<!\*)\*(?!\*)/g, (match, content) => {
+        return stripOnly ? content : `${COLORS.DIM}${content}${COLORS.RESET}`;
+    });
+    processed = processed.replace(/(?<!_)_(?!_)([^_\n]+)(?<!_)_(?!_)/g, (match, content) => {
+        return stripOnly ? content : `${COLORS.DIM}${content}${COLORS.RESET}`;
+    });
+    
+    // Inline code: `code` (after code blocks to avoid matching backticks in blocks)
+    processed = processed.replace(/`([^`]+)`/g, (match, content) => {
+        return stripOnly ? content : `${COLORS.GRAY}${content}${COLORS.RESET}`;
+    });
+    
+    // Lists: Convert markdown bullets to better symbols
+    // Unordered lists: - item or * item
+    processed = processed.replace(/^[\s]*[-*]\s+(.+)$/gm, (match, content) => {
+        return stripOnly ? content : `  ${COLORS.CYAN}•${COLORS.RESET} ${content}`;
+    });
+    
+    // Ordered lists: 1. item
+    processed = processed.replace(/^[\s]*\d+\.\s+(.+)$/gm, (match, content) => {
+        return stripOnly ? content : `  ${COLORS.CYAN}›${COLORS.RESET} ${content}`;
+    });
+    
+    // Links: [text](url) - process before blockquotes so links in quotes work
+    processed = processed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+        return stripOnly ? text : `${COLORS.CYAN}${text}${COLORS.RESET}`;
+    });
+    
+    // Blockquotes: > quote
+    processed = processed.replace(/^>\s+(.+)$/gm, (match, content) => {
+        return stripOnly ? content : `${COLORS.DIM}│ ${content}${COLORS.RESET}`;
+    });
+    
+    // Horizontal rules: --- or *** or ___
+    processed = processed.replace(/^[-*_]{3,}$/gm, () => {
+        return stripOnly ? '' : `${COLORS.DIM}${'─'.repeat(40)}${COLORS.RESET}`;
+    });
+    
+    // Clean up any double resets or color artifacts
+    processed = processed.replace(/(\x1b\[0m)+/g, COLORS.RESET);
+    
+    return processed;
+}
+
+/**
+ * Format memories for CLI environment with enhanced visual formatting
+ */
+function formatMemoriesForCLI(memories, projectContext, options = {}) {
+    const {
+        includeProjectSummary = true,
+        maxMemories = 8,
+        includeTimestamp = true
+    } = options;
+
+    if (!memories || memories.length === 0) {
+        return `${COLORS.CYAN}┌─${COLORS.RESET} 🧠 Memory Context\n${COLORS.CYAN}└─${COLORS.RESET} No relevant memories found for this session.\n`;
+    }
+
+    // Filter out null/generic memories and limit number
+    const validMemories = [];
+    let memoryIndex = 0;
+    
+    for (const memory of memories) {
+        if (validMemories.length >= maxMemories) break;
+        
+        const formatted = formatMemoryForCLI(memory, memoryIndex, {
+            maxContentLength: 180,
+            includeDate: includeTimestamp
+        });
+        
+        if (formatted) {
+            validMemories.push({ memory, formatted });
+            memoryIndex++;
+        }
+    }
+
+    let contextMessage = `${COLORS.CYAN}┌─${COLORS.RESET} 🧠 ${COLORS.BRIGHT}Memory Context${COLORS.RESET}`;
+    
+    // Add project summary in enhanced CLI format
+    if (includeProjectSummary && projectContext) {
+        const { name, frameworks, tools, branch, lastCommit } = projectContext;
+        const projectInfo = [];
+        if (name) projectInfo.push(name);
+        if (frameworks?.length) projectInfo.push(frameworks.join(', '));
+        if (tools?.length) projectInfo.push(tools.join(', '));
+        
+        contextMessage += ` ${COLORS.DIM}→${COLORS.RESET} ${COLORS.BLUE}${projectInfo.join(', ')}${COLORS.RESET}\n`;
+        contextMessage += `${COLORS.CYAN}│${COLORS.RESET}\n`;
+        
+        if (branch || lastCommit) {
+            const gitInfo = [];
+            if (branch) gitInfo.push(`${COLORS.GREEN}${branch}${COLORS.RESET}`);
+            if (lastCommit) gitInfo.push(`${COLORS.GRAY}${lastCommit.substring(0, 7)}${COLORS.RESET}`);
+            contextMessage += `${COLORS.CYAN}├─${COLORS.RESET} 📂 ${gitInfo.join(' • ')}\n`;
+        }
+    } else {
+        contextMessage += '\n';
+        contextMessage += `${COLORS.CYAN}│${COLORS.RESET}\n`;
+    }
+    
+    contextMessage += `${COLORS.CYAN}├─${COLORS.RESET} 📚 ${COLORS.BRIGHT}${validMemories.length} memories loaded${COLORS.RESET}\n`;
+    contextMessage += `${COLORS.CYAN}│${COLORS.RESET}\n`;
+    
+    if (validMemories.length > 3) {
+        // Group by category with enhanced formatting
+        const categories = groupMemoriesByCategory(validMemories.map(v => v.memory));
+        
+        const categoryInfo = {
+            decisions: { title: 'Architecture & Design', icon: '🏗️', color: COLORS.YELLOW },
+            architecture: { title: 'Architecture & Design', icon: '🏗️', color: COLORS.YELLOW }, 
+            insights: { title: 'Key Insights', icon: '💡', color: COLORS.MAGENTA },
+            bugs: { title: 'Bug Fixes', icon: '🐛', color: COLORS.GREEN },
+            features: { title: 'Features', icon: '✨', color: COLORS.BLUE },
+            other: { title: 'Context', icon: '📝', color: COLORS.GRAY }
+        };
+        
+        let hasContent = false;
+        let categoryCount = 0;
+        const totalCategories = Object.values(categories).filter(cat => cat.length > 0).length;
+        
+        Object.entries(categories).forEach(([category, categoryMemories]) => {
+            if (categoryMemories.length > 0) {
+                categoryCount++;
+                const isLast = categoryCount === totalCategories;
+                const categoryIcon = categoryInfo[category]?.icon || '📝';
+                const categoryTitle = categoryInfo[category]?.title || 'Context';
+                const categoryColor = categoryInfo[category]?.color || COLORS.GRAY;
+                
+                contextMessage += `${COLORS.CYAN}${isLast ? '└─' : '├─'}${COLORS.RESET} ${categoryIcon} ${categoryColor}${categoryTitle}${COLORS.RESET}:\n`;
+                hasContent = true;
+                
+                categoryMemories.forEach((memory, idx) => {
+                    const formatted = formatMemoryForCLI(memory, 0, {
+                        maxContentLength: 160,
+                        includeDate: includeTimestamp,
+                        indent: true
+                    });
+                    if (formatted) {
+                        const isLastMemory = idx === categoryMemories.length - 1;
+                        const connector = isLast ? ' ' : `${COLORS.CYAN}│${COLORS.RESET}`;
+                        const prefix = isLastMemory 
+                            ? `${connector}  ${COLORS.CYAN}└─${COLORS.RESET} ` 
+                            : `${connector}  ${COLORS.CYAN}├─${COLORS.RESET} `;
+                        contextMessage += `${prefix}${formatted}\n`;
+                    }
+                });
+                if (!isLast) contextMessage += `${COLORS.CYAN}│${COLORS.RESET}\n`;
+            }
+        });
+        
+        if (!hasContent) {
+            // Fallback to linear format
+            validMemories.forEach(({ formatted }, idx) => {
+                const isLast = idx === validMemories.length - 1;
+                contextMessage += `${COLORS.CYAN}${isLast ? '└─' : '├─'}${COLORS.RESET} ${formatted}\n`;
+            });
+        }
+    } else {
+        // Simple linear formatting with enhanced visual elements
+        validMemories.forEach(({ formatted }, idx) => {
+            const isLast = idx === validMemories.length - 1;
+            contextMessage += `${COLORS.CYAN}${isLast ? '└─' : '├─'}${COLORS.RESET} ${formatted}\n`;
+        });
+    }
+    
+    return contextMessage;
+}
+
+/**
+ * Format individual memory for CLI with color coding
+ */
+function formatMemoryForCLI(memory, index, options = {}) {
+    try {
+        const {
+            maxContentLength = 180,
+            includeDate = true,
+            indent = false
+        } = options;
+        
+        // Extract meaningful content with markdown conversion enabled for CLI
+        const content = extractMeaningfulContent(
+            memory.content || 'No content available', 
+            maxContentLength,
+            { convertMarkdown: true, stripMarkdown: false }
+        );
+        
+        // Skip generic summaries
+        if (isGenericSessionSummary(memory.content)) {
+            return null;
+        }
+        
+        // Format date with color
+        let dateStr = '';
+        if (includeDate && memory.created_at_iso) {
+            const date = new Date(memory.created_at_iso);
+            const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            dateStr = ` ${COLORS.GRAY}(${formattedDate})${COLORS.RESET}`;
+        }
+        
+        // Color the content based on type
+        let coloredContent = content;
+        if (memory.memory_type === 'decision' || (memory.tags && memory.tags.some(tag => tag.includes('decision')))) {
+            coloredContent = `${COLORS.YELLOW}${content}${COLORS.RESET}`;
+        } else if (memory.memory_type === 'insight') {
+            coloredContent = `${COLORS.MAGENTA}${content}${COLORS.RESET}`;
+        } else if (memory.memory_type === 'bug-fix') {
+            coloredContent = `${COLORS.GREEN}${content}${COLORS.RESET}`;
+        } else if (memory.memory_type === 'feature') {
+            coloredContent = `${COLORS.BLUE}${content}${COLORS.RESET}`;
+        }
+        
+        return `${coloredContent}${dateStr}`;
+        
+    } catch (error) {
+        return `${COLORS.GRAY}[Error formatting memory: ${error.message}]${COLORS.RESET}`;
+    }
+}
+
+/**
  * Extract meaningful content from session summaries and structured memories
  */
-function extractMeaningfulContent(content, maxLength = 300) {
+function extractMeaningfulContent(content, maxLength = 300, options = {}) {
     if (!content || typeof content !== 'string') {
         return 'No content available';
     }
+    
+    const {
+        convertMarkdown = isCLIEnvironment(),  // Auto-convert in CLI mode
+        stripMarkdown = false  // Just strip without ANSI colors
+    } = options;
     
     // Check if this is a session summary with structured sections
     if (content.includes('# Session Summary') || content.includes('## 🎯') || content.includes('## 🏛️') || content.includes('## 💡')) {
@@ -75,27 +388,39 @@ function extractMeaningfulContent(content, maxLength = 300) {
         
         if (meaningfulParts.length > 0) {
             const extracted = meaningfulParts.join(' | ');
-            return extracted.length > maxLength ? extracted.substring(0, maxLength - 3) + '...' : extracted;
+            const truncated = extracted.length > maxLength ? extracted.substring(0, maxLength - 3) + '...' : extracted;
+            
+            // Apply markdown conversion if requested
+            if (convertMarkdown) {
+                return convertMarkdownToANSI(truncated, { stripOnly: stripMarkdown });
+            }
+            return truncated;
         }
     }
     
-    // For non-structured content, use smart truncation
-    if (content.length <= maxLength) {
-        return content;
+    // For non-structured content, apply markdown conversion first if needed
+    let processedContent = content;
+    if (convertMarkdown) {
+        processedContent = convertMarkdownToANSI(content, { stripOnly: stripMarkdown });
+    }
+    
+    // Then use smart truncation
+    if (processedContent.length <= maxLength) {
+        return processedContent;
     }
     
     // Try to find a good breaking point (sentence, paragraph, or code block)
     const breakPoints = ['. ', '\n\n', '\n', '; '];
     
     for (const breakPoint of breakPoints) {
-        const lastBreak = content.lastIndexOf(breakPoint, maxLength - 3);
+        const lastBreak = processedContent.lastIndexOf(breakPoint, maxLength - 3);
         if (lastBreak > maxLength * 0.7) { // Only use if we keep at least 70% of desired length
-            return content.substring(0, lastBreak + (breakPoint === '. ' ? 1 : 0)) + '...';
+            return processedContent.substring(0, lastBreak + (breakPoint === '. ' ? 1 : 0)) + '...';
         }
     }
     
     // Fallback to hard truncation
-    return content.substring(0, maxLength - 3) + '...';
+    return processedContent.substring(0, maxLength - 3) + '...';
 }
 
 /**
@@ -130,7 +455,12 @@ function formatMemory(memory, index = 0, options = {}) {
         } = options;
         
         // Extract meaningful content using smart parsing
-        const content = extractMeaningfulContent(memory.content || 'No content available', maxContentLength);
+        // For non-CLI, strip markdown without adding ANSI colors
+        const content = extractMeaningfulContent(
+            memory.content || 'No content available', 
+            maxContentLength,
+            { convertMarkdown: true, stripMarkdown: true }
+        );
         
         // Skip generic/empty session summaries
         if (isGenericSessionSummary(memory.content) && !includeScore) {
@@ -169,7 +499,7 @@ function formatMemory(memory, index = 0, options = {}) {
         return formatted;
         
     } catch (error) {
-        console.warn('[Context Formatter] Error formatting memory:', error.message);
+        // Silently fail with error message to avoid noise
         return `${index + 1}. [Error formatting memory: ${error.message}]`;
     }
 }
@@ -177,7 +507,7 @@ function formatMemory(memory, index = 0, options = {}) {
 /**
  * Deduplicate memories based on content similarity
  */
-function deduplicateMemories(memories) {
+function deduplicateMemories(memories, options = {}) {
     if (!Array.isArray(memories) || memories.length <= 1) {
         return memories;
     }
@@ -229,7 +559,10 @@ function deduplicateMemories(memories) {
         }
     }
     
-    console.log(`[Context Formatter] Deduplicated ${memories.length} → ${deduplicated.length} memories`);
+    // Only log if in verbose mode (can be passed via options)
+    if (options?.verbose !== false) {
+        console.log(`[Context Formatter] Deduplicated ${memories.length} → ${deduplicated.length} memories`);
+    }
     return deduplicated;
 }
 
@@ -256,10 +589,10 @@ function calculateContentSimilarity(str1, str2) {
 /**
  * Group memories by category for better organization
  */
-function groupMemoriesByCategory(memories) {
+function groupMemoriesByCategory(memories, options = {}) {
     try {
         // First deduplicate to remove redundant content
-        const deduplicated = deduplicateMemories(memories);
+        const deduplicated = deduplicateMemories(memories, options);
         
         const categories = {
             decisions: [],
@@ -293,7 +626,9 @@ function groupMemoriesByCategory(memories) {
         return categories;
         
     } catch (error) {
-        console.warn('[Context Formatter] Error grouping memories:', error.message);
+        if (options?.verbose !== false) {
+            console.warn('[Context Formatter] Error grouping memories:', error.message);
+        }
         return { other: memories };
     }
 }
@@ -328,7 +663,7 @@ function createProjectSummary(projectContext) {
         return summary;
         
     } catch (error) {
-        console.warn('[Context Formatter] Error creating project summary:', error.message);
+        // Silently fail with fallback summary
         return `**Project**: ${projectContext.name || 'Unknown Project'}`;
     }
 }
@@ -338,6 +673,11 @@ function createProjectSummary(projectContext) {
  */
 function formatMemoriesForContext(memories, projectContext, options = {}) {
     try {
+        // Use CLI formatting if in CLI environment
+        if (isCLIEnvironment()) {
+            return formatMemoriesForCLI(memories, projectContext, options);
+        }
+        
         const {
             includeProjectSummary = true,
             includeScore = false,
@@ -439,7 +779,7 @@ function formatMemoriesForContext(memories, projectContext, options = {}) {
         return contextMessage;
         
     } catch (error) {
-        console.error('[Context Formatter] Error formatting memories for context:', error.message);
+        // Return error context without logging to avoid noise
         return `## 📋 Memory Context\n\n*Error loading context: ${error.message}*\n`;
     }
 }
@@ -500,17 +840,21 @@ function formatSessionConsolidation(sessionData, projectContext) {
         return consolidation;
         
     } catch (error) {
-        console.error('[Context Formatter] Error formatting session consolidation:', error.message);
+        // Return error without logging to avoid noise
         return `Session Summary Error: ${error.message}`;
     }
 }
 
 module.exports = {
     formatMemoriesForContext,
+    formatMemoriesForCLI,
     formatMemory,
+    formatMemoryForCLI,
     groupMemoriesByCategory,
     createProjectSummary,
-    formatSessionConsolidation
+    formatSessionConsolidation,
+    isCLIEnvironment,
+    convertMarkdownToANSI
 };
 
 // Direct execution support for testing
@@ -537,6 +881,20 @@ if (require.main === module) {
             memory_type: 'bug-fix',
             created_at_iso: '2025-08-18T15:30:00Z',
             relevanceScore: 0.72
+        },
+        {
+            content: 'Added new feature: Claude Code hooks with session lifecycle management',
+            tags: ['feature', 'claude-code', 'hooks'],
+            memory_type: 'feature',
+            created_at_iso: '2025-08-17T12:00:00Z',
+            relevanceScore: 0.85
+        },
+        {
+            content: 'Key insight: Memory deduplication prevents information overload in context',
+            tags: ['insight', 'memory-management', 'optimization'],
+            memory_type: 'insight',
+            created_at_iso: '2025-08-16T14:00:00Z',
+            relevanceScore: 0.78
         }
     ];
     
@@ -545,11 +903,8 @@ if (require.main === module) {
         language: 'JavaScript',
         frameworks: ['Node.js'],
         tools: ['npm'],
-        git: {
-            isRepo: true,
-            branch: 'main',
-            lastCommit: 'abc1234 Implement memory awareness hooks'
-        }
+        branch: 'main',
+        lastCommit: 'cdabc9a feat: enhance deduplication script'
     };
     
     console.log('\n=== CONTEXT FORMATTING TEST ===');

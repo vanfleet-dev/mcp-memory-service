@@ -56,6 +56,13 @@
       "priority": "low"
     }
   },
+  "output": {
+    "verbose": true,
+    "showMemoryDetails": false,
+    "showProjectDetails": true,
+    "showScoringDetails": false,
+    "cleanMode": false
+  },
   "logging": {
     "level": "info",
     "enableDebug": false,

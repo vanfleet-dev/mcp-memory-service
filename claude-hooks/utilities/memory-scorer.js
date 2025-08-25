@@ -30,7 +30,7 @@ function calculateTimeDecay(memoryDate, decayRate = 0.1) {
         return Math.max(0.01, Math.min(1.0, decayScore));
         
     } catch (error) {
-        console.warn('[Memory Scorer] Time decay calculation error:', error.message);
+        // Silently fail with default score to avoid noise
         return 0.5;
     }
 }
@@ -86,7 +86,7 @@ function calculateTagRelevance(memoryTags = [], projectContext) {
         return Math.max(0.1, totalScore);
         
     } catch (error) {
-        console.warn('[Memory Scorer] Tag relevance calculation error:', error.message);
+        // Silently fail with default score to avoid noise
         return 0.3;
     }
 }
@@ -145,7 +145,7 @@ function calculateContentQuality(memoryContent = '') {
         return Math.max(0.05, Math.min(1.0, qualityScore));
         
     } catch (error) {
-        console.warn('[Memory Scorer] Content quality calculation error:', error.message);
+        // Silently fail with default score to avoid noise
         return 0.3;
     }
 }
@@ -194,7 +194,7 @@ function calculateContentRelevance(memoryContent = '', projectContext) {
         return Math.max(0.1, contentScore);
         
     } catch (error) {
-        console.warn('[Memory Scorer] Content relevance calculation error:', error.message);
+        // Silently fail with default score to avoid noise
         return 0.3;
     }
 }
@@ -302,7 +302,7 @@ function calculateConversationRelevance(memory, conversationAnalysis) {
         return Math.max(0.1, Math.min(1.0, normalizedScore));
 
     } catch (error) {
-        console.warn('[Memory Scorer] Conversation relevance calculation error:', error.message);
+        // Silently fail with default score to avoid noise
         return 0.3;
     }
 }
@@ -382,7 +382,7 @@ function calculateRelevanceScore(memory, projectContext, options = {}) {
         };
         
     } catch (error) {
-        console.warn('[Memory Scorer] Score calculation error:', error.message);
+        // Silently fail with default score to avoid noise
         return {
             finalScore: 0.1,
             breakdown: { error: error.message },
@@ -397,12 +397,16 @@ function calculateRelevanceScore(memory, projectContext, options = {}) {
  */
 function scoreMemoryRelevance(memories, projectContext, options = {}) {
     try {
+        const { verbose = true } = options;
+        
         if (!Array.isArray(memories)) {
-            console.warn('[Memory Scorer] Invalid memories array');
+            if (verbose) console.warn('[Memory Scorer] Invalid memories array');
             return [];
         }
         
-        console.log(`[Memory Scorer] Scoring ${memories.length} memories for project: ${projectContext.name}`);
+        if (verbose) {
+            console.log(`[Memory Scorer] Scoring ${memories.length} memories for project: ${projectContext.name}`);
+        }
         
         // Score each memory
         const scoredMemories = memories.map(memory => {
@@ -420,15 +424,17 @@ function scoreMemoryRelevance(memories, projectContext, options = {}) {
         const sortedMemories = scoredMemories.sort((a, b) => b.relevanceScore - a.relevanceScore);
         
         // Log scoring results for debugging
-        console.log('[Memory Scorer] Top scored memories:');
-        sortedMemories.slice(0, 3).forEach((memory, index) => {
-            console.log(`  ${index + 1}. Score: ${memory.relevanceScore.toFixed(3)} - ${memory.content.substring(0, 60)}...`);
-        });
+        if (verbose) {
+            console.log('[Memory Scorer] Top scored memories:');
+            sortedMemories.slice(0, 3).forEach((memory, index) => {
+                console.log(`  ${index + 1}. Score: ${memory.relevanceScore.toFixed(3)} - ${memory.content.substring(0, 60)}...`);
+            });
+        }
         
         return sortedMemories;
         
     } catch (error) {
-        console.error('[Memory Scorer] Error scoring memories:', error.message);
+        if (verbose) console.error('[Memory Scorer] Error scoring memories:', error.message);
         return memories || [];
     }
 }
@@ -436,14 +442,17 @@ function scoreMemoryRelevance(memories, projectContext, options = {}) {
 /**
  * Filter memories by minimum relevance threshold
  */
-function filterByRelevance(memories, minScore = 0.3) {
+function filterByRelevance(memories, minScore = 0.3, options = {}) {
     try {
+        const { verbose = true } = options;
         const filtered = memories.filter(memory => memory.relevanceScore >= minScore);
-        console.log(`[Memory Scorer] Filtered ${filtered.length}/${memories.length} memories above threshold ${minScore}`);
+        if (verbose) {
+            console.log(`[Memory Scorer] Filtered ${filtered.length}/${memories.length} memories above threshold ${minScore}`);
+        }
         return filtered;
         
     } catch (error) {
-        console.warn('[Memory Scorer] Error filtering memories:', error.message);
+        if (verbose) console.warn('[Memory Scorer] Error filtering memories:', error.message);
         return memories;
     }
 }
