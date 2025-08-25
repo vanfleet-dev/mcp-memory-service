@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### 🐛 **Bug Fixes**
 
 #### Fixed Claude Code Memory Commands
-- **API Key Update**: Updated all Claude Code memory commands with correct API key (`VhOGAoUOE5_BMzu-phDORdyXHNMcDRBxvndK_Uop`)
+- **API Key Update**: Updated all Claude Code memory commands with current production API key
   - Fixed `/memory-context`, `/memory-store`, `/memory-recall`, `/memory-search`, `/memory-health` commands
   - Replaced outdated `test-key-123` with current production API key
   - **Impact**: All memory commands now work correctly with remote memory service
