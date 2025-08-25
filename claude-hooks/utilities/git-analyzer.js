@@ -31,7 +31,7 @@ async function getRecentCommits(workingDir, options = {}) {
         gitCommand += ` --since="${sinceDate.toISOString()}"`;
         
         const output = execSync(gitCommand, { 
-            cwd: workingDir, 
+            cwd: path.resolve(workingDir), 
             encoding: 'utf8',
             timeout: 10000
         });
@@ -57,7 +57,7 @@ async function getRecentCommits(workingDir, options = {}) {
         for (const commit of recentCommits) {
             try {
                 const filesOutput = execSync(`git show --name-only --pretty="" ${commit.fullHash}`, {
-                    cwd: workingDir,
+                    cwd: path.resolve(workingDir),
                     encoding: 'utf8',
                     timeout: 5000
                 });
@@ -307,19 +307,19 @@ function buildGitContextQuery(projectContext, gitContext, userMessage = '') {
 function getCurrentGitInfo(workingDir) {
     try {
         const branch = execSync('git rev-parse --abbrev-ref HEAD', {
-            cwd: workingDir,
+            cwd: path.resolve(workingDir),
             encoding: 'utf8',
             timeout: 3000
         }).trim();
         
         const lastCommit = execSync('git log -1 --pretty=format:"%h %s"', {
-            cwd: workingDir,
+            cwd: path.resolve(workingDir),
             encoding: 'utf8',
             timeout: 3000
         }).trim();
         
         const hasChanges = execSync('git status --porcelain', {
-            cwd: workingDir,
+            cwd: path.resolve(workingDir),
             encoding: 'utf8',
             timeout: 3000
         }).trim().length > 0;

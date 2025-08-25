@@ -4,6 +4,77 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.13.0] - 2025-08-25
+
+### ⚡ **Major Features**
+
+#### Enhanced Storage Backend Visibility & Health Integration
+- **Health Check Integration**: Claude Code hooks now use `/api/health/detailed` endpoint for **authoritative storage information**
+  - **Real-time Backend Detection**: Queries live health data instead of environment variables
+  - **Rich Storage Information**: Displays memory count, database size, connection status, and embedding model
+  - **Comprehensive Database Stats**: Shows unique tags, file paths, platform info, and uptime
+  - **Fallback Strategy**: Health check → Environment variables → Configuration inference
+
+- **Enhanced Console Output**:
+  - **Brief Mode**: `💾 Storage → 🪶 sqlite-vec (Connected) • 990 memories • 5.21MB`
+  - **Detailed Mode**: Separate lines for storage type, location, and database statistics
+  - **Icon-Only Mode**: Minimal display with backend type and memory count
+  - **Path Display**: Shows actual database file locations from health data
+
+- **Context Message Enhancement**:
+  - **Storage Section**: Includes backend type, connection status, memory count, and database size
+  - **Location Info**: Real file paths from health endpoint rather than configuration guesses  
+  - **Model Information**: Displays active embedding model (e.g., all-MiniLM-L6-v2)
+  - **Health Metadata**: Platform info and database accessibility status
+
+### 🔧 **Configuration Enhancements**
+
+#### New Health Check Settings
+- **`memoryService.healthCheckEnabled`**: Enable/disable health endpoint queries (default: true)
+- **`memoryService.healthCheckTimeout`**: Timeout for health requests in milliseconds (default: 3000)
+- **`memoryService.useDetailedHealthCheck`**: Use `/api/health/detailed` vs `/api/health` (default: true)
+- **Enhanced Display Modes**: `sourceDisplayMode` supports "brief", "detailed", "icon-only"
+
+### 🐛 **Critical Bug Fixes**
+
+#### Windows Path Resolution Issues
+- **Git Analyzer**: Fixed Windows path handling in `execSync` calls using `path.resolve()`
+- **Project Detector**: Resolved Windows path issues in git command execution
+- **Path Normalization**: All working directory paths properly normalized for cross-platform compatibility
+
+#### Memory Context Display Improvements  
+- **Content Length Limits**: Increased from 300→500 characters to prevent truncation
+- **CLI Formatting**: Enhanced from 180→400 chars for better context visibility
+- **Categorized Display**: Improved from 160→350 chars for categorized memories
+- **Deduplication Logging**: Fixed misleading "8 → 2" messages, now shows actual selection counts
+
+#### Output Cleaning & Visual Improvements
+- **Session Hook Tags**: Added cleaning logic to remove `<session-start-hook>` wrapper tags
+- **Memory Categories**: Enhanced category titles (e.g., "Recent Work (Last 7 days)", "Bug Fixes & Issues")
+- **Better Hierarchy**: Improved visual organization and color coding
+- **Configurable Limits**: All content length limits now configurable via config.json
+
+### 💡 **Smart Detection Improvements**
+
+#### Backend Detection Hierarchy
+1. **Health Endpoint** (Primary): Authoritative data from running service
+2. **Environment Variables** (Secondary): MCP_MEMORY_STORAGE_BACKEND detection
+3. **Configuration Inference** (Fallback): Endpoint-based local/remote classification
+
+#### Supported Backend Types
+- **SQLite-vec**: 🪶 Local database with file path and size information
+- **ChromaDB**: 📦 Local or 🌐 Remote with endpoint details  
+- **Cloudflare**: ☁️ Cloud service with account information
+- **Generic Services**: 💾 Local or 🌐 Remote MCP services
+
+### 🎯 **Performance & Reliability**
+
+#### Health Check Implementation
+- **Non-blocking**: Async health queries don't slow session start
+- **Timeout Protection**: 3-second default timeout prevents hanging
+- **Error Handling**: Graceful fallback to configuration-based detection
+- **Caching**: Health info cached during session to avoid repeated calls
+
 ## [6.12.0] - 2025-08-25
 
 ### ⚡ **Major Features**

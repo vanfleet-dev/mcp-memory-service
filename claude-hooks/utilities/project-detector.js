@@ -198,9 +198,9 @@ function getGitInfo(directory) {
         }
         
         // Get repository information
-        const remoteBranch = execSync('git branch --show-current', { cwd: directory, encoding: 'utf8' }).trim();
-        const remoteUrl = execSync('git config --get remote.origin.url', { cwd: directory, encoding: 'utf8' }).trim();
-        const lastCommit = execSync('git log -1 --pretty=format:"%h %s"', { cwd: directory, encoding: 'utf8' }).trim();
+        const remoteBranch = execSync('git branch --show-current', { cwd: path.resolve(directory), encoding: 'utf8' }).trim();
+        const remoteUrl = execSync('git config --get remote.origin.url', { cwd: path.resolve(directory), encoding: 'utf8' }).trim();
+        const lastCommit = execSync('git log -1 --pretty=format:"%h %s"', { cwd: path.resolve(directory), encoding: 'utf8' }).trim();
         
         // Extract repository name from URL
         let repoName = 'unknown-repo';

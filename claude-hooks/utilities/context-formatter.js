@@ -144,7 +144,10 @@ function formatMemoriesForCLI(memories, projectContext, options = {}) {
     const {
         includeProjectSummary = true,
         maxMemories = 8,
-        includeTimestamp = true
+        includeTimestamp = true,
+        maxContentLengthCLI = 400,
+        maxContentLengthCategorized = 350,
+        storageInfo = null
     } = options;
 
     if (!memories || memories.length === 0) {
@@ -159,7 +162,7 @@ function formatMemoriesForCLI(memories, projectContext, options = {}) {
         if (validMemories.length >= maxMemories) break;
         
         const formatted = formatMemoryForCLI(memory, memoryIndex, {
-            maxContentLength: 180,
+            maxContentLength: maxContentLengthCLI,
             includeDate: includeTimestamp
         });
         
@@ -188,6 +191,23 @@ function formatMemoriesForCLI(memories, projectContext, options = {}) {
             if (lastCommit) gitInfo.push(`${COLORS.GRAY}${lastCommit.substring(0, 7)}${COLORS.RESET}`);
             contextMessage += `${COLORS.CYAN}├─${COLORS.RESET} 📂 ${gitInfo.join(' • ')}\n`;
         }
+        
+        // Add storage information if available
+        if (storageInfo) {
+            const locationText = storageInfo.location.length > 40 ? 
+                storageInfo.location.substring(0, 37) + '...' : 
+                storageInfo.location;
+            
+            // Show rich storage info if health data is available
+            if (storageInfo.health && storageInfo.health.totalMemories > 0) {
+                const memoryInfo = `${storageInfo.health.totalMemories} memories`;
+                const sizeInfo = storageInfo.health.databaseSizeMB > 0 ? `, ${storageInfo.health.databaseSizeMB}MB` : '';
+                contextMessage += `${COLORS.CYAN}├─${COLORS.RESET} ${storageInfo.icon} ${COLORS.BRIGHT}${storageInfo.description}${COLORS.RESET} ${COLORS.GRAY}(${memoryInfo}${sizeInfo})${COLORS.RESET}\n`;
+                contextMessage += `${COLORS.CYAN}├─${COLORS.RESET} 📍 ${COLORS.GRAY}${locationText}${COLORS.RESET}\n`;
+            } else {
+                contextMessage += `${COLORS.CYAN}├─${COLORS.RESET} ${storageInfo.icon} ${COLORS.BRIGHT}${storageInfo.description}${COLORS.RESET} ${COLORS.GRAY}(${locationText})${COLORS.RESET}\n`;
+            }
+        }
     } else {
         contextMessage += '\n';
         contextMessage += `${COLORS.CYAN}│${COLORS.RESET}\n`;
@@ -202,13 +222,13 @@ function formatMemoriesForCLI(memories, projectContext, options = {}) {
         
         const categoryInfo = {
             gitContext: { title: 'Current Development', icon: '⚡', color: COLORS.BRIGHT },
-            recent: { title: 'Recent Work', icon: '🕒', color: COLORS.GREEN },
+            recent: { title: 'Recent Work (Last 7 days)', icon: '🕒', color: COLORS.GREEN },
             decisions: { title: 'Architecture & Design', icon: '🏗️', color: COLORS.YELLOW },
             architecture: { title: 'Architecture & Design', icon: '🏗️', color: COLORS.YELLOW }, 
             insights: { title: 'Key Insights', icon: '💡', color: COLORS.MAGENTA },
-            bugs: { title: 'Bug Fixes', icon: '🐛', color: COLORS.GREEN },
-            features: { title: 'Features', icon: '✨', color: COLORS.BLUE },
-            other: { title: 'Context', icon: '📝', color: COLORS.GRAY }
+            bugs: { title: 'Bug Fixes & Issues', icon: '🐛', color: COLORS.GREEN },
+            features: { title: 'Features & Implementation', icon: '✨', color: COLORS.BLUE },
+            other: { title: 'Additional Context', icon: '📝', color: COLORS.GRAY }
         };
         
         let hasContent = false;
@@ -228,7 +248,7 @@ function formatMemoriesForCLI(memories, projectContext, options = {}) {
                 
                 categoryMemories.forEach((memory, idx) => {
                     const formatted = formatMemoryForCLI(memory, 0, {
-                        maxContentLength: 160,
+                        maxContentLength: maxContentLengthCategorized,
                         includeDate: includeTimestamp,
                         indent: true
                     });
@@ -269,7 +289,7 @@ function formatMemoriesForCLI(memories, projectContext, options = {}) {
 function formatMemoryForCLI(memory, index, options = {}) {
     try {
         const {
-            maxContentLength = 180,
+            maxContentLength = 400,
             includeDate = true,
             indent = false
         } = options;
@@ -337,7 +357,7 @@ function formatMemoryForCLI(memory, index, options = {}) {
 /**
  * Extract meaningful content from session summaries and structured memories
  */
-function extractMeaningfulContent(content, maxLength = 300, options = {}) {
+function extractMeaningfulContent(content, maxLength = 500, options = {}) {
     if (!content || typeof content !== 'string') {
         return 'No content available';
     }
@@ -472,7 +492,7 @@ function formatMemory(memory, index = 0, options = {}) {
         const {
             includeScore = false,
             includeMetadata = false,
-            maxContentLength = 300,
+            maxContentLength = 500,
             includeDate = true,
             showOnlyRelevantTags = true
         } = options;
@@ -583,7 +603,7 @@ function deduplicateMemories(memories, options = {}) {
     }
     
     // Only log if in verbose mode (can be passed via options)
-    if (options?.verbose !== false) {
+    if (options?.verbose !== false && memories.length !== deduplicated.length) {
         console.log(`[Context Formatter] Deduplicated ${memories.length} → ${deduplicated.length} memories`);
     }
     return deduplicated;
@@ -722,7 +742,9 @@ function formatMemoriesForContext(memories, projectContext, options = {}) {
             includeScore = false,
             groupByCategory = true,
             maxMemories = 8,
-            includeTimestamp = true
+            includeTimestamp = true,
+            maxContentLength = 500,
+            storageInfo = null
         } = options;
         
         if (!memories || memories.length === 0) {
@@ -738,7 +760,7 @@ function formatMemoriesForContext(memories, projectContext, options = {}) {
             
             const formatted = formatMemory(memory, memoryIndex, {
                 includeScore,
-                maxContentLength: 300,
+                maxContentLength: maxContentLength,
                 includeDate: includeTimestamp,
                 showOnlyRelevantTags: true
             });
@@ -759,6 +781,33 @@ function formatMemoriesForContext(memories, projectContext, options = {}) {
         // Add project summary
         if (includeProjectSummary && projectContext) {
             contextMessage += createProjectSummary(projectContext) + '\n\n';
+        }
+        
+        // Add storage information
+        if (storageInfo) {
+            contextMessage += `**Storage**: ${storageInfo.description}`;
+            
+            // Add health information if available
+            if (storageInfo.health && storageInfo.health.totalMemories > 0) {
+                const memoryCount = storageInfo.health.totalMemories;
+                const dbSize = storageInfo.health.databaseSizeMB;
+                const uniqueTags = storageInfo.health.uniqueTags;
+                
+                contextMessage += ` - ${memoryCount} memories`;
+                if (dbSize > 0) contextMessage += `, ${dbSize}MB`;
+                if (uniqueTags > 0) contextMessage += `, ${uniqueTags} unique tags`;
+            }
+            contextMessage += '\n';
+            
+            if (storageInfo.location && !storageInfo.location.includes('Configuration Error') && !storageInfo.location.includes('Health parse error')) {
+                contextMessage += `**Location**: \`${storageInfo.location}\`\n`;
+            }
+            
+            if (storageInfo.health && storageInfo.health.embeddingModel && storageInfo.health.embeddingModel !== 'Unknown') {
+                contextMessage += `**Embedding Model**: ${storageInfo.health.embeddingModel}\n`;
+            }
+            
+            contextMessage += '\n';
         }
         
         contextMessage += `**Loaded ${validMemories.length} relevant memories from your project history:**\n\n`;
@@ -787,7 +836,7 @@ function formatMemoriesForContext(memories, projectContext, options = {}) {
                     categoryMemories.forEach((memory, index) => {
                         const formatted = formatMemory(memory, index, {
                             includeScore,
-                            maxContentLength: 300,
+                            maxContentLength: maxContentLength,
                             includeDate: includeTimestamp,
                             showOnlyRelevantTags: true
                         });
