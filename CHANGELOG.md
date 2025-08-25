@@ -4,6 +4,31 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.7.1] - 2025-08-25
+
+### 🔧 **Critical Bug Fix**
+
+#### Claude Code Hooks Installation Script Fix
+- **Fixed Missing v6.7.0 Files in Installation**: Resolved critical installation script bug that prevented complete v6.7.0 setup
+  - **Added Missing Core Hook**: `memory-retrieval.js` now properly copied during installation
+  - **Added Missing Utility**: `context-shift-detector.js` now properly copied during installation
+  - **Updated Install Messages**: Installation logs now accurately reflect all installed files
+  - **Impact**: Eliminates "Cannot find module" errors on fresh v6.7.0 installations
+
+#### Problem Resolved
+- **Issue**: Installation script (`install.sh`) used hardcoded file list that was missing new v6.7.0 files
+- **Symptoms**: Users experienced module import errors and incomplete feature sets after installation
+- **Root Cause**: Script copied only `session-start.js`, `session-end.js` but missed `memory-retrieval.js` and `context-shift-detector.js`
+- **Solution**: Added missing file copy commands and updated installation messaging
+
+#### Validation
+- **✅ Complete Installation**: All v6.7.0 files now properly installed
+- **✅ Integration Tests**: 14/14 tests pass immediately after fresh installation 
+- **✅ No Module Errors**: All dependencies resolved correctly
+- **✅ Full Feature Set**: On-demand memory retrieval and smart timing work out-of-the-box
+
+> **Note**: This is a critical patch for v6.7.0 users. If you installed v6.7.0 and experienced module errors, please reinstall using v6.7.1.
+
 ## [6.7.0] - 2025-08-25
 
 ### 🧠 **Claude Code Memory Awareness - Major Enhancement**
