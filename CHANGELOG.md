@@ -4,6 +4,85 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.12.0] - 2025-08-25
+
+### ⚡ **Major Features**
+
+#### Git-Aware Memory Retrieval System
+- **Repository Context Analysis**: Session hooks now analyze git commit history and changelog entries
+  - **Git Context Analyzer**: New utility (`git-analyzer.js`) extracts development keywords from recent commits
+  - **Commit Mining**: Analyzes last 14 days of commits to understand development patterns
+  - **Changelog Integration**: Parses CHANGELOG.md to identify recent development themes
+  - **Smart Query Generation**: Creates git-informed semantic queries for memory retrieval
+
+- **Multi-Phase Memory Retrieval Enhancement**:
+  - **Phase 0 (NEW)**: Git-aware memory search using repository context (highest priority)
+  - **Phase 1**: Recent memories enhanced with git development keywords  
+  - **Phase 2**: Important tagged memories with framework/language context
+  - **Phase 3**: Fallback general context with extended time windows
+
+- **Enhanced Context Categorization**:
+  - **"Current Development" Category**: New category for git-context derived memories
+  - **Repository-Aware Scoring**: Memories aligned with recent commits get higher relevance scores
+  - **Development Timeline Integration**: Memory selection based on actual coding activity
+
+### 🔧 **Configuration Enhancements**
+
+#### New Git Analysis Settings
+- **`gitAnalysis.enabled`**: Enable/disable git context analysis (default: true)
+- **`gitAnalysis.commitLookback`**: Days of commit history to analyze (default: 14)
+- **`gitAnalysis.maxCommits`**: Maximum commits to process (default: 20)
+- **`gitAnalysis.includeChangelog`**: Parse changelog for context (default: true)
+- **`gitAnalysis.maxGitMemories`**: Memory slots reserved for git context (default: 3)
+- **`gitAnalysis.gitContextWeight`**: Relevance multiplier for git-derived memories (default: 1.2)
+
+#### Enhanced Output Control
+- **`output.showGitAnalysis`**: Display git analysis information (default: true)
+- **`output.showPhaseDetails`**: Show detailed phase execution info (default: true)
+- **Improved Memory Ratio Configuration**: `recentMemoryRatio`, `recentTimeWindow`, `fallbackTimeWindow`
+
+### 💡 **Smart Query Improvements**
+
+#### Development-Aware Semantic Queries
+- **Commit Message Context**: Latest commit messages influence memory search
+- **File Pattern Recognition**: Recently changed files inform query building  
+- **Technical Keyword Extraction**: Action words (feat, fix, refactor) enhance search relevance
+- **Branch-Aware Queries**: Git branch context integrated into semantic search
+
+### 🎯 **Memory Relevance Enhancements**
+
+#### Repository Activity Integration
+- **Development Intensity Scoring**: High commit activity increases recent memory priority
+- **File-Based Context**: Memories related to recently changed files get boosted relevance
+- **Changelog Correlation**: Memory selection aligned with documented changes
+- **Temporal Context Weighting**: Recent development activity influences memory scoring
+
+### 🚀 **Performance & Reliability**
+
+#### Git Integration Optimizations  
+- **Lazy Git Analysis**: Only processes git context when repository detected
+- **Performance Limits**: Configurable commit analysis limits to prevent slowdowns
+- **Graceful Degradation**: Falls back to standard retrieval if git analysis fails
+- **Async Processing**: Non-blocking git analysis for faster session startup
+
+### 📊 **Enhanced Debugging & Monitoring**
+
+#### Git Analysis Visibility
+- **Git Context Reporting**: Shows analyzed commits, changelog entries, and extracted keywords
+- **Phase Execution Details**: Clear indication of which phase found which memories
+- **Query Source Tracking**: Memories tagged with their retrieval source (git-commits, git-files, etc.)
+- **Development Keywords Display**: Shows extracted technical terms from recent activity
+
+### 🔄 **Backward Compatibility**
+
+#### Seamless Integration
+- **Legacy Mode Support**: `recentFirstMode: false` preserves original behavior
+- **Configuration Migration**: All existing configurations continue to work
+- **Optional Git Features**: Git analysis can be completely disabled if needed
+- **Incremental Adoption**: Features can be enabled progressively
+
+---
+
 ## [6.11.1] - 2025-08-25
 
 ### 🐛 **Bug Fixes**

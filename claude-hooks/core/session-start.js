@@ -12,6 +12,7 @@ const { detectProjectContext } = require('../utilities/project-detector');
 const { scoreMemoryRelevance } = require('../utilities/memory-scorer');
 const { formatMemoriesForContext } = require('../utilities/context-formatter');
 const { detectContextShift, extractCurrentContext, determineRefreshStrategy } = require('../utilities/context-shift-detector');
+const { analyzeGitContext, buildGitContextQuery } = require('../utilities/git-analyzer');
 
 /**
  * Load hook configuration
@@ -188,42 +189,283 @@ async function onSessionStart(context) {
             console.log(`${CONSOLE_COLORS.BLUE}📂 Project${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.BRIGHT}${projectContext.name}${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.GRAY}(${projectContext.language})${CONSOLE_COLORS.RESET}`);
         }
         
-        // Build query for relevant memories
-        const memoryQuery = {
-            tags: [
-                projectContext.name,
-                `language:${projectContext.language}`,
-                'key-decisions',
-                'architecture',
-                'recent-insights',
-                'claude-code-reference'
-            ].filter(Boolean),
-            semanticQuery: context.userMessage ? 
-                `${projectContext.name} ${context.userMessage}` :
-                `${projectContext.name} project context decisions architecture`,
-            limit: config.memoryService.maxMemoriesPerSession,
-            timeFilter: 'last-2-weeks'
-        };
+        // Analyze git context if enabled
+        const gitAnalysisEnabled = config.gitAnalysis?.enabled !== false; // Default to true
+        const showGitAnalysis = config.output?.showGitAnalysis !== false; // Default to true
+        let gitContext = null;
         
-        // Query memory service
-        const memories = await queryMemoryService(
-            config.memoryService.endpoint,
-            config.memoryService.apiKey,
-            memoryQuery
-        );
-        
-        if (memories.length > 0) {
-            if (verbose && showMemoryDetails && !cleanMode) {
-                console.log(`${CONSOLE_COLORS.GREEN}📚 Memory Search${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Found ${CONSOLE_COLORS.BRIGHT}${memories.length}${CONSOLE_COLORS.RESET} relevant memories`);
+        if (gitAnalysisEnabled) {
+            if (verbose && showGitAnalysis && !cleanMode) {
+                console.log(`${CONSOLE_COLORS.CYAN}📊 Git Analysis${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Analyzing repository context...`);
             }
             
-            // Score memories for relevance
-            const scoredMemories = scoreMemoryRelevance(memories, projectContext, { verbose: showMemoryDetails });
+            gitContext = await analyzeGitContext(context.workingDirectory || process.cwd(), {
+                commitLookback: config.gitAnalysis?.commitLookback || 14,
+                maxCommits: config.gitAnalysis?.maxCommits || 20,
+                includeChangelog: config.gitAnalysis?.includeChangelog !== false,
+                verbose: showGitAnalysis && showMemoryDetails && !cleanMode
+            });
             
-            // Show top scoring memories briefly
+            if (gitContext && verbose && showGitAnalysis && !cleanMode) {
+                const { commits, changelogEntries, repositoryActivity, developmentKeywords } = gitContext;
+                console.log(`${CONSOLE_COLORS.CYAN}📊 Git Context${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} ${commits.length} commits, ${changelogEntries?.length || 0} changelog entries`);
+                
+                if (showMemoryDetails) {
+                    const topKeywords = developmentKeywords.keywords.slice(0, 5).join(', ');
+                    if (topKeywords) {
+                        console.log(`${CONSOLE_COLORS.CYAN}🔑 Keywords${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.YELLOW}${topKeywords}${CONSOLE_COLORS.RESET}`);
+                    }
+                }
+            }
+        }
+        
+        // Multi-phase memory retrieval for better recency prioritization
+        const allMemories = [];
+        const maxMemories = config.memoryService.maxMemoriesPerSession;
+        const recentFirstMode = config.memoryService.recentFirstMode !== false; // Default to true
+        const recentRatio = config.memoryService.recentMemoryRatio || 0.6;
+        const recentTimeWindow = config.memoryService.recentTimeWindow || 'last-week';
+        const fallbackTimeWindow = config.memoryService.fallbackTimeWindow || 'last-month';
+        const showPhaseDetails = config.output?.showPhaseDetails !== false; // Default to true
+        
+        if (recentFirstMode) {
+            // Phase 0: Git Context Phase (NEW - highest priority for repository-aware memories)
+            if (gitContext && gitContext.developmentKeywords.keywords.length > 0) {
+                const maxGitMemories = config.gitAnalysis?.maxGitMemories || 3;
+                const gitQueries = buildGitContextQuery(projectContext, gitContext.developmentKeywords, context.userMessage);
+                
+                if (verbose && showPhaseDetails && !cleanMode && gitQueries.length > 0) {
+                    console.log(`${CONSOLE_COLORS.GREEN}⚡ Phase 0${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Git-aware memory search (${maxGitMemories} slots, ${gitQueries.length} queries)`);
+                }
+                
+                // Execute git-context queries
+                for (const gitQuery of gitQueries.slice(0, 2)) { // Limit to top 2 queries for performance
+                    if (allMemories.length >= maxGitMemories) break;
+                    
+                    const gitMemories = await queryMemoryService(
+                        config.memoryService.endpoint,
+                        config.memoryService.apiKey,
+                        {
+                            semanticQuery: gitQuery.semanticQuery,
+                            limit: Math.min(maxGitMemories - allMemories.length, 3),
+                            timeFilter: 'last-2-weeks' // Focus on recent memories for git context
+                        }
+                    );
+                    
+                    if (gitMemories && gitMemories.length > 0) {
+                        // Mark these memories as git-context derived for scoring
+                        const markedMemories = gitMemories.map(mem => ({
+                            ...mem,
+                            _gitContextType: gitQuery.type,
+                            _gitContextSource: gitQuery.source,
+                            _gitContextWeight: config.gitAnalysis?.gitContextWeight || 1.2
+                        }));
+                        
+                        // Avoid duplicates from previous git queries
+                        const newGitMemories = markedMemories.filter(newMem => 
+                            !allMemories.some(existing => 
+                                existing.content && newMem.content && 
+                                existing.content.substring(0, 100) === newMem.content.substring(0, 100)
+                            )
+                        );
+                        
+                        allMemories.push(...newGitMemories);
+                        
+                        if (verbose && showMemoryDetails && !cleanMode && newGitMemories.length > 0) {
+                            console.log(`${CONSOLE_COLORS.GREEN}  📋 Git Query${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} [${gitQuery.type}] found ${newGitMemories.length} memories`);
+                        }
+                    }
+                }
+            }
+            
+            // Phase 1: Recent memories - high priority
+            const remainingSlotsAfterGit = Math.max(0, maxMemories - allMemories.length);
+            if (remainingSlotsAfterGit > 0) {
+                // Build enhanced semantic query with git context
+                let recentSemanticQuery = context.userMessage ? 
+                    `recent ${projectContext.name} ${context.userMessage}` :
+                    `recent ${projectContext.name} development decisions insights`;
+                
+                // Add git context if available
+                if (projectContext.git?.branch) {
+                    recentSemanticQuery += ` ${projectContext.git.branch}`;
+                }
+                if (projectContext.git?.lastCommit) {
+                    recentSemanticQuery += ` latest changes commit`;
+                }
+                
+                // Add development keywords from git analysis
+                if (gitContext && gitContext.developmentKeywords.keywords.length > 0) {
+                    const topKeywords = gitContext.developmentKeywords.keywords.slice(0, 3).join(' ');
+                    recentSemanticQuery += ` ${topKeywords}`;
+                }
+                const recentQuery = {
+                    semanticQuery: recentSemanticQuery,
+                    limit: Math.max(Math.floor(remainingSlotsAfterGit * recentRatio), 2), // Adjusted for remaining slots
+                    timeFilter: recentTimeWindow
+                };
+                
+                if (verbose && showMemoryDetails && showPhaseDetails && !cleanMode) {
+                    console.log(`${CONSOLE_COLORS.BLUE}🕒 Phase 1${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Searching recent memories (${recentTimeWindow}, ${recentQuery.limit} slots)`);
+                }
+                
+                const recentMemories = await queryMemoryService(
+                    config.memoryService.endpoint,
+                    config.memoryService.apiKey,
+                    recentQuery
+                );
+                
+                // Filter out duplicates from git context phase
+                if (recentMemories && recentMemories.length > 0) {
+                    const newRecentMemories = recentMemories.filter(newMem => 
+                        !allMemories.some(existing => 
+                            existing.content && newMem.content && 
+                            existing.content.substring(0, 100) === newMem.content.substring(0, 100)
+                        )
+                    );
+                    
+                    allMemories.push(...newRecentMemories);
+                }
+            }
+            
+            // Phase 2: Important tagged memories - fill remaining slots  
+            const remainingSlots = maxMemories - allMemories.length;
+            if (remainingSlots > 0) {
+                // Build enhanced query for important memories
+                let importantSemanticQuery = `${projectContext.name} important decisions architecture`;
+                if (projectContext.language && projectContext.language !== 'Unknown') {
+                    importantSemanticQuery += ` ${projectContext.language}`;
+                }
+                if (projectContext.frameworks?.length > 0) {
+                    importantSemanticQuery += ` ${projectContext.frameworks.join(' ')}`;
+                }
+                
+                const importantQuery = {
+                    tags: [
+                        projectContext.name,
+                        'key-decisions',
+                        'architecture', 
+                        'claude-code-reference'
+                    ].filter(Boolean),
+                    semanticQuery: importantSemanticQuery,
+                    limit: remainingSlots,
+                    timeFilter: 'last-2-weeks'
+                };
+                
+                if (verbose && showMemoryDetails && showPhaseDetails && !cleanMode) {
+                    console.log(`${CONSOLE_COLORS.BLUE}🎯 Phase 2${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Searching important tagged memories (${remainingSlots} slots)`);
+                }
+                
+                const importantMemories = await queryMemoryService(
+                    config.memoryService.endpoint,
+                    config.memoryService.apiKey,
+                    importantQuery
+                );
+                
+                // Avoid duplicates by checking content similarity  
+                const newMemories = (importantMemories || []).filter(newMem => 
+                    !allMemories.some(existing => 
+                        existing.content && newMem.content && 
+                        existing.content.substring(0, 100) === newMem.content.substring(0, 100)
+                    )
+                );
+                
+                allMemories.push(...newMemories);
+            }
+            
+            // Phase 3: Fallback to general project context if still need more
+            const stillRemaining = maxMemories - allMemories.length;
+            if (stillRemaining > 0 && allMemories.length < 3) {
+                const fallbackQuery = {
+                    semanticQuery: `${projectContext.name} project context`,
+                    limit: stillRemaining,
+                    timeFilter: fallbackTimeWindow
+                };
+                
+                if (verbose && showMemoryDetails && showPhaseDetails && !cleanMode) {
+                    console.log(`${CONSOLE_COLORS.BLUE}🔄 Phase 3${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Fallback general context (${stillRemaining} slots, ${fallbackTimeWindow})`);
+                }
+                
+                const fallbackMemories = await queryMemoryService(
+                    config.memoryService.endpoint,
+                    config.memoryService.apiKey,
+                    fallbackQuery
+                );
+                
+                const newFallbackMemories = (fallbackMemories || []).filter(newMem => 
+                    !allMemories.some(existing => 
+                        existing.content && newMem.content && 
+                        existing.content.substring(0, 100) === newMem.content.substring(0, 100)
+                    )
+                );
+                
+                allMemories.push(...newFallbackMemories);
+            }
+        } else {
+            // Legacy single-phase approach 
+            const memoryQuery = {
+                tags: [
+                    projectContext.name,
+                    `language:${projectContext.language}`,
+                    'key-decisions',
+                    'architecture',
+                    'recent-insights',
+                    'claude-code-reference'
+                ].filter(Boolean),
+                semanticQuery: context.userMessage ? 
+                    `${projectContext.name} ${context.userMessage}` :
+                    `${projectContext.name} project context decisions architecture`,
+                limit: maxMemories,
+                timeFilter: 'last-2-weeks'
+            };
+            
+            const legacyMemories = await queryMemoryService(
+                config.memoryService.endpoint,
+                config.memoryService.apiKey,
+                memoryQuery
+            );
+            
+            allMemories.push(...(legacyMemories || []));
+        }
+        
+        // Use the collected memories from all phases
+        const memories = allMemories.slice(0, maxMemories);
+        
+        if (memories.length > 0) {
+            // Analyze memory recency for better reporting
+            const now = new Date();
+            const recentCount = memories.filter(m => {
+                if (!m.created_at_iso) return false;
+                const memDate = new Date(m.created_at_iso);
+                const daysDiff = (now - memDate) / (1000 * 60 * 60 * 24);
+                return daysDiff <= 7; // Within last week
+            }).length;
+            
+            if (verbose && !cleanMode) {
+                const recentText = recentCount > 0 ? ` ${CONSOLE_COLORS.GREEN}(${recentCount} recent)${CONSOLE_COLORS.RESET}` : '';
+                console.log(`${CONSOLE_COLORS.GREEN}📚 Memory Search${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Found ${CONSOLE_COLORS.BRIGHT}${memories.length}${CONSOLE_COLORS.RESET} relevant memories${recentText}`);
+            }
+            
+            // Score memories for relevance (with enhanced recency weighting)
+            const scoredMemories = scoreMemoryRelevance(memories, projectContext, { 
+                verbose: showMemoryDetails, 
+                enhanceRecency: recentFirstMode 
+            });
+            
+            // Show top scoring memories with recency info
             if (verbose && showMemoryDetails && scoredMemories.length > 0 && !cleanMode) {
-                const topScores = scoredMemories.slice(0, 3).map(m => `${(m.relevanceScore * 100).toFixed(0)}%`).join(', ');
-                console.log(`${CONSOLE_COLORS.CYAN}🎯 Scoring${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Top relevance: ${CONSOLE_COLORS.YELLOW}${topScores}${CONSOLE_COLORS.RESET}`);
+                const topMemories = scoredMemories.slice(0, 3);
+                const memoryInfo = topMemories.map(m => {
+                    const score = `${(m.relevanceScore * 100).toFixed(0)}%`;
+                    let recencyFlag = '';
+                    if (m.created_at_iso) {
+                        const daysDiff = (now - new Date(m.created_at_iso)) / (1000 * 60 * 60 * 24);
+                        if (daysDiff <= 1) recencyFlag = '🕒';
+                        else if (daysDiff <= 7) recencyFlag = '📅';
+                    }
+                    return `${score}${recencyFlag}`;
+                }).join(', ');
+                console.log(`${CONSOLE_COLORS.CYAN}🎯 Scoring${CONSOLE_COLORS.RESET} ${CONSOLE_COLORS.DIM}→${CONSOLE_COLORS.RESET} Top relevance: ${CONSOLE_COLORS.YELLOW}${memoryInfo}${CONSOLE_COLORS.RESET}`);
             }
             
             // Determine refresh strategy based on context
@@ -283,13 +525,13 @@ async function onSessionStart(context) {
  */
 module.exports = {
     name: 'memory-awareness-session-start',
-    version: '2.2.0',
-    description: 'Automatically inject relevant memories at session start with enhanced output control',
+    version: '2.3.0',
+    description: 'Automatically inject relevant memories at session start with git-aware repository context',
     trigger: 'session-start',
     handler: onSessionStart,
     config: {
         async: true,
-        timeout: 10000, // 10 second timeout
+        timeout: 15000, // Increased timeout for git analysis
         priority: 'high'
     }
 };

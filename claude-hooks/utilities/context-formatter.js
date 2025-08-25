@@ -201,6 +201,8 @@ function formatMemoriesForCLI(memories, projectContext, options = {}) {
         const categories = groupMemoriesByCategory(validMemories.map(v => v.memory));
         
         const categoryInfo = {
+            gitContext: { title: 'Current Development', icon: '⚡', color: COLORS.BRIGHT },
+            recent: { title: 'Recent Work', icon: '🕒', color: COLORS.GREEN },
             decisions: { title: 'Architecture & Design', icon: '🏗️', color: COLORS.YELLOW },
             architecture: { title: 'Architecture & Design', icon: '🏗️', color: COLORS.YELLOW }, 
             insights: { title: 'Key Insights', icon: '💡', color: COLORS.MAGENTA },
@@ -284,12 +286,33 @@ function formatMemoryForCLI(memory, index, options = {}) {
             return null;
         }
         
-        // Format date with color
+        // Format date with recency indicators and color
         let dateStr = '';
         if (includeDate && memory.created_at_iso) {
             const date = new Date(memory.created_at_iso);
-            const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            dateStr = ` ${COLORS.GRAY}(${formattedDate})${COLORS.RESET}`;
+            const now = new Date();
+            const daysDiff = (now - date) / (1000 * 60 * 60 * 24);
+            
+            let recencyIndicator = '';
+            let dateColor = COLORS.GRAY;
+            
+            if (daysDiff < 1) {
+                recencyIndicator = '🕒 ';
+                dateColor = COLORS.GREEN;
+                dateStr = ` ${dateColor}${recencyIndicator}today${COLORS.RESET}`;
+            } else if (daysDiff < 2) {
+                recencyIndicator = '📅 ';
+                dateColor = COLORS.GREEN;
+                dateStr = ` ${dateColor}${recencyIndicator}yesterday${COLORS.RESET}`;
+            } else if (daysDiff <= 7) {
+                recencyIndicator = '📅 ';
+                dateColor = COLORS.CYAN;
+                const formattedDate = date.toLocaleDateString('en-US', { weekday: 'short' });
+                dateStr = ` ${dateColor}${recencyIndicator}${formattedDate}${COLORS.RESET}`;
+            } else {
+                const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                dateStr = ` ${COLORS.GRAY}(${formattedDate})${COLORS.RESET}`;
+            }
         }
         
         // Color the content based on type
@@ -595,6 +618,8 @@ function groupMemoriesByCategory(memories, options = {}) {
         const deduplicated = deduplicateMemories(memories, options);
         
         const categories = {
+            gitContext: [],
+            recent: [],
             decisions: [],
             architecture: [],
             insights: [],
@@ -603,12 +628,26 @@ function groupMemoriesByCategory(memories, options = {}) {
             other: []
         };
         
+        const now = new Date();
+        
         deduplicated.forEach(memory => {
             const type = memory.memory_type?.toLowerCase() || 'other';
             const tags = memory.tags || [];
             
-            // Categorize based on type and tags
-            if (type === 'decision' || tags.some(tag => tag.includes('decision'))) {
+            // Check if memory is recent (within last week)
+            let isRecent = false;
+            if (memory.created_at_iso) {
+                const memDate = new Date(memory.created_at_iso);
+                const daysDiff = (now - memDate) / (1000 * 60 * 60 * 24);
+                isRecent = daysDiff <= 7;
+            }
+            
+            // Prioritize git context categorization (highest priority)
+            if (memory._gitContextType) {
+                categories.gitContext.push(memory);
+            } else if (isRecent) {
+                categories.recent.push(memory);
+            } else if (type === 'decision' || tags.some(tag => tag.includes('decision'))) {
                 categories.decisions.push(memory);
             } else if (type === 'architecture' || tags.some(tag => tag.includes('architecture'))) {
                 categories.architecture.push(memory);
@@ -729,6 +768,8 @@ function formatMemoriesForContext(memories, projectContext, options = {}) {
             const categories = groupMemoriesByCategory(validMemories.map(v => v.memory));
             
             const categoryTitles = {
+                gitContext: '### ⚡ Current Development (Git Context)',
+                recent: '### 🕒 Recent Work (Last Week)',
                 decisions: '### 🎯 Key Decisions',
                 architecture: '### 🏗️ Architecture & Design', 
                 insights: '### 💡 Insights & Learnings',

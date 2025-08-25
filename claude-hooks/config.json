@@ -5,7 +5,11 @@
     "defaultTags": ["claude-code", "auto-generated"],
     "maxMemoriesPerSession": 8,
     "enableSessionConsolidation": true,
-    "injectAfterCompacting": false
+    "injectAfterCompacting": false,
+    "recentFirstMode": true,
+    "recentMemoryRatio": 0.6,
+    "recentTimeWindow": "last-week",
+    "fallbackTimeWindow": "last-month"
   },
   "projectDetection": {
     "gitRepository": true,
@@ -59,11 +63,22 @@
       "priority": "low"
     }
   },
+  "gitAnalysis": {
+    "enabled": true,
+    "commitLookback": 14,
+    "maxCommits": 20,
+    "includeChangelog": true,
+    "maxGitMemories": 3,
+    "gitContextWeight": 1.2
+  },
   "output": {
     "verbose": true,
-    "showMemoryDetails": false,
+    "showMemoryDetails": true,
     "showProjectDetails": true,
     "showScoringDetails": false,
+    "showRecencyInfo": true,
+    "showPhaseDetails": true,
+    "showGitAnalysis": true,
     "cleanMode": false
   },
   "logging": {
