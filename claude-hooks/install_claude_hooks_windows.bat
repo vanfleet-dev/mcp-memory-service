@@ -111,7 +111,7 @@ echo   install_claude_hooks_windows.bat -test        - Test installation
 echo.
 echo This script will:
 echo   1. Check for Node.js installation
-echo   2. Create Claude Code hooks directory at %%USERPROFILE%%\.claude-code\hooks
+echo   2. Create Claude Code hooks directory at %%USERPROFILE%%\.claude\hooks
 echo   3. Copy all hook files from the claude-hooks directory
 echo   4. Configure the memory service endpoint (default: narrowbox.local:8443)
 echo   5. Run integration tests to verify installation

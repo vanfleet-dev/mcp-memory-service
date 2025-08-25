@@ -43,10 +43,21 @@ This installs hooks that automatically:
 
 ## Installation
 
-### Automated (Recommended)
+### Linux/macOS (Recommended)
 ```bash
 cd claude-hooks
 ./install.sh
+```
+
+### Windows
+```cmd
+cd claude-hooks
+.\install_claude_hooks_windows.bat
+```
+Or run the PowerShell script directly:
+```powershell
+cd claude-hooks
+.\install_claude_hooks_windows.ps1
 ```
 
 ### Manual
@@ -129,6 +140,30 @@ Once installed, hooks work automatically:
 claude --debug hooks  # Shows hook execution details
 node ~/.claude/hooks/core/session-start.js  # Test individual hooks
 ```
+
+### Windows-Specific Issues
+
+#### Path Configuration
+- **Directory Structure**: Hooks should be installed to `%USERPROFILE%\.claude\hooks\`
+- **JSON Path Format**: Use forward slashes in settings.json: `"command": "node C:/Users/username/.claude/hooks/core/session-start.js"`
+- **Avoid Backslashes**: Windows backslashes in JSON need escaping: `"C:\\\\Users\\\\..."` (prefer forward slashes instead)
+
+#### Settings Configuration Example
+```json
+{
+  "hooks": [
+    {
+      "pattern": "session-start",
+      "command": "node C:/Users/your-username/.claude/hooks/core/session-start.js"
+    }
+  ]
+}
+```
+
+#### Common Fixes
+- **Wrong Path Format**: If you see `session-start-wrapper.bat` errors, update your settings.json to use the Node.js script directly
+- **Legacy Directory**: If using old `.claude-code` directory, move contents to `.claude` directory
+- **Permission Issues**: Run installation scripts as Administrator if needed
 
 ## Changelog
 

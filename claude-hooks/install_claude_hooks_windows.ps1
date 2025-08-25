@@ -18,11 +18,7 @@ function Get-ClaudeHooksDirectory {
     # Alternative locations to check
     $alternativePaths = @(
         "$env:APPDATA\.claude\hooks",
-        "$env:LOCALAPPDATA\.claude\hooks",
-        # Legacy paths for backwards compatibility
-        "$env:USERPROFILE\.claude-code\hooks",
-        "$env:APPDATA\.claude-code\hooks",
-        "$env:LOCALAPPDATA\.claude-code\hooks"
+        "$env:LOCALAPPDATA\.claude\hooks"
     )
     
     # If primary path already exists, use it

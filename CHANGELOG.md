@@ -4,6 +4,32 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.11.1] - 2025-08-25
+
+### 🐛 **Bug Fixes**
+
+#### Windows Path Configuration Issues
+- **Claude Code Hooks Installation**: Fixed Windows-specific path configuration issues
+  - **Legacy Path Cleanup**: Removed outdated `.claude-code` references from installation scripts
+  - **Windows Batch File**: Updated help text to use correct `.claude\hooks` directory structure
+  - **PowerShell Script**: Cleaned up legacy path alternatives for better reliability
+  - **Impact**: Windows users no longer encounter `.claude-code` vs `.claude` directory confusion
+
+#### Enhanced Documentation
+- **Windows Installation Guide**: Added comprehensive Windows-specific installation and troubleshooting section
+  - **Path Format Guidance**: Clear instructions for JSON path formatting (forward slashes vs backslashes)
+  - **Common Issues**: Solutions for `session-start-wrapper.bat` errors and legacy directory migration
+  - **Settings Examples**: Proper Windows configuration examples with correct Node.js script paths
+  - **Impact**: Windows users have clear guidance for resolving path configuration issues
+
+#### Path Validation Utilities
+- **Automated Detection**: Added path validation functions to detect and warn about configuration issues
+  - **Legacy Path Detection**: Automatically identifies old `.claude-code` directories and provides migration steps
+  - **Settings Validation**: Validates JSON settings files for Windows path issues and missing files
+  - **Path Normalization**: Utility to convert Windows backslash paths to JSON-compatible format
+  - **Validation Command**: New `python scripts/claude_commands_utils.py --validate` command for configuration checking
+  - **Impact**: Proactive detection and resolution of Windows path issues during installation
+
 ## [6.10.1] - 2025-08-25
 
 ### 🐛 **Bug Fixes**
