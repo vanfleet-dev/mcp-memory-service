@@ -4,6 +4,29 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.0] - 2025-08-25
+
+### ✨ **New Features**
+
+#### Enhanced Claude Code CLI Formatting
+- **Beautiful CLI Output**: Claude Code hooks now feature enhanced visual formatting with Unicode box-drawing characters
+  - **Visual Hierarchy**: Clean tree structure using `├─`, `└─`, and `│` characters for better readability
+  - **Contextual Icons**: Memory context (🧠), project info (📂, 📝), and category-specific icons (🏗️, 🐛, ✨)
+  - **Smart Environment Detection**: Automatically switches between Markdown (web) and enhanced CLI formatting
+  - **Improved Categorization**: Visual grouping of memories by type with proper indentation and spacing
+  - **Impact**: Dramatically improved readability of hook output in Claude Code terminal sessions
+
+#### CLI Environment Detection
+- **Automatic Detection**: Uses multiple detection methods including `CLAUDE_CODE_CLI` environment variable
+- **Terminal Compatibility**: Enhanced formatting works seamlessly across different terminal emulators
+- **Fallback Support**: Graceful degradation to standard formatting when enhanced features unavailable
+
+#### Visual Design Improvements
+- **Category Icons**: 🏗️ Architecture & Design, 🐛 Bug Fixes & Issues, ✨ Features & Implementation, 📝 Additional Context
+- **Project Status Display**: Git branch (📂) and commit info (📝) with clean formatting
+- **Memory Count Indicators**: Clear display of loaded memory count with 📚 icon
+- **Empty State Handling**: Elegant display when no memories available
+
 ## [6.7.2] - 2025-08-25
 
 ### 🔧 **Enhancement**
