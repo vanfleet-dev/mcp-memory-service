@@ -4,6 +4,29 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.6.4] - 2025-08-25
+
+### 🔧 **Installation Experience Improvements**
+
+#### Universal Installer Bug Fixes ([#92](https://github.com/doobidoo/mcp-memory-service/issues/92))
+- **Fixed "Installer Gets Stuck" Issues**: Resolved multiple causes of installation appearing frozen
+  - Added prominent visual separators (`⚠️ USER INPUT REQUIRED`) around all input prompts
+  - Extended system detection timeouts from 10 to 30 seconds (macOS `system_profiler`, Homebrew checks)
+  - Added progress indicators for long-running operations (package installations, hardware detection)
+  - **Impact**: Users now clearly understand when installer needs input vs. processing in background
+
+#### New Non-Interactive Installation Mode
+- **Added `--non-interactive` Flag**: Enables fully automated installations using sensible defaults
+  - Automatically selects SQLite-vec backend (recommended)
+  - Skips optional components (Claude Code commands, multi-client setup)
+  - Perfect for CI/CD, Docker builds, and scripted deployments
+  - **Usage**: `python install.py --non-interactive`
+
+#### Enhanced User Experience
+- **Better Progress Feedback**: Clear messaging during system detection and package installation phases
+- **Improved Timeout Handling**: More resilient system detection with graceful fallbacks
+- **Log File Visibility**: Prominently displays location of `installation.log` for troubleshooting
+
 ## [6.6.3] - 2025-08-24
 
 ### 🔧 **CI/CD Infrastructure Improvements**
