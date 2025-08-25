@@ -7,7 +7,7 @@
 const path = require('path');
 
 // Import the enhanced hook
-const sessionStartHook = require('./claude-hooks/core/session-start.js');
+const sessionStartHook = require('../../claude-hooks/core/session-start.js');
 
 async function testEnhancedHook() {
     console.log('🧪 Testing Enhanced Session Start Hook\n');
