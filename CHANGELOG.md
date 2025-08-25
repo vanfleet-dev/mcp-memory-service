@@ -4,6 +4,70 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.7.0] - 2025-08-25
+
+### 🧠 **Claude Code Memory Awareness - Major Enhancement**
+
+#### Smart Memory Context Presentation ([#Memory-Presentation-Fix](https://github.com/doobidoo/mcp-memory-service/issues/memory-presentation))
+- **Eliminated Generic Content Fluff**: Complete overhaul of session-start hook memory presentation
+  - **Smart Content Extraction**: Extracts meaningful content from session summaries (decisions, insights, code changes) instead of truncating at 200 chars
+  - **Section-Aware Parsing**: Prioritizes showing actual decisions/insights over generic headers like "Topics Discussed - implementation..."
+  - **Deduplication Logic**: Automatically filters out repetitive session summaries with 80% similarity threshold
+  - **Impact**: Users now see actionable memory content instead of truncated generic summaries
+
+#### Enhanced Memory Quality Scoring
+- **Content Quality Factor**: New scoring dimension that heavily penalizes generic/empty content
+  - **Meaningful Indicators**: Detects substantial content using decision words (decided, implemented, fixed, learned)
+  - **Information Density**: Analyzes word diversity and content richness
+  - **Generic Pattern Detection**: Automatically identifies and demotes "implementation..." session summaries
+  - **Impact**: Quality memories now outrank recent-but-empty summaries
+
+#### Smart Context Management
+- **Post-Compacting Control**: Added `injectAfterCompacting: false` configuration option
+  - **Problem Solved**: Stops disruptive mid-session memory injection after compacting events
+  - **User-Controlled**: Can be enabled via `config.json` for users who prefer the old behavior
+- **Context Shift Detection**: Intelligent timing for when to refresh memory context
+  - **Project Change Detection**: Auto-refreshes when switching between projects/directories
+  - **Topic Shift Analysis**: Detects significant conversation topic changes
+  - **User Request Recognition**: Responds to explicit memory requests ("remind me", "what did we decide")
+  - **Impact**: Memory context appears only when contextually appropriate, not disruptively
+
+#### New Features
+- **On-Demand Memory Retrieval**: New `memory-retrieval.js` hook for manual context requests
+  - **User-Triggered**: Allows manual memory refresh when needed
+  - **Query-Based**: Supports semantic search with user-provided queries
+  - **Relevance Scoring**: Shows confidence scores for manual retrieval
+- **Streamlined Presentation**: Cleaner formatting with reduced metadata clutter
+  - **Smart Categorization**: Only groups memories when there's meaningful diverse content
+  - **Relevant Tags Only**: Filters out machine-generated and generic tags
+  - **Concise Dating**: More compact date formatting (Aug 25 vs full timestamps)
+
+#### Technical Improvements
+- **Enhanced Memory Scoring Weights**:
+  ```json
+  {
+    "timeDecay": 0.25,        // Reduced from 0.30
+    "tagRelevance": 0.35,     // Maintained
+    "contentRelevance": 0.15,  // Reduced from 0.20
+    "contentQuality": 0.25,    // NEW quality factor
+    "conversationRelevance": 0.25 // Maintained
+  }
+  ```
+- **New Utility Files**:
+  - `context-shift-detector.js`: Intelligent context change detection
+  - Enhanced `context-formatter.js` with smart content extraction
+  - Quality-aware scoring in `memory-scorer.js`
+
+#### Breaking Changes
+- **Session-Start Hook**: Upgraded to v2.0.0 with smart timing and quality filtering
+- **Configuration Schema**: Added new options for memory quality control and compacting behavior
+- **Memory Filtering**: Generic session summaries are now automatically filtered out
+
+#### Migration Guide
+- **Automatic**: No user action required - existing configurations work with sensible defaults
+- **Optional**: Users can enable `injectAfterCompacting: true` in config.json if they prefer old behavior
+- **Benefit**: Immediate improvement in memory context quality and relevance
+
 ## [6.6.4] - 2025-08-25
 
 ### 🔧 **Installation Experience Improvements**
