@@ -4,6 +4,36 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.7.2] - 2025-08-25
+
+### 🔧 **Enhancement**
+
+#### Deduplication Script Configuration-Aware Refactoring
+- **Enhanced API Integration**: Deduplication script now reads Claude Code hooks configuration for seamless integration
+  - **Configuration Auto-Detection**: Automatically reads `~/.claude/hooks/config.json` for memory service endpoint and API key
+  - **API-Based Analysis**: Supports remote memory service analysis via HTTPS API with self-signed certificate support
+  - **Intelligent Pagination**: Handles large memory collections (972+ memories) with automatic page-by-page retrieval
+  - **Backward Compatibility**: Maintains support for direct database access with `--db-path` parameter
+  - **Impact**: Users can now run deduplication on remote memory services without manual configuration
+
+#### New Command-Line Options
+- **`--use-api`**: Force API-based analysis using configuration endpoint
+- **Smart Fallback**: Automatically detects available options and suggests alternatives when paths missing
+- **Enhanced Error Messages**: Clear guidance on configuration requirements and troubleshooting steps
+
+#### Technical Improvements
+- **SSL Context Configuration**: Proper handling of self-signed certificates for secure remote connections
+- **Memory Format Normalization**: Converts API response format to internal analysis format seamlessly
+- **Progress Reporting**: Real-time feedback during multi-page memory retrieval operations
+
+#### Validation Results
+- **✅ 972 Memories Analyzed**: Successfully processed complete memory collection via API
+- **✅ No Duplicates Detected**: Confirms v6.7.0 content quality filters are preventing duplicate creation
+- **✅ Configuration Integration**: Seamless integration with existing Claude Code hooks setup
+- **✅ Performance Maintained**: Efficient pagination and processing of large memory collections
+
+> **Usage**: Run `python scripts/find_duplicates.py --use-api` to analyze memories using your configured remote memory service
+
 ## [6.7.1] - 2025-08-25
 
 ### 🔧 **Critical Bug Fix**
