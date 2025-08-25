@@ -1,13 +1,14 @@
 @echo off
-REM Claude Code Memory Awareness Hooks - Windows Installation Batch Wrapper
+REM Claude Code Memory Awareness Hooks v2.2.0 - Windows Installation Batch Wrapper
 REM This batch file wraps the PowerShell installation script for easy execution
+REM Enhanced Output Control and Session Management
 
 setlocal enabledelayedexpansion
 
 echo.
-echo ========================================================
-echo  Claude Code Memory Awareness Hooks - Windows Installer
-echo ========================================================
+echo =============================================================
+echo  Claude Code Memory Awareness Hooks v2.2.0 - Windows Installer
+echo =============================================================
 echo.
 
 REM Check for help flag
@@ -39,15 +40,15 @@ REM Check if PowerShell script exists
 if not exist "%PS_SCRIPT%" (
     echo [ERROR] PowerShell script not found: %PS_SCRIPT%
     echo.
-    echo Please ensure you're running this from the scripts directory
+    echo Please ensure you're running this from the claude-hooks directory
     echo of the mcp-memory-service repository.
     echo.
     echo Expected repository structure:
     echo   mcp-memory-service/
-    echo     ├── scripts/
-    echo     │   ├── install_claude_hooks_windows.bat  ^<-- This file
-    echo     │   └── install_claude_hooks_windows.ps1
     echo     └── claude-hooks/
+    echo         ├── install.sh
+    echo         ├── install_claude_hooks_windows.bat  ^<-- This file
+    echo         ├── install_claude_hooks_windows.ps1
     echo         ├── core/
     echo         ├── utilities/
     echo         └── config.json

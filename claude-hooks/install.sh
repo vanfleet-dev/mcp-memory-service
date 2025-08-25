@@ -1,15 +1,56 @@
 #!/bin/bash
 
-# Claude Code Memory Awareness Hooks - Installation Script
+# Claude Code Memory Awareness Hooks - Installation Script v2.2.0
 # Installs hooks into Claude Code hooks directory for automatic memory awareness
+# Enhanced Output Control and Session Management
 
 set -e
 
-echo "🚀 Claude Code Memory Awareness Hooks Installation"
-echo "================================================="
+echo "🚀 Claude Code Memory Awareness Hooks Installation v2.2.0"
+echo "========================================================"
+
+# Enhanced Claude Code directory detection
+get_claude_hooks_directory() {
+    local primary_path="${HOME}/.claude/hooks"
+    local alternative_paths=(
+        "${HOME}/.config/claude/hooks"
+        "${XDG_CONFIG_HOME:-$HOME/.config}/claude/hooks"
+    )
+    
+    # If primary path already exists, use it
+    if [ -d "$primary_path" ]; then
+        echo "$primary_path"
+        return 0
+    fi
+    
+    # Check if Claude Code is installed and can tell us the hooks directory
+    if command -v claude &> /dev/null; then
+        local claude_help
+        if claude_help=$(claude --help 2>/dev/null); then
+            # Look for hooks directory information in help output
+            local detected_path
+            detected_path=$(echo "$claude_help" | grep -o 'hooks.*directory[^[:space:]]*' | head -1 | sed 's/.*: *//' || true)
+            if [ -n "$detected_path" ] && [ -d "$(dirname "$detected_path" 2>/dev/null || echo '')" ]; then
+                echo "$detected_path"
+                return 0
+            fi
+        fi
+    fi
+    
+    # Check alternative locations
+    for alt_path in "${alternative_paths[@]}"; do
+        if [ -d "$alt_path" ]; then
+            echo "$alt_path"
+            return 0
+        fi
+    done
+    
+    # Default to primary path (will be created if needed)
+    echo "$primary_path"
+}
 
 # Configuration
-CLAUDE_HOOKS_DIR="${HOME}/.claude/hooks"
+CLAUDE_HOOKS_DIR="$(get_claude_hooks_directory)"
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="${HOME}/.claude/hooks-backup-$(date +%Y%m%d-%H%M%S)"
 
@@ -18,6 +59,13 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
+
+# Debug: Display resolved paths
+echo ""
+echo -e "${GREEN}[INFO]${NC} Script location: $SOURCE_DIR"
+echo -e "${GREEN}[INFO]${NC} Target hooks directory: $CLAUDE_HOOKS_DIR"
+echo -e "${GREEN}[INFO]${NC} Backup directory: $BACKUP_DIR"
+echo ""
 
 info() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -312,12 +360,19 @@ main() {
 # Handle command line arguments
 case "${1:-}" in
     --help|-h)
+        echo "Claude Code Memory Awareness Hooks Installation v2.2.0"
+        echo ""
         echo "Usage: $0 [options]"
         echo ""
         echo "Options:"
         echo "  --help, -h     Show this help message"
         echo "  --uninstall    Remove installed hooks"
         echo "  --test         Run tests only"
+        echo ""
+        echo "Examples:"
+        echo "  ./install.sh                # Install hooks"
+        echo "  ./install.sh --uninstall    # Remove hooks"
+        echo "  ./install.sh --test         # Test installation"
         echo ""
         exit 0
         ;;

@@ -1,5 +1,6 @@
-# Claude Code Memory Awareness Hooks - Windows Installation Script
+# Claude Code Memory Awareness Hooks - Windows Installation Script v2.2.0
 # Installs hooks into Claude Code hooks directory for automatic memory awareness
+# Enhanced Output Control and Session Management
 
 param(
     [switch]$Uninstall,
@@ -11,11 +12,15 @@ $ErrorActionPreference = "Stop"
 
 # Configuration - Detect proper Claude Code hooks directory
 function Get-ClaudeHooksDirectory {
-    # Primary location: User profile
-    $primaryPath = "$env:USERPROFILE\.claude-code\hooks"
+    # Primary location: User profile (updated to match actual Claude Code directory structure)
+    $primaryPath = "$env:USERPROFILE\.claude\hooks"
     
     # Alternative locations to check
     $alternativePaths = @(
+        "$env:APPDATA\.claude\hooks",
+        "$env:LOCALAPPDATA\.claude\hooks",
+        # Legacy paths for backwards compatibility
+        "$env:USERPROFILE\.claude-code\hooks",
         "$env:APPDATA\.claude-code\hooks",
         "$env:LOCALAPPDATA\.claude-code\hooks"
     )
@@ -51,13 +56,12 @@ function Get-ClaudeHooksDirectory {
 
 $CLAUDE_HOOKS_DIR = Get-ClaudeHooksDirectory
 
-# Dynamically find the repository root directory
+# Script is now in the claude-hooks directory itself
 $SCRIPT_DIR = $PSScriptRoot
-$REPO_ROOT = Split-Path -Parent $SCRIPT_DIR
-$SOURCE_DIR = Join-Path $REPO_ROOT "claude-hooks"
+$SOURCE_DIR = $SCRIPT_DIR
 
 $dateStr = Get-Date -Format "yyyyMMdd-HHmmss"
-$BACKUP_DIR = "$env:USERPROFILE\.claude-code\hooks-backup-$dateStr"
+$BACKUP_DIR = "$env:USERPROFILE\.claude\hooks-backup-$dateStr"
 
 # Debug: Display resolved paths
 function Write-Info { Write-Host "[INFO]" -ForegroundColor Green -NoNewline; Write-Host " $args" }
@@ -91,8 +95,8 @@ Examples:
 
 # Header
 Write-Host ""
-Write-Host "Claude Code Memory Awareness Hooks Installation (Windows)" -ForegroundColor Cyan
-Write-Host "=========================================================" -ForegroundColor Cyan
+Write-Host "Claude Code Memory Awareness Hooks Installation v2.2.0 (Windows)" -ForegroundColor Cyan
+Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Check if Claude Code is installed

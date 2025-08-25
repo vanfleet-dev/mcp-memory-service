@@ -701,8 +701,8 @@ This release provides comprehensive cross-platform fixes for path detection issu
   - Validates found directory contains pyproject.toml to ensure correct repository
 
 - **Windows Path Detection**: Added comprehensive Windows support with PowerShell and batch scripts
-  - New: `scripts/install_claude_hooks_windows.ps1` - Full-featured PowerShell installation
-  - New: `scripts/install_claude_hooks_windows.bat` - Batch wrapper for easy execution
+  - New: `claude-hooks/install_claude_hooks_windows.ps1` - Full-featured PowerShell installation
+  - New: `claude-hooks/install_claude_hooks_windows.bat` - Batch wrapper for easy execution
   - Dynamic repository location detection using PSScriptRoot resolution
   - Comprehensive Claude Code hooks directory detection with fallbacks
   - Improved error handling and validation for source/target directories
