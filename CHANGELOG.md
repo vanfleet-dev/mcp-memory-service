@@ -4,6 +4,23 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.10.1] - 2025-08-25
+
+### 🐛 **Bug Fixes**
+
+#### Fixed Claude Code Memory Commands
+- **API Key Update**: Updated all Claude Code memory commands with correct API key (`VhOGAoUOE5_BMzu-phDORdyXHNMcDRBxvndK_Uop`)
+  - Fixed `/memory-context`, `/memory-store`, `/memory-recall`, `/memory-search`, `/memory-health` commands
+  - Replaced outdated `test-key-123` with current production API key
+  - **Impact**: All memory commands now work correctly with remote memory service
+
+#### Enhanced `/memory-context` Command
+- **Dynamic Session Capture**: Removed hardcoded session content, now captures real-time context
+  - **Real-time Info**: Includes current timestamp, working directory, git branch, and recent commits  
+  - **Dynamic Tags**: Automatically includes current project name as tag
+  - **User Context**: Properly captures user-provided session description via `$ARGUMENTS`
+  - **Impact**: `/memory-context` now stores actual session context instead of static placeholder text
+
 ## [6.10.0] - 2025-08-25
 
 ### ✨ **New Features**
