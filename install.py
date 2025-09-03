@@ -640,7 +640,8 @@ def install_pytorch_macos_arm64():
         subprocess.check_call(cmd)
         
         # Install sentence-transformers
-        print_info("Installing sentence-transformers...")
+        print_info("Installing sentence-transformers (for embedding generation)...")
+        print_info("Note: Models will be downloaded on first use (~25MB)")
         cmd = [
             sys.executable, '-m', 'pip', 'install',
             'sentence-transformers>=2.2.2'
@@ -1236,7 +1237,8 @@ def install_package(args):
                 subprocess.check_call(cmd, env=env)
                 
                 # Install core dependencies except torch/sentence-transformers
-                print_info("Installing core dependencies except ML libraries...")
+                print_info("Installing core dependencies (without ML libraries for compatibility)...")
+                print_info("Note: First run will download embedding models automatically (~25MB)")
                 
                 # Create a list of dependencies to install
                 dependencies = [
@@ -2865,6 +2867,18 @@ def main():
             print_info("Commands installation skipped")
     
     print_header("Installation Complete")
+    
+    # First-time setup notice
+    print_info("")
+    print_info("⚠️  FIRST-TIME SETUP EXPECTATIONS:")
+    print_info("On first run, you may see these NORMAL warnings:")
+    print_info("  • 'No snapshots directory' - Model will download automatically (~25MB)")
+    print_info("  • 'TRANSFORMERS_CACHE deprecated' - Informational, doesn't affect operation")
+    print_info("  • Model download progress - One-time download (1-2 minutes)")
+    print_info("")
+    print_info("These warnings disappear after the first successful run.")
+    print_info("See docs/first-time-setup.md for details.")
+    print_info("")
     
     # Get final storage backend info for multi-client setup determination
     if system_info["is_macos"] and system_info["is_x86"] and system_info.get("has_homebrew_pytorch"):

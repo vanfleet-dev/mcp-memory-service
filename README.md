@@ -38,6 +38,16 @@ docker-compose -f docker-compose.http.yml up -d
 npx -y @smithery/cli install @doobidoo/mcp-memory-service --client claude
 ```
 
+## ⚠️ First-Time Setup Expectations
+
+On your first run, you'll see some warnings that are **completely normal**:
+
+- **"WARNING: Failed to load from cache: No snapshots directory"** - The service is checking for cached models (first-time setup)
+- **"WARNING: Using TRANSFORMERS_CACHE is deprecated"** - Informational warning, doesn't affect functionality
+- **Model download in progress** - The service automatically downloads a ~25MB embedding model (takes 1-2 minutes)
+
+These warnings disappear after the first successful run. The service is working correctly! For details, see our [First-Time Setup Guide](docs/first-time-setup.md).
+
 ## 📚 Complete Documentation
 
 **👉 Visit our comprehensive [Wiki](https://github.com/doobidoo/mcp-memory-service/wiki) for detailed guides:**

@@ -4,6 +4,32 @@ All notable changes to the MCP Memory Service project will be documented in this
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.13.1] - 2025-09-03
+
+### 📚 **Documentation & User Experience**
+
+#### First-Time Setup Documentation (Addresses Issue #95)
+- **Added First-Time Setup Section**: New prominent section in README.md explaining expected warnings on initial run
+- **Created Comprehensive Guide**: New `docs/first-time-setup.md` with detailed explanations of:
+  - Normal warnings vs actual errors
+  - Model download process (~25MB, 1-2 minutes)
+  - Success indicators and verification steps
+  - Ubuntu 24-specific installation instructions
+- **Enhanced Troubleshooting**: Updated `docs/troubleshooting/general.md` with first-time warnings section
+- **Improved Installer Messages**: Enhanced `install.py` with clear first-time setup expectations and progress indicators
+
+### 🐛 **Bug Fixes**
+
+#### User Experience Improvements
+- **Fixed Issue #95**: Clarified that "No snapshots directory" warning is normal on first run
+- **Addressed Confusion**: Distinguished between expected initialization warnings and actual errors
+- **Ubuntu 24 Support**: Added specific documentation for Ubuntu 24 installation issues
+
+### 📝 **Changes**
+- Added clear messaging that warnings disappear after first successful run
+- Included estimated download times and model sizes in documentation
+- Improved installer output to set proper expectations for first-time users
+
 ## [6.13.0] - 2025-08-25
 
 ### ⚡ **Major Features**
