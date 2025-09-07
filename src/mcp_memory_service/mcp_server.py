@@ -49,8 +49,8 @@ def get_storage_backend():
     
     if backend == "sqlite-vec" or backend == "sqlite_vec":
         try:
-            from .storage.sqlite_vec import SqliteVecStorage
-            return SqliteVecStorage
+            from .storage.sqlite_vec import SqliteVecMemoryStorage
+            return SqliteVecMemoryStorage
         except ImportError as e:
             logger.error(f"Failed to import SQLite-vec storage: {e}")
             raise
@@ -100,10 +100,9 @@ async def mcp_server_lifespan(server: FastMCP) -> AsyncIterator[MCPServerContext
     # Initialize storage backend based on configuration and availability
     StorageClass = get_storage_backend()
     
-    if StorageClass.__name__ == "SqliteVecStorage":
+    if StorageClass.__name__ == "SqliteVecMemoryStorage":
         storage = StorageClass(
-            db_path=CHROMA_PATH / "memory.db",
-            embedding_manager=None  # Will be set after creation
+            db_path=str(CHROMA_PATH / "memory.db")
         )
     elif StorageClass.__name__ == "CloudflareStorage":
         storage = StorageClass(
