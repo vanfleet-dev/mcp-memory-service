@@ -14,11 +14,17 @@ logger = logging.getLogger(__name__)
 async def auto_start_http_server_if_needed() -> bool:
     """
     Auto-start HTTP server if needed for multi-client coordination.
-    
+
     Returns:
         bool: True if server was started or already running, False if failed
     """
     try:
+        # Check if HTTP server is enabled in configuration
+        from ..config import HTTP_ENABLED
+        if not HTTP_ENABLED:
+            logger.debug("HTTP server disabled in configuration")
+            return False
+
         # Check if HTTP auto-start is enabled
         if not os.getenv("MCP_MEMORY_HTTP_AUTO_START", "").lower() in ("true", "1"):
             logger.debug("HTTP auto-start not enabled")
