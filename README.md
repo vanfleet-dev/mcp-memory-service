@@ -111,6 +111,60 @@ uv run memory health
 
 ## 🔧 Configuration
 
+### opencode Integration
+
+#### Basic Configuration
+Add to your opencode config (`~/.config/opencode/opencode.json`):
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "/Users/nervkil/mcp-memory-service/venv/bin/python",
+      "args": ["/Users/nervkil/mcp-memory-service/scripts/run_memory_server.py"],
+      "env": {
+        "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+        "MCP_HTTP_ENABLED": "false"
+      }
+    }
+  }
+}
+```
+
+#### With Custom Storage Path
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "/Users/nervkil/mcp-memory-service/venv/bin/python",
+      "args": ["/Users/nervkil/mcp-memory-service/scripts/run_memory_server.py"],
+      "env": {
+        "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+        "MCP_MEMORY_SQLITE_PATH": "/path/to/custom/memory.db",
+        "MCP_HTTP_ENABLED": "false"
+      }
+    }
+  }
+}
+```
+
+#### With HTTP API Enabled (Optional)
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "/Users/nervkil/mcp-memory-service/venv/bin/python",
+      "args": ["/Users/nervkil/mcp-memory-service/scripts/run_memory_server.py"],
+      "env": {
+        "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+        "MCP_HTTP_ENABLED": "true",
+        "MCP_HTTP_PORT": "8000"
+      }
+    }
+  }
+}
+```
+
 ### Claude Desktop Integration
 Add to your Claude Desktop config (`~/.claude/config.json`):
 
@@ -133,12 +187,158 @@ Add to your Claude Desktop config (`~/.claude/config.json`):
 # Storage backend (sqlite_vec recommended)
 export MCP_MEMORY_STORAGE_BACKEND=sqlite_vec
 
-# Enable HTTP API
+# Custom database path
+export MCP_MEMORY_SQLITE_PATH=/path/to/memory.db
+
+# Enable HTTP API (optional)
 export MCP_HTTP_ENABLED=true
 export MCP_HTTP_PORT=8000
 
-# Security  
+# Security
 export MCP_API_KEY="your-secure-key"
+
+# Disable web app (recommended for pure MCP usage)
+export MCP_HTTP_ENABLED=false
+```
+
+### NPX Installation
+
+#### Install Globally via NPM
+```bash
+npm install -g mcp-memory-service
+```
+
+#### Basic Configuration
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "mcp-memory-service",
+      "env": {
+        "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec"
+      }
+    }
+  }
+}
+```
+
+#### With Custom Database Path
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "mcp-memory-service",
+      "env": {
+        "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+        "MCP_MEMORY_SQLITE_PATH": "/path/to/custom/memory.db"
+      }
+    }
+  }
+}
+```
+
+### Docker Installation
+
+#### Using Pre-built Image
+```bash
+docker pull doobidoo/mcp-memory-service:latest
+```
+
+#### Basic Configuration
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "MCP_MEMORY_STORAGE_BACKEND=sqlite_vec",
+        "doobidoo/mcp-memory-service:latest"
+      ]
+    }
+  }
+}
+```
+
+#### With Volume Mount for Persistent Storage
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-v", "/host/path/to/memory:/app/data",
+        "-e", "MCP_MEMORY_SQLITE_PATH=/app/data/memory.db",
+        "-e", "MCP_MEMORY_STORAGE_BACKEND=sqlite_vec",
+        "doobidoo/mcp-memory-service:latest"
+      ]
+    }
+  }
+}
+```
+
+#### With HTTP API Enabled
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-p", "8000:8000",
+        "-e", "MCP_MEMORY_STORAGE_BACKEND=sqlite_vec",
+        "-e", "MCP_HTTP_ENABLED=true",
+        "-e", "MCP_HTTP_PORT=8000",
+        "doobidoo/mcp-memory-service:latest"
+      ]
+    }
+  }
+}
+```
+
+### HTTP Transport (Optional)
+
+The server supports both STDIO (default) and HTTP transports:
+
+#### STDIO Transport (Default)
+- **Best for**: opencode and most MCP clients
+- **Usage**: Automatic - no additional configuration needed
+
+#### HTTP Transport
+- **Best for**: Web-based applications and remote MCP clients
+- **Usage**: Set the `MCP_HTTP_ENABLED=true` environment variable
+
+##### HTTP Server Configuration
+```json
+{
+  "mcpServers": {
+    "memory-http": {
+      "command": "/Users/nervkil/mcp-memory-service/venv/bin/python",
+      "args": ["/Users/nervkil/mcp-memory-service/scripts/run_memory_server.py"],
+      "env": {
+        "MCP_MEMORY_STORAGE_BACKEND": "sqlite_vec",
+        "MCP_HTTP_ENABLED": "true",
+        "MCP_HTTP_PORT": "8000"
+      }
+    }
+  }
+}
+```
+
+**HTTP Endpoints:**
+- **MCP Protocol**: `POST/GET/DELETE /mcp`
+- **Health Check**: `GET /health`
+- **Dashboard**: `GET /` (if web app enabled)
+- **CORS**: Enabled for web clients
+
+**Testing HTTP Server:**
+```bash
+# Start HTTP server
+MCP_HTTP_ENABLED=true MCP_HTTP_PORT=8000 /Users/nervkil/mcp-memory-service/venv/bin/python /Users/nervkil/mcp-memory-service/scripts/run_memory_server.py
+
+# Check health
+curl http://localhost:8000/health
 ```
 
 ## 🏗️ Architecture
@@ -156,6 +356,19 @@ export MCP_API_KEY="your-secure-key"
 
 ## 🛠️ Development
 
+### Coding Guidelines
+
+- Use Python type hints for type safety
+- Follow existing error handling patterns with proper logging
+- Keep error messages concise but informative
+- Write comprehensive unit tests for new functionality
+- Ensure all tests pass before submitting PRs
+- Maintain test coverage above 80%
+- Test changes with the MCP inspector
+- Run integration tests before submitting PRs
+- Document new features and configuration options
+- Follow PEP 8 style guidelines
+
 ### Project Structure
 ```
 mcp-memory-service/
@@ -169,11 +382,60 @@ mcp-memory-service/
 └── tools/docker/              # Docker configuration
 ```
 
+### Development Workflow
+
+#### 1. Setup Development Environment
+```bash
+# Clone the repository
+git clone https://github.com/vanfleet-dev/mcp-memory-service.git
+cd mcp-memory-service
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -e .
+
+# Install development dependencies
+pip install -e ".[dev]"
+```
+
+#### 2. Development Commands
+```bash
+# Run tests
+pytest
+
+# Run with coverage
+pytest --cov=src/mcp_memory_service --cov-report=html
+
+# Run type checking
+mypy src/mcp_memory_service
+
+# Run linting
+flake8 src/mcp_memory_service
+
+# Format code
+black src/mcp_memory_service
+isort src/mcp_memory_service
+```
+
+#### 3. Testing MCP Server
+```bash
+# Test with MCP inspector
+python -m mcp.server.stdio memory
+
+# Run integration tests
+pytest tests/integration/
+```
+
 ### Contributing
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes with tests
-4. Submit a pull request
+4. Run the full test suite (`pytest`)
+5. Ensure code formatting (`black` and `isort`)
+6. Submit a pull request
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
