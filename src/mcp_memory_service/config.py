@@ -308,7 +308,7 @@ else:
     DATABASE_PATH = os.path.join(BASE_DIR, 'memory_http.db')
 
 # Embedding model configuration
-EMBEDDING_MODEL_NAME = os.getenv('MCP_EMBEDDING_MODEL', 'all-MiniLM-L6-v2')
+EMBEDDING_MODEL_NAME = os.getenv('MCP_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2')
 
 # Dream-inspired consolidation configuration
 CONSOLIDATION_ENABLED = os.getenv('MCP_CONSOLIDATION_ENABLED', 'false').lower() == 'true'

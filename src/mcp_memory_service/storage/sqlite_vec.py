@@ -230,16 +230,21 @@ class SqliteVecMemoryStorage(MemoryStorage):
     async def _initialize_embedding_model(self):
         """Initialize the embedding model (ONNX or SentenceTransformer based on configuration)."""
         global _MODEL_CACHE
-        
+
+        print("DEBUG: _initialize_embedding_model called")
         try:
-            # Check if we should use ONNX
-            use_onnx = os.environ.get('MCP_MEMORY_USE_ONNX', '').lower() in ('1', 'true', 'yes')
+            # Force ONNX usage to avoid SentenceTransformer issues
+            use_onnx = True
+            print(f"DEBUG: use_onnx = {use_onnx}")
+            print("DEBUG: Forcing ONNX embeddings to avoid SentenceTransformer loading issues")
             
             if use_onnx:
                 # Try to use ONNX embeddings
-                logger.info("Attempting to use ONNX embeddings (PyTorch-free)")
+                print("DEBUG: ONNX flag is True, attempting to use ONNX embeddings (PyTorch-free)")
                 try:
+                    print("DEBUG: Importing get_onnx_embedding_model...")
                     from ..embeddings import get_onnx_embedding_model
+                    print("DEBUG: Import successful")
                     
                     # Check cache first
                     cache_key = f"onnx_{self.embedding_model_name}"
@@ -249,15 +254,17 @@ class SqliteVecMemoryStorage(MemoryStorage):
                         return
                     
                     # Create ONNX model
+                    print("DEBUG: Creating ONNX model...")
                     onnx_model = get_onnx_embedding_model(self.embedding_model_name)
+                    print(f"DEBUG: ONNX model creation result: {onnx_model is not None}")
                     if onnx_model:
                         self.embedding_model = onnx_model
                         self.embedding_dimension = onnx_model.embedding_dimension
                         _MODEL_CACHE[cache_key] = onnx_model
-                        logger.info(f"ONNX embedding model loaded successfully. Dimension: {self.embedding_dimension}")
+                        print(f"DEBUG: ONNX embedding model loaded successfully. Dimension: {self.embedding_dimension}")
                         return
                     else:
-                        logger.warning("ONNX model creation failed, falling back to SentenceTransformer")
+                        print("DEBUG: ONNX model creation returned None, falling back to SentenceTransformer")
                 except ImportError as e:
                     logger.warning(f"ONNX dependencies not available: {e}")
                 except Exception as e:
@@ -281,39 +288,57 @@ class SqliteVecMemoryStorage(MemoryStorage):
             logger.info(f"Loading embedding model: {self.embedding_model_name}")
             logger.info(f"Using device: {device}")
             
-            # Configure for offline mode if models are cached
-            # Only set offline mode if we detect cached models to prevent initial downloads
-            hf_home = os.environ.get('HF_HOME', os.path.expanduser("~/.cache/huggingface"))
-            model_cache_path = os.path.join(hf_home, "hub", f"models--sentence-transformers--{self.embedding_model_name.replace('/', '--')}")
-            if os.path.exists(model_cache_path):
-                os.environ['HF_HUB_OFFLINE'] = '1'
-                os.environ['TRANSFORMERS_OFFLINE'] = '1'
+            # Force offline mode since we have the model cached
+            os.environ['HF_HUB_OFFLINE'] = '1'
+            os.environ['TRANSFORMERS_OFFLINE'] = '1'
+            os.environ['HF_HUB_LOCAL_FILES_ONLY'] = '1'
+            # Ensure cache paths are set correctly
+            if 'HF_HOME' not in os.environ:
+                os.environ['HF_HOME'] = os.path.expanduser("~/.cache/huggingface")
+            if 'TRANSFORMERS_CACHE' not in os.environ:
+                os.environ['TRANSFORMERS_CACHE'] = os.path.expanduser("~/.cache/huggingface")
             
             # Try to load from cache first, fallback to direct model name
             try:
-                # First try loading from Hugging Face cache
+                # First try loading from Hugging Face cache (new format)
                 hf_home = os.environ.get('HF_HOME', os.path.expanduser("~/.cache/huggingface"))
-                cache_path = os.path.join(hf_home, "hub", f"models--sentence-transformers--{self.embedding_model_name.replace('/', '--')}")
-                if os.path.exists(cache_path):
+                cache_path_new = os.path.join(hf_home, f"models--sentence-transformers--{self.embedding_model_name.replace('/', '--')}")
+
+                # Try new cache format first
+                if os.path.exists(cache_path_new):
                     # Find the snapshot directory
-                    snapshots_path = os.path.join(cache_path, "snapshots")
+                    snapshots_path = os.path.join(cache_path_new, "snapshots")
                     if os.path.exists(snapshots_path):
                         snapshot_dirs = [d for d in os.listdir(snapshots_path) if os.path.isdir(os.path.join(snapshots_path, d))]
                         if snapshot_dirs:
                             model_path = os.path.join(snapshots_path, snapshot_dirs[0])
                             logger.info(f"Loading model from cache: {model_path}")
-                            self.embedding_model = SentenceTransformer(model_path, device=device)
+
+                            # Try loading by model name first (should use cached files)
+                            try:
+                                logger.info(f"Attempting to load model by name: {self.embedding_model_name}")
+                                self.embedding_model = SentenceTransformer(self.embedding_model_name, device=device, trust_remote_code=True, local_files_only=True)
+                            except Exception as name_error:
+                                logger.warning(f"Failed to load by name: {name_error}")
+                                # Fallback to loading from path
+                                logger.info(f"Loading model from path: {model_path}")
+                                self.embedding_model = SentenceTransformer(model_path, device=device, trust_remote_code=True)
                         else:
-                            raise FileNotFoundError("No snapshot found")
+                            raise FileNotFoundError("No snapshot found in cache")
                     else:
-                        raise FileNotFoundError("No snapshots directory")
+                        raise FileNotFoundError("No snapshots directory in cache")
                 else:
                     raise FileNotFoundError("No cache found")
             except Exception as cache_error:
                 logger.warning(f"Failed to load from cache: {cache_error}")
                 # Fallback to normal loading (may fail if offline)
                 logger.info("Attempting normal model loading...")
-                self.embedding_model = SentenceTransformer(self.embedding_model_name, device=device)
+                try:
+                    self.embedding_model = SentenceTransformer(self.embedding_model_name, device=device, local_files_only=True, trust_remote_code=True)
+                except Exception as fallback_error:
+                    logger.warning(f"Fallback loading also failed: {fallback_error}")
+                    # Last resort: try without local_files_only but with trust_remote_code
+                    self.embedding_model = SentenceTransformer(self.embedding_model_name, device=device, local_files_only=False, trust_remote_code=True)
             
             # Update embedding dimension based on actual model
             test_embedding = self.embedding_model.encode(["test"], convert_to_numpy=True)
